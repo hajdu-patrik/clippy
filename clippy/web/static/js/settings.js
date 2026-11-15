@@ -3,6 +3,7 @@ import { t, tx } from "./i18n.js";
 import { onLive } from "./live.js";
 import { loadAccounts } from "./publish.js";
 import { state } from "./state.js";
+import { bindResults, loadResults } from "./results.js";
 import { bindWatches, loadWatches } from "./watches.js";
 import { $, esc, toast } from "./util.js";
 
@@ -57,6 +58,7 @@ function open() {
   $("#profileLinks").focus();
   refreshAccounts();
   loadWatches();
+  loadResults();
 }
 
 async function save(event) {
@@ -134,6 +136,7 @@ export function bindSettings() {
   });
   document.addEventListener("clippy:settings", open);
   bindWatches();
+  bindResults();
   onLive((event) => {
     if (event.type === "settings") state.settings = event.settings;
     if (event.type === "accounts") refreshAccounts();

@@ -35,6 +35,7 @@ from .jobs import Runner
 from .media import MediaStore
 from .lan import Lan, is_loopback
 from .security import SecurityMiddleware
+from . import results
 from .watch import EVERY_MINUTES, Watcher, present_watch, watch_settings
 
 STATIC = Path(__file__).resolve().parent / "static"
@@ -336,6 +337,15 @@ def create_app(storage: Storage | None = None, db_path: Path | None = None, runn
         if not chats.cancel_scheduled(item_id):
             raise HTTPException(404, "Not planned")
         return {"ok": True}
+
+    @app.get("/api/results")
+    def get_results():
+        status = accounts.status()
+        return {**results.insights(db), "analytics": status["youtube"].get("analytics", True)}
+
+    @app.post("/api/results/refresh")
+    def refresh_results():
+        return {"read": watcher.measure(), **results.insights(db)}
 
     @app.get("/api/watches")
     def list_watches():

@@ -18,6 +18,20 @@ function whenText(seconds) {
     { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
 }
 
+const count = (n) => new Intl.NumberFormat(document.documentElement.lang || undefined, { notation: "compact" }).format(n || 0);
+
+function statsHtml(s) {
+  if (!s) return "";
+  const parts = [
+    t("results.views", { n: count(s.views) }),
+    s.likes ? `❤ ${count(s.likes)}` : "",
+    s.comments ? `💬 ${count(s.comments)}` : "",
+    s.shares ? `↗ ${count(s.shares)}` : "",
+    s.watched != null ? t("results.watched", { p: Math.round(100 * s.watched) }) : "",
+  ].filter(Boolean);
+  return `<span class="post-stats">${esc(parts.join(" · "))}</span>`;
+}
+
 function plannedHtml(c) {
   return (c.scheduled || []).map((s) => `<li class="post planned"><b>🕒 ${esc(whenText(s.due))}</b>
     ${esc(s.platforms.map((p) => LABELS[p] || p).join(", "))}
@@ -35,7 +49,7 @@ export function postsHtml(c) {
     }
     const what = esc(t(`publish.state.${p.state}`));
     const link = p.url ? ` <a href="${esc(p.url)}" target="_blank" rel="noopener noreferrer">${esc(t("publish.open"))}</a>` : "";
-    return `<li class="post ok"><b>${label}</b> ${what}${link}</li>`;
+    return `<li class="post ok"><b>${label}</b> ${what}${link}${statsHtml(p.stats)}</li>`;
   }).join("");
   return `<ul class="posts" aria-label="${esc(t("publish.posts"))}">${planned}${items}</ul>`;
 }

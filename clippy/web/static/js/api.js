@@ -59,6 +59,8 @@ export const api = {
   publish: (id, number, body) =>
     request(`/api/chats/${id}/clips/${number}/publish`, { method: "POST", body: JSON.stringify(body) }),
   cancelScheduled: (id) => request(`/api/scheduled/${id}`, { method: "DELETE" }),
+  results: () => request("/api/results"),
+  refreshResults: () => request("/api/results/refresh", { method: "POST" }),
   watches: () => request("/api/watches"),
   addWatch: (body) => request("/api/watches", { method: "POST", body: JSON.stringify(body) }),
   toggleWatch: (id, enabled) => request(`/api/watches/${id}`, { method: "PATCH", body: JSON.stringify({ enabled }) }),

@@ -49,6 +49,7 @@ class Tokens:
     expires_at: float = 0.0
     name: str = ""
     user_id: str = ""
+    scope: str = ""
 
 
 def bearer(token: str) -> dict:

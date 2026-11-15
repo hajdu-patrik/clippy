@@ -15,7 +15,8 @@ AUTH = "https://accounts.google.com/o/oauth2/v2/auth"
 TOKEN = "https://oauth2.googleapis.com/token"
 API = "https://www.googleapis.com/youtube/v3"
 UPLOAD = "https://www.googleapis.com/upload/youtube/v3/videos"
-SCOPES = "https://www.googleapis.com/auth/youtube.upload https://www.googleapis.com/auth/youtube.readonly"
+SCOPES = ("https://www.googleapis.com/auth/youtube.upload https://www.googleapis.com/auth/youtube.readonly "
+          "https://www.googleapis.com/auth/yt-analytics.readonly")
 CHUNK = 8 * 1024 * 1024
 LONGEST = 180
 PRIVACY = ("public", "unlisted", "private")
@@ -62,7 +63,7 @@ class YouTube:
             "code": code, "client_id": client_id, "client_secret": secret, "redirect_uri": redirect,
             "grant_type": "authorization_code", "code_verifier": verifier}, timeout=TIMEOUT), self.label)
         tokens = Tokens(access_token=data["access_token"], refresh_token=data.get("refresh_token", ""),
-                        expires_at=now + float(data.get("expires_in") or 3600))
+                        expires_at=now + float(data.get("expires_in") or 3600), scope=str(data.get("scope") or ""))
         channels = checked(http.get(f"{API}/channels", params={"part": "snippet", "mine": "true"},
                                     headers=bearer(tokens.access_token), timeout=TIMEOUT), self.label)
         items = channels.get("items") or []

@@ -18,7 +18,8 @@ connect accounts.
 1. Open the [Google Cloud Console](https://console.cloud.google.com/), create a project, then under
    **APIs & Services, Library** enable **YouTube Data API v3**.
 2. **Google Auth Platform** (or **OAuth consent screen**): audience **External**, fill in the app name and your
-   email. Under **Data access** add the scopes `youtube.upload` and `youtube.readonly`.
+   email. Under **Data access** add the scopes `youtube.upload`, `youtube.readonly` and `yt-analytics.readonly`
+   (the last one lets Clippy read how much of each clip people watch; enable the **YouTube Analytics API** too).
 3. Under **Audience** press **Publish app**. While the app is in *Testing*, Google ends the sign-in after 7 days and you
    would have to connect again every week. A published app that is not verified shows a warning page at sign-in;
    that is expected for an app only you use: choose *Advanced* and continue.
@@ -46,7 +47,8 @@ Works with an Instagram **Creator** or **Business** account; no Facebook Page is
 2. Under **App roles, Roles** add your Instagram account as an **Instagram Tester**, then accept the invite in the
    Instagram app (Settings, Website permissions, Apps and websites, Tester invites).
 3. In **API setup with Instagram login** add your account and press **Generate token**. Allow the permissions it
-   asks for (`instagram_business_basic`, `instagram_business_content_publish`) and copy the token.
+   asks for (`instagram_business_basic`, `instagram_business_content_publish`, and
+   `instagram_business_manage_insights` for the numbers) and copy the token.
 4. In Clippy: Settings, Accounts, **Paste token** next to Instagram, then **Connect**.
 
 The token lasts 60 days; Clippy renews it by itself well before that, as long as it posts or checks the account now
@@ -94,6 +96,18 @@ review (TikTok calls it an audit).
   across all channels, best clip first. YouTube posts go public, TikTok to your drafts.
 
 Clippy has to be running at the planned time; a post whose time passed while it was off goes out when it starts again.
+
+## Learning from the results
+
+Every few hours Clippy reads back how the clips it posted are doing: views, likes, comments, shares and, where the
+platform tells, how much of the clip people watch (YouTube Analytics, Instagram's average watch time). The numbers
+show under each post on the clip card. TikTok drafts have no public video yet, so TikTok posts are not measured.
+
+*Settings, What works* compares the clips with your own usual (the median views on the same platform), from 5 clips
+that are at least two days old: which openings, lengths, kinds of moment and posting times do clearly better or
+worse. The clear patterns go to the clip picker as a soft preference (a clearly better moment still wins), and the
+chat can answer *"mi működik a legjobban?"* with your own numbers. An account connected to YouTube before this
+needs to be connected again once for the watch share.
 
 ## When something goes wrong
 

@@ -252,7 +252,7 @@ class Project:
             yield
 
     def select(self, n: int | None = None, exclude: list[Clip] | tuple = (), instructions: str | None = None,
-               opts: Options | None = None) -> list[Clip]:
+               opts: Options | None = None, lessons: str = "") -> list[Clip]:
         """The best moments. A short source (a TikTok, a Reel) becomes one clip of all of it, the LLM only writes its
         texts; without speech it gets no texts, since moments and hooks come from what is said. A short video's own
         first seconds are its hook, so it gets no opening text over them."""
@@ -283,7 +283,7 @@ class Project:
                                 title=self.title, exclude=list(exclude), text_language=o.captions,
                                 instructions=o.instructions if instructions is None else instructions,
                                 cache=PickCache(self.storage.cache("picks"), self.video_stem) if self.video_stem else None,
-                                signals=reactions)
+                                signals=reactions, lessons=lessons)
         if not clips:
             raise ClippyError(key="error.no_suitable_clip")
         if short:

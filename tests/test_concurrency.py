@@ -194,7 +194,7 @@ class SlowProject:
     def prepare(self):
         return self
 
-    def select(self, n=None, exclude=(), instructions=None, opts=None):
+    def select(self, n=None, exclude=(), instructions=None, opts=None, lessons=""):
         return [Clip(10.0 * i, 10.0 * i + 5, 90 - i, hook=f"H{i}", title=f"T{i}") for i in range(n or 3)]
 
     def prefetch(self, clip):

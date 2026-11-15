@@ -57,6 +57,7 @@ const HANDLERS = {
   deleted: (ev) => markDeleted(ev.number),
   status: (ev) => setWorker(ev.status),
   settings: () => resync(),
+  results: () => resync(),
   chat: (ev) => upsertChat(ev.chat),
   chat_deleted: (ev) => {
     state.chats = state.chats.filter((c) => c.id !== ev.chat_id);

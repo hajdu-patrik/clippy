@@ -46,6 +46,8 @@ cheering; laughter; action = a sudden change on screen; chat xN = N times this s
 gameplay and streams these are often the best moments, even when little is said: start a few seconds before the
 reaction so the viewer sees what caused it, and end after it lands."""
 PEAK_REASON = "reaction peak"
+LESSONS_RULE = ("\n\nHow this creator's posted clips did so far, against their usual views (a soft preference: a "
+                "clearly better moment still wins):\n")
 PEAK_LEAD = 0.6
 
 RERANK_PROMPT = """You are the head editor of a viral clips channel. Your team proposed candidate clips from
@@ -245,7 +247,7 @@ def _clip_text(c: Clip, words: list[dict], limit: int = 700) -> str:
 
 
 def _rerank(llm: LLM, cands: list[Clip], words: list[dict], n: int, title: str, language: str,
-            text_language: str, signals: Signals | None = None) -> list[Clip]:
+            text_language: str, signals: Signals | None = None, lessons: str = "") -> list[Clip]:
     def reactions(c: Clip) -> str:
         found = signals.describe(c.start, c.end) if signals else ""
         return f" | reactions: {found}" if found else ""
@@ -258,7 +260,7 @@ def _rerank(llm: LLM, cands: list[Clip], words: list[dict], n: int, title: str, 
     ]
     try:
         prompt = RERANK_PROMPT.format(title=title, language=language, text_language=text_language, n=n,
-                                      max_words=playbook.HOOK_MAX_WORDS)
+                                      max_words=playbook.HOOK_MAX_WORDS) + (LESSONS_RULE + lessons if lessons else "")
         reply = llm.chat_json(prompt,
                               "\n\n".join(lines),
                               think=think_enabled(), schema=RERANK_SCHEMA)
@@ -546,7 +548,7 @@ def find_highlights(transcript: dict, llm: LLM, max_clips: int = 5, min_len: flo
                     max_len: float = 60, window_sec: float = 480, overlap_sec: float = 60,
                     title: str = "", exclude: list[Clip] | tuple = (), instructions: str = "",
                     text_language: str | None = None, cache: PickCache | None = None,
-                    signals: Signals | None = None) -> list[Clip]:
+                    signals: Signals | None = None, lessons: str = "") -> list[Clip]:
     """`exclude`: clips that already exist (new picks must not overlap them).
     `instructions`: free-text wishes from the user ("the funniest parts", "only the parts about music"…).
     `cache`: earlier window answers for this video; when they no longer hold enough new moments, the windows are
@@ -570,6 +572,8 @@ def find_highlights(transcript: dict, llm: LLM, max_clips: int = 5, min_len: flo
                                       title=title.replace('"', "'"), language=language, text_language=text_language)
         if signals is not None:
             system += "\n" + SIGNALS_RULE
+        if lessons:
+            system += LESSONS_RULE + lessons
         if instructions.strip():
             system += ("\n\nThe channel owner's specific wishes for THIS selection (follow them, they override "
                        f"the generic preferences above):\n{instructions.strip()}")
@@ -591,7 +595,7 @@ def find_highlights(transcript: dict, llm: LLM, max_clips: int = 5, min_len: flo
     if llm.backend != "none" and len(unique) > max_clips:
         log(f"[hook] globally re-ranking {len(unique)} candidates…")
         with report_span(0.8, 0.9):
-            unique = _rerank(llm, unique, words, max_clips, title, language, text_language, signals)
+            unique = _rerank(llm, unique, words, max_clips, title, language, text_language, signals, lessons)
 
     chosen = unique[:max_clips]
     spoken = [c for c in chosen if _speaks(c, words)]

@@ -73,6 +73,8 @@ class AccountStore:
                          "name": str(entry.get("name") or ""), "expires": int(entry.get("expires_at") or 0),
                          "lasting": bool(entry.get("refresh_token")) or name == "instagram",
                          "configured": platform.configured(), "oauth": platform.oauth}
+            if name == "youtube" and entry.get("access_token"):
+                out[name]["analytics"] = "yt-analytics" in str(entry.get("scope") or "")
         return out
 
     def tokens(self, name: str) -> Tokens:

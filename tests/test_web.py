@@ -43,7 +43,7 @@ class FakeProject:
         self.storage.cache("downloads").joinpath("vid123.mkv").write_bytes(b"v")
         return self
 
-    def select(self, n=None, exclude=(), instructions=None, opts=None):
+    def select(self, n=None, exclude=(), instructions=None, opts=None, lessons=""):
         base = 10 * len(exclude)
         return [Clip(base + 20.0 * i, base + 20.0 * i + 15, 80 - i, hook=f"Hook {i}", title=f"Title {i}")
                 for i in range(n or 2)]

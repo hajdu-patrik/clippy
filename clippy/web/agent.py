@@ -354,7 +354,7 @@ def watch_action(message: str, url: str, n=None) -> dict:
     return {"type": "watch", "url": url, "n": count, "preset": preset}
 
 
-def build_state(chat: dict, clips: list[dict], excerpt) -> str:
+def build_state(chat: dict, clips: list[dict], excerpt, lessons: str = "") -> str:
     lines = [f"Current video: {chat.get('video_title') or '(processing)'} | {chat['source']}" if chat.get("source")
              else "Current video: none yet", "Existing clips:" if clips else "Existing clips: none"]
     for c in clips:
@@ -366,6 +366,8 @@ def build_state(chat: dict, clips: list[dict], excerpt) -> str:
         if text:
             line += f"\n   <transcript>{text[:220].replace('<', '‹')}</transcript>"
         lines.append(line)
+    if lessons:
+        lines.append("How the creator's posted clips did (against their usual views):\n" + lessons)
     return "\n".join(lines)
 
 
@@ -392,7 +394,7 @@ def texts_first(message: str, actions: list[dict]) -> list[dict]:
 
 
 def run_agent(llm, chat: dict, clips: list[dict], history: list[dict], message: str, excerpt=None,
-              attachments: tuple[dict, ...] = ()) -> dict:
+              attachments: tuple[dict, ...] = (), lessons: str = "") -> dict:
     """-> {"reply", "actions", "notes"}; never raises for LLM problems."""
     turns = [f"{'User' if m['role'] == 'user' else 'Assistant'}: {m['content'][:400]}"
              for m in history[-10:] if m.get("kind") in ("text", "error") and m.get("content")]
@@ -401,7 +403,7 @@ def run_agent(llm, chat: dict, clips: list[dict], history: list[dict], message: 
                   else "Write \"reply\" in the same language as the new user message.")
     attached = ("\nATTACHED TO THIS MESSAGE: " + ", ".join(f"{a['name']} ({a['kind']})" for a in attachments)
                 + ", usable in edits (music, logo, intro / outro, LUT)") if attachments else ""
-    prompt = (f"STATE:\n{build_state(chat, clips, excerpt)}\n\nCONVERSATION SO FAR:\n" + ("\n".join(turns) or "(empty)")
+    prompt = (f"STATE:\n{build_state(chat, clips, excerpt, lessons)}\n\nCONVERSATION SO FAR:\n" + ("\n".join(turns) or "(empty)")
               + f"\n\nNEW USER MESSAGE:\n{message}{attached}\n\n{reply_rule}")
     fast = fast_path(message, chat, bool(clips))
     reply, raw_actions = "", []

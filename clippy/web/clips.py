@@ -21,7 +21,8 @@ def slim_info(info: dict) -> dict:
 def present_post(post: dict) -> dict:
     problem = post.get("problem") or {}
     return {"platform": post["platform"], "state": post["state"], "url": post["url"], "created": post["created"],
-            **({"error_t": problem} if problem.get("key") else {})}
+            **({"error_t": problem} if problem.get("key") else {}),
+            **({"stats": post["stats"]} if post.get("stats") else {})}
 
 
 class ClipPresenter:

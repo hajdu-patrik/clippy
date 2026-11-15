@@ -9,11 +9,12 @@ import traceback
 
 from ..download import latest_uploads, require_public_url
 from ..tools import ClippyError, log
-from . import schedule
+from . import results, schedule
 from .jobs import english, tx
 from .presets import PRESETS
 
 TICK = 30.0
+MEASURE_EVERY = 600.0
 EVERY_MINUTES = (15, 30, 60, 180, 360, 1440)
 DEFAULT_EVERY = 60
 LIST_LIMIT = 10
@@ -58,6 +59,7 @@ class Watcher:
         self.db, self.runner, self.hub, self.clock = db, runner, hub, clock
         self.lister = lister or (lambda url, limit: latest_uploads(url, limit))
         self._lock = threading.Lock()
+        self._measured = 0.0
 
     def start(self) -> None:
         threading.Thread(target=self._loop, name="clippy-watch", daemon=True).start()
@@ -74,6 +76,9 @@ class Watcher:
         with self._lock:
             self.post_due()
             now = self.clock()
+            if now - self._measured >= MEASURE_EVERY:
+                self._measured = now
+                self.measure()
             for w in self.db.list_watches():
                 every = 60 * int((w.get("settings") or {}).get("every") or DEFAULT_EVERY)
                 if w["enabled"] and now - float(w["checked"] or 0) >= every:
@@ -92,6 +97,13 @@ class Watcher:
                 started += 1
             self.refresh_clip(item["chat_id"], item["number"])
         return started
+
+    def measure(self) -> int:
+        """Reads how the recent posts are doing; the open windows refresh their cards when something changed."""
+        done = results.refresh(self.db, self.runner.accounts, self.clock())
+        if done:
+            self.hub.publish(None, {"type": "results"})
+        return done
 
     def refresh_clip(self, chat_id: int, number: int) -> None:
         row = next((c for c in self.db.current_clips(chat_id) if c["number"] == number), None)

@@ -509,3 +509,14 @@ kbd { font: 11px var(--mono); color: var(--faint); border: 1px solid var(--borde
   .account.watch { flex-direction: column; align-items: stretch; }
   .watch-btns { justify-content: flex-start; }
 }
+.post-stats { display: block; color: var(--muted); font-size: 12px; margin-top: 2px; }
+.findings { list-style: none; margin: 0 0 8px; padding: 0; display: grid; gap: 6px; }
+.finding { display: flex; justify-content: space-between; gap: 10px; padding: 8px 12px; border-radius: 10px;
+  background: var(--bg-elev); border: 1px solid var(--border); font-size: 13.5px; }
+.finding b { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.finding.up b { color: var(--ok); }
+.finding.down b { color: var(--danger); }
+.finding small { display: block; color: var(--muted); font-size: 12px; }
+.small-btn { min-height: 34px; padding: 0 14px; border-radius: 999px; font: inherit; font-size: 13px; font-weight: 700;
+  cursor: pointer; background: transparent; color: var(--text); border: 1px solid var(--border); }
+.small-btn:disabled { opacity: .6; cursor: wait; }

@@ -33,7 +33,7 @@ from ..tools import ClippyError, SharedProgress, atomic_write_text, log, log_sin
 from .agent import RENDER_KEYS
 from .clips import ClipLibrary, ClipPresenter, slim_info
 from .hub import Hub
-from . import schedule
+from . import results, schedule
 
 PLACEHOLDER_TITLE = "Processing video…"
 WORKERS = max(1, int(os.environ.get("CLIPPY_WORKERS", "3")))
@@ -477,7 +477,8 @@ class GenerateJob(JobHandler):
             updates["title"] = proj.title[:80]
         ctx.runner.hub.publish(chat["id"], {"type": "chat", "chat": ctx.db.update_chat(chat["id"], **updates)})
         existing = [Clip.from_dict(c["clip"]) for c in ctx.current_clips()] if same_video else []
-        clips = proj.select(n=p.get("n"), exclude=existing, instructions=p.get("instructions") or "")
+        clips = proj.select(n=p.get("n"), exclude=existing, instructions=p.get("instructions") or "",
+                            lessons=results.lessons(results.insights(ctx.db)))
         first = ctx.db.next_number(chat["id"])
         n = self.render_new(ctx, proj, clips, render_options(chat_opts))
         if p.get("autopost") and not p.get("planned"):
@@ -504,7 +505,8 @@ class MoreJob(JobHandler):
         opts = ctx.options(p.get("options"))
         proj = ctx.project(chat["source"], opts)
         existing = [Clip.from_dict(c["clip"]) for c in ctx.current_clips()]
-        clips = proj.select(n=p.get("n", 3), exclude=existing, instructions=p.get("instructions") or "", opts=opts)
+        clips = proj.select(n=p.get("n", 3), exclude=existing, instructions=p.get("instructions") or "", opts=opts,
+                            lessons=results.lessons(results.insights(ctx.db)))
         n = self.render_new(ctx, proj, clips, render_options({**(chat.get("options") or {}), **p.get("options", {})}))
         return tx("done.more", n=n)
 

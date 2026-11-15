@@ -6,6 +6,9 @@ change, what changed rather than how; dates are ISO 8601.
 ## [Unreleased]
 
 ### Added
+- Learning from results: views, likes, comments, shares and the share watched are read back from YouTube (with
+  YouTube Analytics) and Instagram onto each post; *What works* in Settings compares clips with the creator's usual
+  by opening, length, kind of moment and posting time, and the clear patterns steer the picker and the chat.
 - Watched channels: a YouTube channel (uploads and past streams), a Twitch channel or a playlist is checked for new
   videos on a schedule, from Settings or the chat ("figyeld ezt a csatornát"); every new video becomes its own chat
   with clips of the chosen kind.

@@ -14,7 +14,7 @@ from ..publish import LABELS, PLATFORMS
 from ..storage import Storage
 from ..tools import ClippyError
 from . import agent
-from . import schedule
+from . import results, schedule
 from .clips import ClipLibrary, ClipPresenter
 from .hub import Hub
 from .jobs import PLACEHOLDER_TITLE, Runner
@@ -149,8 +149,9 @@ class ChatService:
         excerpt = project.transcript_text if project is not None and project.transcript is not None else None
         self.hub.publish(chat_id, {"type": "thinking", "on": True})
         try:
+            learned = results.lessons(results.insights(self.db), ("hook", "length", "kind", "hour"))
             result = agent.run_agent(self.llm_factory(), chat, self.db.current_clips(chat_id), history, text, excerpt,
-                                     tuple(attached))
+                                     tuple(attached), learned)
         finally:
             self.hub.publish(chat_id, {"type": "thinking", "on": False})
         notes = list(result["notes"])

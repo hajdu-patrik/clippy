@@ -26,6 +26,7 @@
   <link rel="modulepreload" href="/static/js/settings.js">
   <link rel="modulepreload" href="/static/js/publish.js">
   <link rel="modulepreload" href="/static/js/watches.js">
+  <link rel="modulepreload" href="/static/js/results.js">
   <link rel="modulepreload" href="/static/js/messages.js">
   <link rel="modulepreload" href="/static/js/cards.js">
   <link rel="modulepreload" href="/static/js/progress.js">
@@ -183,6 +184,13 @@
             <button type="button" class="primary" id="igSave" data-i18n="accounts.tokenSave">Connect</button>
           </div>
         </div>
+      </section>
+      <section class="results" aria-labelledby="resultsTitle">
+        <h3 id="resultsTitle" data-i18n="results.title">What works</h3>
+        <p class="hint" id="resultsSummary" data-i18n="results.hint">Clippy reads back how your posted clips do and picks more of what works.</p>
+        <p class="hint warn" id="resultsAnalytics" hidden data-i18n="results.reconnect">Connect YouTube again so Clippy can also read how much of each clip people watch.</p>
+        <ul class="findings" id="resultsList"></ul>
+        <button type="button" class="ghost small-btn" id="resultsRefresh" data-i18n="results.refresh">Read the numbers now</button>
       </section>
       <section class="watches" aria-labelledby="watchesTitle">
         <h3 id="watchesTitle" data-i18n="watch.title">Watched channels</h3>

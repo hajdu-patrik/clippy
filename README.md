@@ -175,6 +175,10 @@ Posts can wait for their time: choose *At a set time* in the Post dialog, and th
 (*18:00, 21:00*) and each new clip takes the next free time, one clip per time across all channels. That is off until
 you set both, and it uses your own connected accounts (YouTube public, TikTok drafts).
 
+**Learning from the results.** The numbers of every post (views, likes, comments, shares, how much people watch)
+come back onto its card, and *Settings, What works* shows which openings, lengths, kinds of moment and posting times
+do better than your usual. The clear patterns steer the picker for the next videos.
+
 ## Configuration
 
 `.env` (copied from [.env.example](.env.example)) and environment variables:

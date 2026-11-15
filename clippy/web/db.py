@@ -80,7 +80,7 @@ CREATE INDEX IF NOT EXISTS idx_msg_chat ON messages(chat_id, id);
 CREATE INDEX IF NOT EXISTS idx_clip_chat ON clips(chat_id, number, version);
 """
 
-_JSON_COLS = {"options", "data", "clip", "overrides", "info", "problem", "settings", "seen", "platforms"}
+_JSON_COLS = {"options", "data", "clip", "overrides", "info", "problem", "settings", "seen", "platforms", "stats"}
 
 
 def _row(r: sqlite3.Row | None) -> dict | None:
@@ -111,6 +111,9 @@ class DB:
                 self.conn.execute("ALTER TABLE chats ADD COLUMN video_id TEXT")
             if "timeline" not in {r[1] for r in self.conn.execute("PRAGMA table_info(clips)")}:
                 self.conn.execute("ALTER TABLE clips ADD COLUMN timeline TEXT")
+            if "stats" not in {r[1] for r in self.conn.execute("PRAGMA table_info(posts)")}:
+                self.conn.execute("ALTER TABLE posts ADD COLUMN stats TEXT NOT NULL DEFAULT '{}'")
+                self.conn.execute("ALTER TABLE posts ADD COLUMN stats_at REAL NOT NULL DEFAULT 0")
             try:
                 self.conn.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_clip_version ON clips(chat_id, number, version)")
             except sqlite3.IntegrityError:
@@ -301,3 +304,19 @@ class DB:
         """Moves a planned post on (started, cancelled); False when it was not planned any more."""
         return self._exec("UPDATE scheduled SET state = ? WHERE id = ? AND state = ?",
                           (state, item_id, only_from)).rowcount > 0
+
+    def posts_to_measure(self, now: float, every: float, max_age: float) -> list[dict]:
+        """Posts that went up (not failed) on a platform that tells how they did, not read for `every` seconds."""
+        return self._all(
+            "SELECT p.*, c.info AS info FROM posts p JOIN clips c ON c.id = p.clip_id WHERE p.state != 'failed' "
+            "AND p.remote_id != '' AND p.platform IN ('youtube', 'instagram') AND p.created > ? AND p.stats_at < ? "
+            "ORDER BY p.stats_at, p.id", (now - max_age, now - every))
+
+    def set_post_stats(self, post_id: int, stats: dict, at: float) -> None:
+        self._exec("UPDATE posts SET stats = ?, stats_at = ? WHERE id = ?", (json.dumps(stats), at, post_id))
+
+    def measured_posts(self) -> list[dict]:
+        """Every post with stats, with its clip: what was posted and how it did."""
+        return self._all(
+            "SELECT p.*, c.clip AS clip, c.info AS info FROM posts p JOIN clips c ON c.id = p.clip_id "
+            "WHERE p.stats_at > 0 ORDER BY p.id")
