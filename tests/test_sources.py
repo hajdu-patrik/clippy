@@ -77,7 +77,7 @@ def test_a_short_video_becomes_one_clip_of_nearly_all_of_it(monkeypatch, tmp_pat
     proj, seen = project_with(monkeypatch, tmp_path, 15.0, [{"word": "hi", "start": 0.5, "end": 1.0}])
     [clip] = proj.select(n=5)
     assert seen == {"n": 1, "min_len": 9.0, "max_len": 15.0}
-    assert (clip.start, clip.end, clip.hook) == (0.0, 15.0, "h")
+    assert (clip.start, clip.end, clip.hook, clip.alt_hook) == (0.0, 15.0, "", "")
     with pytest.raises(ClippyError):
         proj.select(exclude=[clip])
     proj, seen = project_with(monkeypatch, tmp_path, 3300.0, [{"word": "hi", "start": 0.5, "end": 1.0}])

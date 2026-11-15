@@ -20,7 +20,7 @@ def test_a_full_request_becomes_one_new_version(timeline, ctx, catalogue):
     assert result.ok and result.changed and not result.touches_base
     assert result.timeline.version == timeline.version + 1
     assert [c.text("en") for c in result.changes] == [
-        "Added music summer.mp3", "Added outro outro.mp4", "Removed hook “Elvesztettem magam – miért?”"]
+        "Added music summer.mp3", "Added outro outro.mp4", "Removed opening text “Elvesztettem magam – miért?”"]
 
 
 def test_one_failing_operation_keeps_the_old_timeline_and_reports_why(timeline, ctx, catalogue):

@@ -69,11 +69,13 @@ def test_post_text_is_ready_to_paste_in_the_clip_language():
     caption, notes = text.split("\n---\n")
     assert caption.strip() == "Miért hagyta abba?\n\nTe abbahagytad volna?\n\n#zene"
     assert "Kitűzött komment: A teljes videó: https://youtu.be/x" in notes
-    assert "Hook (kérdés): Erről senki nem beszél" in notes and "B hook (A/B teszt): Tíz év hazugság" in notes
+    assert "Nyitó felirat (kérdés): Erről senki nem beszél" in notes and "B nyitó felirat (A/B teszt): Tíz év hazugság" in notes
     assert "kiragadva félreérthető" in notes
     english = post_text(Clip(0, 20, 50, hook="Nobody tells you this", title="Why he quit"), "u",
                         {"duration_out": 20, "dead_air_removed": 0})
-    assert "Pinned comment: Full video: u" in english and "B hook" not in english
+    assert "Pinned comment: Full video: u" in english and "B opening text" not in english
+    whole = post_text(Clip(0, 15, 50, title="Why he quit"), "u", {"duration_out": 15, "dead_air_removed": 0})
+    assert "Opening text" not in whole
 
 
 def test_captions_stay_clear_of_the_right_hand_buttons():

@@ -55,7 +55,7 @@ Actions:
 
 options (all optional, for generate / more):
   n (1-12), min_len / max_len (clip length in seconds), cta (end text, max 80 chars, "" = none),
-  hook (true/false: show hook text), highlight ("yellow","green","cyan","red","white"), uppercase (true/false),
+  hook (true/false: show the opening text over the first 3 s), highlight ("yellow","green","cyan","red","white"), uppercase (true/false),
   layout ("auto","face","center","blur","stream"), tighten (true/false: cut dead air), punch (true/false: zoom on cuts),
   audio ("voice","natural"), duck (0-15 dB music lowering under speech), lang (SPOKEN language of the video: "hu" or "en"; "auto" = detect),
   captions (language of the captions + hook on the video: "hu" or "en"; "auto" = same as spoken; a different one is
@@ -63,7 +63,8 @@ options (all optional, for generate / more):
 
 Rules:
 - Clip numbers are the "#" numbers in the state below. "the last one" / "az utolsó" = highest number.
-- Hook texts you write: max 7 words, in the VIDEO's language, punchy, honest (paid off in the clip).
+- The hook is the clip's first 3 seconds (a funny, bold or surprising moment); the opening text only supports
+  it, and short videos that already open strongly get none. Opening texts you write: max 7 words, in the VIDEO's language, punchy, honest (paid off in the clip).
 - Any request about how existing clips look or sound is an "edit"; new clips are "generate" / "more".
 - If the user asks for something the app cannot do, say so kindly in "reply" and use {"type":"none"}.
 - If there is no video yet and no link in the message, ask for a video link (YouTube, TikTok, Instagram, Twitch…).

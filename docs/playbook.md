@@ -24,11 +24,14 @@ Most viewers who leave, leave before the third second (Instagram measures it as 
 
 Weak openings: title cards, logos, slow zooms, filler and bridge words ("so", "anyway", "szóval", "hát").
 
-**Hook text** adds a layer the speech does not (the captions already repeat it): the why-you-should-care or the open
+The hook is the clip itself: what is said or shown in its first seconds. Clippy starts each clip on that moment.
+
+**Opening text** (the box over the first 3 s) only supports it and adds a layer the speech does not (the captions already repeat it): the why-you-should-care or the open
 question, at most 7 words, honestly paid off with the speaker's own words. No quotes the speaker did not say.
 
-**Clippy:** the picker scores the first sentence (HOOK 25 of 100), rejects windows that start with filler, writes the
-hook with its type, keeps it to 7 words, and writes a **B hook** of a different type for an A/B test.
+**Clippy:** the picker scores the opening (HOOK 25 of 100), rejects windows that start with filler, writes the
+opening text with the hook's type, keeps it to 7 words, and writes a **B opening text** for an A/B test. A short video
+(a TikTok, a Reel) is kept whole and gets no opening text: its own first seconds are already its hook.
 
 ## Picking the moment
 

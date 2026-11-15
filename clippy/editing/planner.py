@@ -29,7 +29,9 @@ operations; the app validates and renders them. Return ONLY JSON: {"reply": "...
   {"type": "word", "word": "pénz"}, {"type": "phrase", "phrase": "senki nem tud"}, {"type": "edge", "edge": "end",
   "offset": -3} (the last 3 s), {"type": "at", "at": 4.5}. A span is {"start": ref, "end": ref} or {"start": ref,
   "length": seconds}; no span = the whole clip.
-- The big text over the first seconds is the HOOK (layer "hook"; users may call it title, "cím", "felirat az elején").
+- The big text over the first seconds is the OPENING TEXT (layer "hook"; users may call it hook, title, "cím",
+  "nyitó felirat", "felirat az elején", "fekete szöveg"). The hook itself is the clip's first 3 seconds: to make it
+  stronger, start the clip on the funny, bold or surprising moment.
   The text at the end is the CTA (layer "cta"). Captions are the word-by-word subtitles (layer "captions").
 - A misheard word in the captions ("nem X-et mond, hanem Y-t", "javítsd a feliratban") -> fix_caption with the
   words as they are written in the transcript below and what is really said; one operation per wrong word or phrase.

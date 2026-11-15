@@ -104,7 +104,7 @@ def test_trim_camera_and_bumpers(timeline, ctx):
 def test_remove_layer_describes_what_went(timeline, ctx):
     tl, changes = RemoveLayer(layer="hook").apply(timeline, ctx)
     assert tl.text_with_role("hook") is None
-    assert texts(changes, "hu") == ["Eltávolítva: „Elvesztettem magam – miért?” hook"]
+    assert texts(changes, "hu") == ["Eltávolítva: „Elvesztettem magam – miért?” nyitó felirat"]
     with pytest.raises(ClippyError):
         RemoveLayer(layer="nothing").apply(timeline, ctx)
 

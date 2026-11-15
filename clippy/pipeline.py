@@ -99,7 +99,9 @@ def post_text(clip: Clip, source: str, info: dict) -> str:
 
     caption = "\n\n".join(x for x in (clip.title, clip.question, " ".join(clip.hashtags)) if x)
     kind = f" ({tr('hooktype.' + clip.hook_type)})" if clip.hook_type else ""
-    notes = [f"{tr('post.pinned')}: {tr('post.full_video', url=source)}", f"{tr('post.hook')}{kind}: {clip.hook}"]
+    notes = [f"{tr('post.pinned')}: {tr('post.full_video', url=source)}"]
+    if clip.hook:
+        notes.append(f"{tr('post.hook')}{kind}: {clip.hook}")
     if clip.alt_hook:
         notes.append(f"{tr('post.alt_hook')}: {clip.alt_hook}")
     notes += [f"{tr('post.source')}: {source}  ({fmt_ts(clip.start)}–{fmt_ts(clip.end)})",
@@ -219,7 +221,8 @@ class Project:
     def select(self, n: int | None = None, exclude: list[Clip] | tuple = (), instructions: str | None = None,
                opts: Options | None = None) -> list[Clip]:
         """The best moments. A short source (a TikTok, a Reel) becomes one clip of all of it, the LLM only writes its
-        texts; without speech it gets no texts, since moments and hooks come from what is said."""
+        texts; without speech it gets no texts, since moments and hooks come from what is said. A short video's own
+        first seconds are its hook, so it gets no opening text over them."""
         self.prepare()
         o = opts or self.opts
         duration = float((self.transcript or {}).get("duration") or (self.words[-1]["end"] if self.words else 0.0))
@@ -246,6 +249,7 @@ class Project:
             raise ClippyError(key="error.no_suitable_clip")
         if short:
             clips[0].start, clips[0].end = 0.0, min(duration, o.max_len)
+            clips[0].hook = clips[0].alt_hook = ""
         return clips[:1] if short else clips
 
     def audio_source(self, duck: float) -> Path | None:

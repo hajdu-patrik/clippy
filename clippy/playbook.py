@@ -84,8 +84,9 @@ def risk_guide() -> str:
 def selection_rules(min_len: int, max_len: int) -> str:
     """The rubric and rules the clip-picking prompt scores candidates with."""
     return f"""Score each candidate 0-100 with this rubric:
-- HOOK (25): the first sentence grabs attention within 2-3 seconds: a specific claim, a surprising number, real
-  tension, a direct question or the middle of the action. Most viewers who leave, leave before the third second.
+- HOOK (25): the hook is the clip's own first 2-3 seconds, what is said or shown there: a funny moment, a bold
+  or surprising statement, a specific number, real tension, a direct question, the middle of an action or a
+  demonstration. Most viewers who leave, leave before the third second, so the clip starts ON that moment.
 - STANDALONE (20): a new viewer understands it without the rest of the video; no unresolved "he/that/it".
 - PAYOFF (20): a complete arc (setup -> tension -> payoff, punchline or insight) that ends right after the payoff.
 - EMOTION (15): strong emotion, humour, conflict, vulnerability or a surprising twist.
@@ -99,20 +100,21 @@ Rules:
   land the payoff later, then stop within about 2 seconds.
 - Reject windows that start with filler or bridge words ("so", "anyway", "as I said", "um", "szóval", "hát", "na",
   "ugye", "és"), start or end mid-sentence, need earlier context, or whose payoff falls after the cut.
-- Never pick a moment only because it is loud; the promise of the hook must be paid off inside the clip."""
+- Never pick a moment only because it is loud; the promise of the opening must be paid off inside the clip."""
 
 
 def writing_rules(text_language: str) -> str:
-    """How the prompt should write the hook, the A/B hook, the comment question, the title and the hashtags."""
+    """How the prompt should write the opening text, its A/B pair, the comment question, the title and the hashtags."""
     return f"""On-screen and post texts, written by a native {text_language} social media editor:
-- "hook": the on-screen text for the first 3 seconds, at most {HOOK_MAX_WORDS} words (ideally 4-6). It adds a
+- "hook": the opening TEXT shown over the first 3 seconds, supporting the hook moment the clip opens on; at most
+  {HOOK_MAX_WORDS} words (ideally 4-6). It adds a
   DIFFERENT layer than the first spoken line (the captions already repeat the speech): the why-you-should-care or
   the open question. Honest: the clip pays it off with the speaker's own words (ethical clickbait, no lies, no
   quotes the speaker did not say). Do NOT restate the video title: every hook is specific to its own clip's
   payoff. Do NOT prefix it with the speaker's or show's name ("Danny: ...") and do not wrap it in quotes; no emojis.
-- "hook_type": which kind of hook it is, one of:
+- "hook_type": which kind of hook the clip's opening is, one of:
 {hook_guide()}
-- "alt_hook": a second hook for an A/B test, same rules, a DIFFERENT hook_type than "hook".
+- "alt_hook": a second opening text for an A/B test, same rules, a different angle than "hook".
 - "question": one short question (max {QUESTION_MAX_WORDS} words) addressed to the VIEWER about their own
   opinion or experience, tied to this clip, that they want to answer in the comments ("Would you have taken the
   deal?", "Te mit tettél volna a helyében?"); not a quiz about the speaker; never "like and follow".
@@ -126,7 +128,9 @@ def writing_rules(text_language: str) -> str:
 def editor_rules() -> str:
     """Craft rules for the clip editor: what a good change looks like when the request leaves room."""
     return f"""Craft rules (apply them when the request leaves room, e.g. "make it better / more viral"):
-- Hook: at most {HOOK_MAX_WORDS} words in the first 3 s, adds curiosity the speech does not, honestly paid off.
+- Hook: the clip's first 3 s themselves (start on the funny, bold or surprising moment, cut what comes before).
+- Opening text (layer "hook"): optional, at most {HOOK_MAX_WORDS} words, adds curiosity the speech does not, honestly
+  paid off; a short video that already opens strongly (a TikTok, a selfie video) needs none.
 - CTA: after the payoff, short and low-friction: a comment question or "Part 2 on my profile"; never a hard sell.
 - Text placement: platform buttons cover the bottom ~20% and the right edge; keep texts at the top or centre and
   never over the face.

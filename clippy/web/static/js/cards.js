@@ -35,8 +35,8 @@ export function cardHtml(id) {
       <span class="badge ${old ? "" : "cur"}">#${c.number} · v${c.version}</span>
     </div>
     <div class="meta">
-      <h3 class="hook">${esc(d.hook || "")}</h3>
-      <div class="title">${esc(d.title || "")}</div>
+      <h3 class="hook">${esc(d.hook || d.title || "")}</h3>
+      ${d.hook ? `<div class="title">${esc(d.title || "")}</div>` : ""}
       <div class="facts"><span>${fmtTs(d.start)}–${fmtTs(d.end)}</span><span>${duration.toFixed(1)} s</span>
         ${d.score != null ? `<span>${esc(t("card.score", { s: Math.round(d.score) }))}</span>` : ""}${removed}${kind}${risky}</div>
       ${(d.hashtags || []).length ? `<div class="tags">${esc(d.hashtags.join(" "))}</div>` : ""}

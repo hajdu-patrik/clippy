@@ -28,7 +28,7 @@ def build_parser(lang: str | None = None) -> argparse.ArgumentParser:
     p.add_argument("--wish", default="", help='what kind of moments to pick, e.g. "the funniest parts"')
     p.add_argument("--lang", default=None, choices=("hu", "en"), help="spoken language (default: detect hu/en)")
     p.add_argument("--captions", default=None, choices=("hu", "en"),
-                   help="language of captions and hook (default: the spoken one; another one is translated)")
+                   help="language of captions and opening text (default: the spoken one; another one is translated)")
     p.add_argument("--whisper", default="auto",
                    help="Whisper model: auto (GPU: large-v3, CPU: large-v3-turbo), large-v3, large-v3-turbo, small")
     p.add_argument("--vocab", default="",
@@ -42,7 +42,7 @@ def build_parser(lang: str | None = None) -> argparse.ArgumentParser:
                    help="auto | face (speaker tracking) | center | blur (gameplay) | stream (facecam on top, game below)")
     p.add_argument("--facecam", default=None, help="stream layout: x,y,w,h in source pixels")
     p.add_argument("--cta", default="", help='closing call to action for the last 3 s, e.g. "Follow for part 2!"')
-    p.add_argument("--no-hook", action="store_true", help="no hook text in the first 3 seconds")
+    p.add_argument("--no-hook", action="store_true", help="no opening text over the first 3 seconds")
     p.add_argument("--highlight", default="yellow", choices=sorted(COLORS), help="colour of the highlighted word")
     p.add_argument("--no-upper", action="store_true", help="captions not in upper case")
     p.add_argument("--font", default="Arial Black", help="caption font (Windows font name)")
