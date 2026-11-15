@@ -57,12 +57,12 @@ class Options:
     layout: str = "auto"
     facecam: tuple[int, int, int, int] | None = None
     cta: str = ""
-    hook: bool = True
+    hook: bool = False
     highlight: str = "yellow"
     uppercase: bool = True
     font: str = "Arial Black"
     tighten: bool = True
-    punch: bool = True
+    punch: bool = False
     audio: str = "voice"
     duck: float = 0.0
     encoder: str = "auto"

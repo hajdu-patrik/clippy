@@ -67,7 +67,8 @@ Every stage is cached, so re-runs are fast.
 | `--llm ollama/openai/none` | hook picker (also settable in `.env`) |
 | `--layout auto/face/center/blur/stream` | `auto`: decides per shot (speaking face → tracking, otherwise blur) |
 | `--facecam x,y,w,h` | facecam for the stream layout (estimated automatically otherwise) |
-| `--no-tighten` / `--no-punch` | keep dead air / no punch-in zoom |
+| `--no-tighten` | keep dead air and filler words |
+| `--hook` / `--punch` | burn the suggested opening text / punch-in zoom on cuts (both off by default: a clip is the moment, framed, with captions) |
 | `--audio natural` | loudness normalisation only, no speech EQ or compressor (music, gameplay) |
 | `--isolate auto/on/off`, `--no-align`, `--duck 6` | voice isolation, word alignment, music ducking (dB) |
 | `--encoder x264` | CPU x264 slow CRF 16 instead of NVENC |

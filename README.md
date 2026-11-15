@@ -16,11 +16,12 @@ free. Paste a link into a ChatGPT-style chat and it:
 
 * **picks the moments with the strongest hooks** with a local LLM (Qwen3-14B through Ollama), ranked against each other,
 * **cuts them tight**: dead air and filler words out, cuts on real word boundaries,
-* **frames the speaker** with a virtual camera (shot detection, face tracking, active speaker, punch-ins),
-* **adds animated word-by-word captions**, a hook for the first 3 seconds and a closing call to action,
+* **frames the speaker** with a virtual camera (shot detection, face tracking, active speaker),
+* **adds animated word-by-word captions** from the transcript,
 * **masters the sound** for phones (voice EQ, compressor, two-pass −14 LUFS),
-* lets you **refine everything in the chat** – *"make clip 2's hook punchier and start it 2 s earlier"* – in
-  **Hungarian or English**.
+* and nothing else: a new clip is the moment itself. Everything more – opening text, CTA, music, effects, stickers,
+  sound effects, speed, another format, B-roll, joined clips – you **ask for in the chat** (*"start clip 2 two
+  seconds earlier and put the opening text on it"*), in **Hungarian or English**.
 
 No subscription and no upload: fast on an NVIDIA RTX GPU, and it also runs on the CPU.
 

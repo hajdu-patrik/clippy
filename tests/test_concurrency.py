@@ -281,7 +281,7 @@ class BaseProject(SlowProject):
         hidden.write_bytes(b"base")
         info["base"] = {"video": str(hidden), "words": [{"word": "hi", "start": 0, "end": 1}],
                         "intervals": [(clip.start, clip.end)], "fps": 25.0, "rate": "25/1", "layout": self.layout,
-                        "punch": True, "tighten": True, "audio": "voice", "duck": 0.0}
+                        "punch": False, "tighten": True, "audio": "voice", "duck": 0.0}
         return info
 
 

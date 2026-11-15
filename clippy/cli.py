@@ -42,13 +42,13 @@ def build_parser(lang: str | None = None) -> argparse.ArgumentParser:
                    help="auto | face (speaker tracking) | center | blur (gameplay) | stream (facecam on top, game below)")
     p.add_argument("--facecam", default=None, help="stream layout: x,y,w,h in source pixels")
     p.add_argument("--cta", default="", help='closing call to action for the last 3 s, e.g. "Follow for part 2!"')
-    p.add_argument("--no-hook", action="store_true", help="no opening text over the first 3 seconds")
+    p.add_argument("--hook", action="store_true", help="burn the suggested opening text over the first 3 seconds")
     p.add_argument("--highlight", default="yellow", choices=sorted(COLORS), help="colour of the highlighted word")
     p.add_argument("--no-upper", action="store_true", help="captions not in upper case")
     p.add_argument("--font", default="Arial Black", help="caption font (Windows font name)")
     p.add_argument("--no-tighten", action="store_true",
                    help="keep dead air and filler words inside clips (e.g. music or mood pieces)")
-    p.add_argument("--no-punch", action="store_true", help="no punch-in zoom on cuts")
+    p.add_argument("--punch", action="store_true", help="punch-in zoom on cuts")
     p.add_argument("--audio", default="voice", choices=["voice", "natural"],
                    help="voice: speech EQ + compressor (default) | natural: loudness normalisation only")
     p.add_argument("--isolate", default="auto", choices=["auto", "on", "off"],
@@ -80,8 +80,8 @@ def options_from_args(args) -> Options:
         n=args.clips, min_len=args.min_len, max_len=args.max_len, instructions=args.wish, llm=args.llm,
         model=args.model, lang=args.lang, captions=args.captions, whisper=args.whisper, vocab=args.vocab,
         title_vocab=not args.no_title_vocab, device=args.device, isolate=args.isolate, align=not args.no_align,
-        layout=args.layout, facecam=facecam, cta=args.cta, hook=not args.no_hook, highlight=args.highlight,
-        uppercase=not args.no_upper, font=args.font, tighten=not args.no_tighten, punch=not args.no_punch,
+        layout=args.layout, facecam=facecam, cta=args.cta, hook=args.hook, highlight=args.highlight,
+        uppercase=not args.no_upper, font=args.font, tighten=not args.no_tighten, punch=args.punch,
         audio=args.audio, duck=args.duck, encoder=args.encoder, cookies_from_browser=args.cookies_from_browser,
     )
 

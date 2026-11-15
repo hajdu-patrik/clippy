@@ -40,6 +40,8 @@ change, what changed rather than how; dates are ISO 8601.
   profile / channel / playlist link, no video in the post, no sound – each with what helps.
 
 ### Changed
+- A new clip is only the moment, framed vertically, with captions: the opening text and punch-in zooms are off by
+  default (`--hook`, `--punch` or a chat request turn them on); the suggested opening texts stay on the card as ideas.
 - The hook is the clip's own first seconds (a funny, bold or surprising moment the clip starts on); the text
   over them is now called the opening text. Short videos kept whole (a TikTok, a Reel) get no opening text.
 - Edits render in two passes: the camera-framed base is cached per cut, so caption, colour, overlay and music edits

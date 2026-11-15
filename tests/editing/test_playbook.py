@@ -69,7 +69,7 @@ def test_post_text_is_ready_to_paste_in_the_clip_language():
     caption, notes = text.split("\n---\n")
     assert caption.strip() == "Miért hagyta abba?\n\nTe abbahagytad volna?\n\n#zene"
     assert "Kitűzött komment: A teljes videó: https://youtu.be/x" in notes
-    assert "Nyitó felirat (kérdés): Erről senki nem beszél" in notes and "B nyitó felirat (A/B teszt): Tíz év hazugság" in notes
+    assert "Nyitó felirat ötlet (kérdés): Erről senki nem beszél" in notes and "B nyitó felirat ötlet (A/B teszt): Tíz év hazugság" in notes
     assert "kiragadva félreérthető" in notes
     english = post_text(Clip(0, 20, 50, hook="Nobody tells you this", title="Why he quit"), "u",
                         {"duration_out": 20, "dead_air_removed": 0})
@@ -88,7 +88,7 @@ def test_editor_sees_the_craft_rules_and_the_unused_ideas(timeline, words, asset
     req = EditRequest("legyen ütősebb", timeline, tuple(asset_index.assets.values()), (), tuple(words), 1, "Cím",
                       "Tíz év hazugság", "Te mit tettél volna?")
     state = PromptFormatter().state(req)
-    assert 'Alternative hook for an A/B test (not on the video): "Tíz év hazugság"' in state
+    assert 'Alternative opening text for an A/B test (not on the video): "Tíz év hazugság"' in state
     assert 'Suggested comment question, usable as a CTA: "Te mit tettél volna?"' in state
     llm = FakeLLM({"reply": "Kész.", "operations": [{"kind": "set_hook", "text": "Tíz év hazugság"}]})
     EditPlanner(llm).plan(req, ctx)

@@ -27,7 +27,7 @@ def assets() -> AssetIndex:
 @pytest.fixture
 def timeline():
     clip = {"start": 100.0, "end": 120.0, "hook": "Elvesztettem magam – miért?"}
-    return timeline_from_clip(clip, {"highlight": "green", "cta": "Kövess!", "layout": "face"})
+    return timeline_from_clip(clip, {"highlight": "green", "cta": "Kövess!", "layout": "face", "hook": True})
 
 
 @pytest.fixture

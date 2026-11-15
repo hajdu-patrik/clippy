@@ -64,7 +64,7 @@ class EditService:
         info = row["clip"]
         req = EditRequest(request, timeline, tuple(index.assets.values()), tuple(attached), tuple(words), number,
                           info.get("title", ""), info.get("alt_hook", ""), info.get("question", ""),
-                          tuple(sorted(others)))
+                          tuple(sorted(others)), info.get("hook", ""))
         plan = self.planner.plan(req, ctx)
         if plan.control("undo"):
             return self.undo(chat_id, number, plan.reply)
@@ -84,7 +84,7 @@ class EditService:
         rendered = renderer.render(timeline, index, out, FINAL, captions.language if captions else None,
                                    self.joined(chat_id, timeline))
         hook = timeline.text_with_role("hook")
-        clip["hook"] = rendered.info.get("hook") or (hook.text if hook else "")
+        clip["hook"] = rendered.info.get("hook") or (hook.text if hook else clip.get("hook", ""))
         txt = out.with_suffix(".txt")
         atomic_write_text(txt, post_text(Clip.from_dict(clip), project.source, rendered.info))
         version = NewVersion(clip, rendered.info, str(out), str(out.with_suffix(".jpg")), str(txt), timeline.to_json())

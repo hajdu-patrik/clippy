@@ -94,6 +94,7 @@ class EditRequest:
     alt_hook: str = ""
     question: str = ""
     others: tuple[int, ...] = ()
+    hook_idea: str = ""
 
     @property
     def language(self) -> str:
@@ -131,7 +132,9 @@ class PromptFormatter:
 
     @staticmethod
     def _ideas(req: EditRequest) -> list[str]:
-        ideas = [("Alternative hook for an A/B test (not on the video)", req.alt_hook),
+        shown = req.timeline.text_with_role("hook") is not None
+        ideas = [("Suggested opening text (not on the video; set_hook puts it there)", "" if shown else req.hook_idea),
+                 ("Alternative opening text for an A/B test (not on the video)", req.alt_hook),
                  ("Suggested comment question, usable as a CTA", req.question)]
         return [f"{label}: {json.dumps(text, ensure_ascii=False)}" for label, text in ideas if text]
 
