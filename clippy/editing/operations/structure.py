@@ -30,7 +30,7 @@ def merged(ranges: list[TimeRange]) -> tuple[TimeRange, ...]:
 
 @operation
 class CutRange(Operation):
-    """Removes a part of the clip as the viewer sees it, e.g. "cut 12–15 s" or "cut from 'but' to 'anyway'";
+    """Removes a part of the clip as the viewer sees it, e.g. "cut 12-15 s" or "cut from 'but' to 'anyway'";
     transition: what hides the jump (none, flash, fade_black, zoom)."""
 
     kind: Literal["cut_range"] = "cut_range"

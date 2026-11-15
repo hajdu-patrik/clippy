@@ -1,4 +1,4 @@
-"""Dev tool: python dev/make_icons.py . – renders the brand mark SVG to PNGs with headless Edge (exact SVG rendering) and builds favicon.ico from them."""
+"""Dev tool: python dev/make_icons.py ., renders the brand mark SVG to PNGs with headless Edge (exact SVG rendering) and builds favicon.ico from them."""
 
 import struct
 import subprocess

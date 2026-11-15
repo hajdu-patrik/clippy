@@ -118,6 +118,10 @@ DESCRIPTION_RULE = """- "description": 1-2 short sentences under the title that 
   away the payoff; no hashtags, no links, no emojis."""
 
 
+DASH_RULE = ("- Never use em dashes (—) or en dashes (–) in any text you write: they read as AI writing. Use a "
+             "comma, a colon or a full stop instead.")
+
+
 def writing_rules(text_language: str) -> str:
     """How the prompt should write the opening text, its A/B pair, the comment question, the title and the hashtags."""
     return f"""On-screen and post texts, written by a native {text_language} social media editor:
@@ -135,6 +139,7 @@ def writing_rules(text_language: str) -> str:
   deal?", "Te mit tettél volna a helyében?"); not a quiz about the speaker; never "like and follow".
 {TITLE_RULE}
 {DESCRIPTION_RULE}
+{DASH_RULE}
 - "hashtags": 3-5 specific ones (topic, guest, niche); no generic #fyp / #viral.
 - "risks": the risks that apply, from:
 {risk_guide()}
@@ -158,7 +163,7 @@ def editor_rules() -> str:
 
 def advice() -> str:
     """The playbook the chat agent answers strategy questions from."""
-    return """PLAYBOOK (for strategy questions; numbers are mostly vendor estimates – say so – and the user's own
+    return """PLAYBOOK (for strategy questions; numbers are mostly vendor estimates (say so), and the user's own
 retention graph decides):
 - First 3 s decide: open on a specific claim, tension or mid-action; no title cards, logos or slow intros.
   Hook text adds curiosity the speech does not, max 7 words, honestly paid off.

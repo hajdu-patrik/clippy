@@ -1,4 +1,4 @@
-"""Dev tool: python dev/make_og.py . – renders dev/og.html to docs/assets/og.png (1200×630) with headless Edge."""
+"""Dev tool: python dev/make_og.py ., renders dev/og.html to docs/assets/og.png (1200×630) with headless Edge."""
 
 import subprocess
 import sys

@@ -63,7 +63,7 @@ def test_a_preset_prompt_gives_the_same_settings_every_time(model, lang):
 
 
 def test_edited_numbers_and_an_extra_wish_are_kept():
-    text = templates()[("hu", "gameplay")].replace("5 klipet", "8 klipet").replace("20–45", "15–30")
+    text = templates()[("hu", "gameplay")].replace("5 klipet", "8 klipet").replace("20-45", "15-30")
     text = text.replace("Egyéb kérés: " + chr(10), "Egyéb kérés: csak a GTA-s részek, és kövesse az arcomat" + chr(10))
     action = presets.apply(text, [{"type": "generate", "url": LINK, "n": 5, "instructions": "",
                                    "options": {"layout": "face"}}])[0]

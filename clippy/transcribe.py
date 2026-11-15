@@ -57,7 +57,7 @@ def _load_model(model_name: str, device: str):
         try:
             return WhisperModel(model_name, device="cuda", compute_type="float16"), "cuda"
         except Exception as exc:
-            log(f"[transcribe] GPU failed ({type(exc).__name__}: {exc}), running on CPU – slower.")
+            log(f"[transcribe] GPU failed ({type(exc).__name__}: {exc}), running on CPU, slower.")
     return WhisperModel(model_name, device="cpu", compute_type="int8"), "cpu"
 
 
@@ -93,7 +93,7 @@ def transcribe(video: Path, work_dir: Path, model_name: str = "auto",
 def _transcribe(video: Path, work_dir: Path, cache: Path, model_name: str, dev: str, language: str | None,
                 vocab: str, src: Path, audio_source: Path | None) -> dict:
     model, used = _load_model(model_name, dev)
-    log(f"[transcribe] {model_name}, {used}{', on the isolated voice track' if audio_source else ''} – starting…")
+    log(f"[transcribe] {model_name}, {used}{', on the isolated voice track' if audio_source else ''}, starting…")
     audio = decode_audio(src)
     if language is None:
         language = detect_language(model, audio)

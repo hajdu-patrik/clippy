@@ -1,4 +1,4 @@
-"""`clippy`: the one command for everything – the web app (start / down / restart / status / open / logs),
+"""`clippy`: the one command for everything, the web app (start / down / restart / status / open / logs),
 command-line clipping (`clippy clip <link>`) and shell setup (`clippy install`)."""
 
 from __future__ import annotations

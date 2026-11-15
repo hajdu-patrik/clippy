@@ -59,7 +59,7 @@ def build_parser(lang: str | None = None) -> argparse.ArgumentParser:
     p.add_argument("--out", default=None, help="library folder for finished clips (default: CLIPPY_LIBRARY)")
     p.add_argument("--cookies-from-browser", default=None,
                    help="yt-dlp: browser cookies when the site asks for a sign-in (e.g. firefox; or CLIPPY_COOKIES_FROM_BROWSER)")
-    p.add_argument("--only-select", action="store_true", help="only pick the clips (clips.json) – edit it, then render")
+    p.add_argument("--only-select", action="store_true", help="only pick the clips (clips.json), edit it, then render")
     p.add_argument("--from-json", default=None, help="render from an (edited) clips.json")
     p.add_argument("--version", action="version", version=f"clippy {__version__}")
     lang = lang or i18n.system_language()
@@ -131,7 +131,7 @@ def _run(args) -> int:
         log(f"[plan] {len(clips)} clips from {args.from_json}")
 
     for i, c in enumerate(clips, 1):
-        log(f"  #{i}  {fmt_ts(c.start)}–{fmt_ts(c.end)}  ({c.duration:.0f} s)  score: {c.score:.0f}  hook: {c.hook}")
+        log(f"  #{i}  {fmt_ts(c.start)}-{fmt_ts(c.end)}  ({c.duration:.0f} s)  score: {c.score:.0f}  hook: {c.hook}")
     if args.only_select:
         log(f"\nSelection done. Edit clips.json, then: clippy clip --from-json \"{storage.project(proj.title) / 'clips.json'}\"")
         return 0

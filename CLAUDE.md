@@ -1,6 +1,6 @@
 # Working in this repository
 
-Clippy: a local AI clipper – long video in, vertical 9:16 clips out, with a chat web app and a `clippy` command (see
+Clippy: a local AI clipper, long video in, vertical 9:16 clips out, with a chat web app and a `clippy` command (see
 README.md). Code, comments-free modules, docs and commit messages are English; the product itself speaks Hungarian and
 English. No personal data, machine names, account details or absolute user paths in the repository: per-user state
 belongs in `data/` (ignored) and `.env` (ignored).
@@ -25,7 +25,7 @@ belongs in `data/` (ignored) and `.env` (ignored).
 - Parallel work goes through `clippy/concurrency.py`: lock order source video → render slot → GPU (checked at
   runtime), one job per chat at a time, LLM calls of jobs through `GuardedLLM`. Files that others read are written
   all-or-nothing (`tools.atomic_path`, `write_json`, `move_atomic`); a clip version is committed by its DB row.
-- Web security is part of the design: keep the CSP strict (no inline script or style – set CSS variables from JS), every
+- Web security is part of the design: keep the CSP strict (no inline script or style, set CSS variables from JS), every
   state-changing request needs the `X-Clippy-Request` header, media is served only through `MediaStore`, video links
   pass `require_public_url`, and LLM output is validated by `ActionValidator` before anything runs.
 - The UI is plain ES modules, responsive down to 320 px, honours `prefers-reduced-motion`; colours are tokens in

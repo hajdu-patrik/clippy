@@ -1,6 +1,6 @@
 <img src="clippy/web/static/brand/logo.svg" alt="Clippy" height="56">
 
-# Clippy – Local AI Clipper for TikTok, Shorts & Reels
+# Clippy: Local AI Clipper for TikTok, Shorts & Reels
 
 ![Python](https://img.shields.io/badge/Python-3.12%2B-3776AB?style=flat&logo=python&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/Web-FastAPI-009688?style=flat&logo=fastapi&logoColor=white)
@@ -11,7 +11,7 @@
 ![Platform](https://img.shields.io/badge/Platform-Windows_10%2F11-0078D6?style=flat&logo=windows&logoColor=white)
 ![License](https://img.shields.io/badge/License-MIT-yellow?style=flat)
 
-**Clippy** turns a video, podcast or stream (YouTube, TikTok, Instagram, Twitch, Kick, Facebook…) into vertical **9:16 clips** – on your own machine, for
+**Clippy** turns a video, podcast or stream (YouTube, TikTok, Instagram, Twitch, Kick, Facebook…) into vertical **9:16 clips**: on your own machine, for
 free. Paste a link into a ChatGPT-style chat and it:
 
 * **picks the moments with the strongest hooks** with a local LLM (Qwen3-14B through Ollama), ranked against each other,
@@ -19,8 +19,8 @@ free. Paste a link into a ChatGPT-style chat and it:
 * **frames the speaker** with a virtual camera (shot detection, face tracking, active speaker),
 * **adds animated word-by-word captions** from the transcript,
 * **masters the sound** for phones (voice EQ, compressor, two-pass −14 LUFS),
-* and nothing else: a new clip is the moment itself. Everything more – opening text, CTA, music, effects, stickers,
-  sound effects, speed, another format, B-roll, joined clips – you **ask for in the chat** (*"start clip 2 two
+* and nothing else: a new clip is the moment itself. Everything more (opening text, CTA, music, effects, stickers,
+  sound effects, speed, another format, B-roll, joined clips) you **ask for in the chat** (*"start clip 2 two
   seconds earlier and put the opening text on it"*), in **Hungarian or English**.
 
 No subscription and no upload: fast on an NVIDIA RTX GPU, and it also runs on the CPU.
@@ -29,7 +29,7 @@ No subscription and no upload: fast on an NVIDIA RTX GPU, and it also runs on th
 
 Requirements: Windows 10/11, [Python 3.12](https://www.python.org/downloads/), [Node.js](https://nodejs.org/) or
 [Deno](https://deno.com/) (for YouTube downloads) and [Ollama](https://ollama.com/) for the local LLM. An NVIDIA
-GPU with 12–16 GB VRAM is recommended; ffmpeg ships with the pip packages.
+GPU with 12-16 GB VRAM is recommended; ffmpeg ships with the pip packages.
 
 ```bat
 git clone https://github.com/hajdu-patrik/clippy.git
@@ -94,7 +94,7 @@ you keep chatting. The layout works from 320 px phones to wide desktops, with a 
 (`Ctrl+Shift+O`, `/`, `Esc`) and motion that honours *reduce motion*.
 
 **Languages.** The spoken language is detected between Hungarian and English (or set with `--lang`) and transcribed
-as spoken. Captions and hooks follow the video – or ask for the other language (*"English captions on clip 5"*,
+as spoken. Captions and hooks follow the video, or ask for the other language (*"English captions on clip 5"*,
 `--captions hu`) and they are translated line by line and kept in sync with the speech. The chat understands and
 answers in both, and every label of the web app and the CLI exists in both (`HU` / `EN` switch, `clippy lang`).
 
@@ -106,10 +106,10 @@ gives the same kind of clips: the count, the lengths and the CTA come from the t
 
 | Button | Clips | Framing and sound | Picks |
 | --- | --- | --- | --- |
-| 🎙️ Podcast | 6 × 30–60 s | follows the speaker, speech tuned, dead air out | standalone opinions, surprising facts, stories with a payoff, banter, confessions |
-| 🎮 Gameplay & stream | 5 × 20–45 s | facecam on top, game below (blurred full frame without a facecam), natural sound, quiet parts kept | clutch plays, wins, fails, twists, loud reactions, jokes with chat |
-| 📣 Video & promo | 4 × 15–30 s | follows the speaker, speech tuned, opening text and a CTA | the main benefit, a demo, a strong claim or number, a testimonial (hook → proof → CTA) |
-| ⚡ Quick shorts | 3 × 10–25 s | automatic, dead air out | jokes, punchlines, surprising lines and reactions |
+| 🎙️ Podcast | 6 × 30-60 s | follows the speaker, speech tuned, dead air out | standalone opinions, surprising facts, stories with a payoff, banter, confessions |
+| 🎮 Gameplay & stream | 5 × 20-45 s | facecam on top, game below (blurred full frame without a facecam), natural sound, quiet parts kept | clutch plays, wins, fails, twists, loud reactions, jokes with chat |
+| 📣 Video & promo | 4 × 15-30 s | follows the speaker, speech tuned, opening text and a CTA | the main benefit, a demo, a strong claim or number, a testimonial (hook → proof → CTA) |
+| ⚡ Quick shorts | 3 × 10-25 s | automatic, dead air out | jokes, punchlines, surprising lines and reactions |
 
 **Post text.** Every clip comes with a ready-to-paste post: a curiosity title, a short teaser description, a
 comment question, the link of the full video, your own profile links and hashtags (*Copy text* on the card, and the
@@ -119,7 +119,7 @@ line, e.g. `TikTok: https://www.tiktok.com/@you`; they stay on your computer in 
 ## Editing in the chat
 
 Ask for a change in your own words, in Hungarian or English, and attach what it needs with the paperclip button,
-drag and drop or paste – images, music, video and `.cube` LUTs (each file is checked by its content, images are
+drag and drop or paste: images, music, video and `.cube` LUTs (each file is checked by its content, images are
 re-encoded, sizes are capped):
 
 > *"Put my logo in the top right corner of clip 2 and this song under it, quietly."*
@@ -159,16 +159,16 @@ re-render). Older versions stay playable.
 | --- | --- | --- |
 | `CLIPPY_LLM_BACKEND` | `ollama` | `ollama` (local), `openai` (any OpenAI-compatible API: Groq, Gemini, OpenRouter) or `none` (heuristic) |
 | `CLIPPY_LLM_MODEL` | `clippy-qwen3:14b-q6k` | the model name for that backend |
-| `CLIPPY_LLM_BASE_URL`, `CLIPPY_LLM_API_KEY` | – | for hosted backends |
+| `CLIPPY_LLM_BASE_URL`, `CLIPPY_LLM_API_KEY` | - | for hosted backends |
 | `CLIPPY_LLM_THINK` | `1` | reasoning mode when picking clips (better choices, slower) |
 | `CLIPPY_LLM_CTX`, `CLIPPY_LLM_KEEP_ALIVE` | `16384`, `30m` | context size and how long the model stays in VRAM |
 | `CLIPPY_LIBRARY` | `~/Videos/Clippy` | where finished clips are copied |
 | `CLIPPY_PORT` | `7860` | web app port |
-| `CLIPPY_LAN` | – | `1`: phones and tablets on the same Wi-Fi can use it after pairing (`clippy pair`) |
+| `CLIPPY_LAN` | - | `1`: phones and tablets on the same Wi-Fi can use it after pairing (`clippy pair`) |
 | `CLIPPY_BROWSER` | Opera GX, else Edge / Chrome / default | browser to open the UI in |
 | `CLIPPY_LANG` | `clippy lang`, else the OS | `hu` or `en` for one terminal |
-| `CLIPPY_COOKIES_FROM_BROWSER` | – | `firefox` (or another browser) when a site only shows a video to signed-in users (Instagram, Vimeo, Reddit…); Chrome's cookies cannot be read on Windows |
-| `CLIPPY_COOKIES_FILE` | – | a `cookies.txt` (Netscape format) exported from any signed-in browser with an extension; Clippy only reads it, each download uses a private copy. Keep it in `data/` (ignored), it is as good as your login |
+| `CLIPPY_COOKIES_FROM_BROWSER` | - | `firefox` (or another browser) when a site only shows a video to signed-in users (Instagram, Vimeo, Reddit…); Chrome's cookies cannot be read on Windows |
+| `CLIPPY_COOKIES_FILE` | - | a `cookies.txt` (Netscape format) exported from any signed-in browser with an extension; Clippy only reads it, each download uses a private copy. Keep it in `data/` (ignored), it is as good as your login |
 | `CLIPPY_WORKERS`, `CLIPPY_RENDER_SLOTS` | `3`, `3` | jobs of different chats at once, clips rendered at once (the GPU always runs one heavy model at a time) |
 
 **Where files go.** Finished clips: `<CLIPPY_LIBRARY>\<video title>\` (mp4 + cover jpg + post text), never removed
@@ -177,12 +177,12 @@ chat (removed with the chat, together with any cache no other chat uses), comman
 
 ## Guides
 
-* **[docs/cli.md](docs/cli.md)** – every command and `clippy clip` option, with examples.
-* **[docs/playbook.md](docs/playbook.md)** – what works on TikTok, Shorts and Reels (hooks, length, captions, CTA,
+* **[docs/cli.md](docs/cli.md)**: every command and `clippy clip` option, with examples.
+* **[docs/playbook.md](docs/playbook.md)**: what works on TikTok, Shorts and Reels (hooks, length, captions, CTA,
   posting, rights) and where Clippy applies it.
-* **[docs/quality.md](docs/quality.md)** – what each stage does for the picture, the sound and the captions, and how hooks are scored.
-* **[docs/local-llm.md](docs/local-llm.md)** – Qwen3-14B Q6_K tuned for a 16 GB GPU: quantisation, context, sampling, VRAM scheduling.
-* **[docs/BRAND.md](docs/BRAND.md)** – the logo, colours, type and motion rules (icons and the social image are
+* **[docs/quality.md](docs/quality.md)**: what each stage does for the picture, the sound and the captions, and how hooks are scored.
+* **[docs/local-llm.md](docs/local-llm.md)**: Qwen3-14B Q6_K tuned for a 16 GB GPU: quantisation, context, sampling, VRAM scheduling.
+* **[docs/BRAND.md](docs/BRAND.md)**: the logo, colours, type and motion rules (icons and the social image are
   regenerated with `dev/make_icons.py` and `dev/make_og.py`).
 
 ## Security
@@ -223,20 +223,20 @@ Conventions: [CLAUDE.md](CLAUDE.md). Release history: [CHANGELOG.md](CHANGELOG.m
 
 ## FAQ
 
-**What is Clippy?** A free, open-source AI clipper that runs on your own Windows PC: paste a video link – YouTube, TikTok, Instagram, Twitch and the other sites yt-dlp supports – (or a video
+**What is Clippy?** A free, open-source AI clipper that runs on your own Windows PC: paste a video link (YouTube, TikTok, Instagram, Twitch and the other sites yt-dlp supports) or a video
 file) into a chat and get vertical 9:16 clips for TikTok, YouTube Shorts and Instagram Reels, with the strongest hooks,
 animated captions and a call to action.
 
 **Is it really free and private?** Yes. MIT license, local models only (faster-whisper, Qwen3-14B through Ollama,
 FFmpeg), no subscription and no upload.
 
-**Which languages?** Hungarian and English – speech, chat, interface and captions, including captions translated from
+**Which languages?** Hungarian and English: speech, chat, interface and captions, including captions translated from
 one to the other.
 
 **Can I edit a clip after it is made?** Yes, by asking in the chat: music, logos, texts, colours, LUTs, intro / outro,
 cutting parts out, undo. Edits re-render in seconds from a cached base.
 
-**What hardware?** Windows 10/11 and Python 3.12; an NVIDIA GPU with 12–16 GB VRAM is recommended, the CPU works too.
+**What hardware?** Windows 10/11 and Python 3.12; an NVIDIA GPU with 12-16 GB VRAM is recommended, the CPU works too.
 
 Project page: [hajdu-patrik.github.io/clippy](https://hajdu-patrik.github.io/clippy/) · machine-readable summary:
 [llms.txt](docs/llms.txt).

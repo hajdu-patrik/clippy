@@ -35,12 +35,12 @@ opening text with the hook's type, keeps it to 7 words, and writes a **B opening
 
 ## Picking the moment
 
-Score 0–100: hook 25, standalone 20 (no unresolved "he / that / it"), payoff 20 (setup → tension → payoff, ends right
+Score 0-100: hook 25, standalone 20 (no unresolved "he / that / it"), payoff 20 (setup → tension → payoff, ends right
 after it), emotion 15, quotable 10, relevance 10. Risks lower the score: needs context (−10), could be misquoted
 (−20), claims about a real person or company (−30), spoiler (−10), copyrighted music in the background (−10).
 
-**Length:** the shortest cut that delivers one complete idea. Test 20–45 s; a story may run 60–90 s. One study of
-108 000 Shorts found median views peaking at 11–20 s. Under 20 s the payoff may come first; longer narrative clips
+**Length:** the shortest cut that delivers one complete idea. Test 20-45 s; a story may run 60-90 s. One study of
+108 000 Shorts found median views peaking at 11-20 s. Under 20 s the payoff may come first; longer narrative clips
 open on the tension and stop about 2 s after the payoff.
 
 **Clippy:** the rubric above, sentence-aligned cuts, a global re-rank that avoids duplicates and risky picks, and the
@@ -52,7 +52,7 @@ risks shown on the card (*check before posting*).
   the loud neon look.
 - Safe zone: platform buttons cover the bottom ~20% and the right edge. **Clippy** keeps captions 120 px from the sides
   and above the bottom fifth, the hook at the top.
-- Pacing: cut dead air and fillers, a visual change every 3–6 s. **Clippy** removes silences and fillers, punches in
+- Pacing: cut dead air and fillers, a visual change every 3-6 s. **Clippy** removes silences and fillers, punches in
   on jump cuts and on new sentences every few seconds, and keeps the face centred.
 - Music: talking clips rarely need it; if added, quiet (−18 to −24 dB), ducked under speech, royalty-free.
   **Clippy** adds music at −20 dB with ducking by default.
@@ -61,9 +61,9 @@ risks shown on the card (*check before posting*).
 
 - CTA after the payoff, short and low-friction: a comment question or "part 2 on my profile"; the full-episode link
   goes in the pinned comment, not a spoken ad. A last line that flows back into the first can make the clip loop.
-- Title: max 70 characters, the guest or topic keyword early (TikTok counts search value). 2–5 specific hashtags.
-- Posting: consistency wins; 2–5 posts a week gave a strong lift in a Buffer study of 100 000+ creators, clip
-  channels post 1–3 a day. Pick times from your own analytics.
+- Title: max 70 characters, the guest or topic keyword early (TikTok counts search value). 2-5 specific hashtags.
+- Posting: consistency wins; 2-5 posts a week gave a strong lift in a Buffer study of 100 000+ creators, clip
+  channels post 1-3 a day. Pick times from your own analytics.
 
 **Clippy:** every clip gets a **comment question**; *Copy text* puts the title, the question and the hashtags on the
 clipboard, and the `.txt` next to the video adds the pinned comment with the source link, both hooks, the risks and a
@@ -81,7 +81,7 @@ credit reminder. In the chat, "use the B hook" or "put the question at the end" 
 
 ## Measuring
 
-A drop before 5 s is a hook problem; a steady drop at 10–30 s is a weak middle. Post the same moment with the two hooks
+A drop before 5 s is a hook problem; a steady drop at 10-30 s is a weak middle. Post the same moment with the two hooks
 about a week apart and compare. Watch viewed-vs-swiped (Shorts: Analytics → Content → Shorts), skip rate (Instagram)
 and completion (TikTok). For trends, spend 15 minutes a week in TikTok Creative Center (Hungary plus a bigger market)
 and YouTube Studio Trends.

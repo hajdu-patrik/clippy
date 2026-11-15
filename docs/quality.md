@@ -23,7 +23,7 @@ What each stage of the pipeline does for the picture, the sound and the captions
 
 The LLM scores every candidate from 0 to 100 (the rules are in `clippy/playbook.py`, explained in
 [playbook.md](playbook.md)):
-- **Hook, 25 pts:** the first sentence grabs attention within 2–3 s: a specific claim, a question, tension, or it
+- **Hook, 25 pts:** the first sentence grabs attention within 2-3 s: a specific claim, a question, tension, or it
   starts mid-action. It never starts with a filler or bridge word.
 - **Standalone, 20 pts:** it makes sense without the rest of the video.
 - **Payoff, 20 pts:** a complete mini-arc that ends right after the punchline.

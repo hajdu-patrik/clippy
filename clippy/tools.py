@@ -232,7 +232,7 @@ def log(msg: str) -> None:
 
 
 class log_sink:
-    """with log_sink(fn, on_report): ...  – route this thread's log() lines (and report() fractions) to callbacks."""
+    """with log_sink(fn, on_report): ... , route this thread's log() lines (and report() fractions) to callbacks."""
 
     def __init__(self, fn, on_report=None):
         self.fn, self.on_report = fn, on_report

@@ -29,6 +29,22 @@ def clean_text(text: str) -> str:
     return re.sub(r"\s{2,}", " ", text).strip()
 
 
+_RANGE_DASH = re.compile(r"(?<=[\d}])\s*[–—]\s*(?=[\d{])")
+_DASH = re.compile(r"\s*[–—]+\s*")
+
+
+def no_dashes(text: str) -> str:
+    """Post and on-screen texts never use the long dashes typical of AI writing: a range gets a hyphen (20-45), a
+    dash between words becomes a comma."""
+    text = _RANGE_DASH.sub("-", text or "")
+    text = _DASH.sub(", ", text).strip(" ,")
+    return re.sub(r",\s*([,.!?…:;])", r"\1", text)
+
+
+def post_clean(text: str) -> str:
+    return no_dashes(clean_text(text))
+
+
 def merge_suffixes(words: list[dict]) -> list[dict]:
     """Whisper splits Hungarian number suffixes ('10', '-ben'): glue them back into one caption token."""
     out: list[dict] = []

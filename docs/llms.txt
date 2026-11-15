@@ -8,7 +8,7 @@ Key facts:
 - Pipeline: yt-dlp → Demucs voice isolation → faster-whisper large-v3 → MMS_FA word alignment → Qwen3 hook scoring → tight edit → shot detection + YuNet faces + active-speaker camera → ASS captions → FFmpeg NVENC → two-pass loudness.
 - Editing: requests like "put this song under it quietly, add my logo, warm the colours, cut from 'but' to 'anyway', undo" become validated edit operations on a timeline; edits re-render in seconds from a cached base.
 - Languages: spoken language detected between Hungarian and English; captions and hooks can be translated between them; UI and CLI in both.
-- Requirements: Windows 10/11, Python 3.12, Ollama; NVIDIA GPU with 12–16 GB VRAM recommended.
+- Requirements: Windows 10/11, Python 3.12, Ollama; NVIDIA GPU with 12-16 GB VRAM recommended.
 - Privacy and cost: everything runs locally; no upload, no subscription.
 
 ## Docs

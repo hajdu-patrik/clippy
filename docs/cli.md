@@ -59,7 +59,7 @@ Every stage is cached, so re-runs are fast.
 | Option | What it does |
 |---|---|
 | `-n 5` | number of clips |
-| `--min 20 --max 60` | clip length in seconds before the tight edit (20–45 s is a good start; TikTok Creator Rewards needs 60+) |
+| `--min 20 --max 60` | clip length in seconds before the tight edit (20-45 s is a good start; TikTok Creator Rewards needs 60+) |
 | `--wish "..."` | what kind of moments to pick, e.g. "the funniest parts" |
 | `--lang hu` | spoken language (default: detected between Hungarian and English) |
 | `--captions en` | language of the captions and the hook; a different one than the spoken language is translated |

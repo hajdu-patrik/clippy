@@ -105,3 +105,15 @@ def test_editor_sees_the_craft_rules_and_the_unused_ideas(timeline, words, asset
 
 def test_chat_agent_answers_strategy_questions_from_the_playbook():
     assert "PLAYBOOK" in agent.SYSTEM_PROMPT and "Creative Center" in agent.SYSTEM_PROMPT
+
+
+def test_generated_texts_have_no_long_dashes():
+    from clippy.editing.planner import written
+    from clippy.text import no_dashes
+
+    assert no_dashes("Lucia carries two guns—Trevor never did.") == "Lucia carries two guns, Trevor never did."
+    assert no_dashes("Teszteld 20–45 mp-cel – vagy hosszabban.") == "Teszteld 20-45 mp-cel, vagy hosszabban."
+    assert no_dashes("— Vége —.") == "Vége."
+    assert written([{"kind": "set_title", "title": "GTA 6 — new"}, {"kind": "fix_caption", "replace": "a – b"}]) == [
+        {"kind": "set_title", "title": "GTA 6, new"}, {"kind": "fix_caption", "replace": "a – b"}]
+    assert "em dashes" in playbook.writing_rules("Hungarian")

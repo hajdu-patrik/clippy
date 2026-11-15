@@ -68,7 +68,7 @@ options (all optional, for generate / more):
   layout ("auto","face","center","blur","stream"), tighten (true/false: cut dead air), punch (true/false: zoom on cuts; default false),
   audio ("voice","natural"), duck (0-15 dB music lowering under speech), lang (SPOKEN language of the video: "hu" or "en"; "auto" = detect),
   captions (language of the captions + hook on the video: "hu" or "en"; "auto" = same as spoken; a different one is
-  translated automatically – e.g. an English video with Hungarian captions), vocab (names to spell right)
+  translated automatically, e.g. an English video with Hungarian captions), vocab (names to spell right)
 
 Rules:
 - Clip numbers are the "#" numbers in the state below. "the last one" / "az utolsó" = highest number.
@@ -103,7 +103,7 @@ User: "3 more about the music"
 User: "delete the 4th"
 {"reply": "Deleted clip #4.", "actions": [{"type": "delete", "clip": 4}]}
 User: "milyen hosszúak legyenek a klipek tiktokra?"
-{"reply": "Az a legjobb, ami egy teljes gondolatot átad: tesztelésre 20–45 mp, egy erős sztori mehet 60–90 mp-ig is. Egy Shorts-vizsgálatban 11–20 mp-nél volt a legtöbb nézés, de ezek becslések, a saját megtartási grafikonod dönt. Szólj, és rövidebbre vágom a klipeket.", "actions": [{"type": "none"}]}"""
+{"reply": "Az a legjobb, ami egy teljes gondolatot átad: tesztelésre 20-45 mp, egy erős sztori mehet 60-90 mp-ig is. Egy Shorts-vizsgálatban 11-20 mp-nél volt a legtöbb nézés, de ezek becslések, a saját megtartási grafikonod dönt. Szólj, és rövidebbre vágom a klipeket.", "actions": [{"type": "none"}]}"""
 
 
 AGENT_SCHEMA = {
@@ -281,12 +281,12 @@ class ActionValidator:
 
 
 def build_state(chat: dict, clips: list[dict], excerpt) -> str:
-    lines = [f"Current video: {chat.get('video_title') or '(processing)'} — {chat['source']}" if chat.get("source")
+    lines = [f"Current video: {chat.get('video_title') or '(processing)'} | {chat['source']}" if chat.get("source")
              else "Current video: none yet", "Existing clips:" if clips else "Existing clips: none"]
     for c in clips:
         d, style = c["clip"], c.get("overrides") or {}
         length = (c.get("info") or {}).get("duration_out", d.get("end", 0) - d.get("start", 0))
-        line = (f"#{c['number']} (v{c['version']}) {fmt_ts(d.get('start', 0))}–{fmt_ts(d.get('end', 0))}, {length:.0f}s"
+        line = (f"#{c['number']} (v{c['version']}) {fmt_ts(d.get('start', 0))}-{fmt_ts(d.get('end', 0))}, {length:.0f}s"
                 f" | hook: {d.get('hook', '')} | title: {d.get('title', '')}" + (f" | style: {style}" if style else ""))
         text = excerpt(d.get("start", 0), d.get("end", 0)) if excerpt else ""
         if text:
@@ -324,7 +324,7 @@ def run_agent(llm, chat: dict, clips: list[dict], history: list[dict], message: 
     reply_rule = ("Write \"reply\" in Hungarian (magyarul)." if lang == "hu"
                   else "Write \"reply\" in the same language as the new user message.")
     attached = ("\nATTACHED TO THIS MESSAGE: " + ", ".join(f"{a['name']} ({a['kind']})" for a in attachments)
-                + " – usable in edits (music, logo, intro / outro, LUT)") if attachments else ""
+                + ", usable in edits (music, logo, intro / outro, LUT)") if attachments else ""
     prompt = (f"STATE:\n{build_state(chat, clips, excerpt)}\n\nCONVERSATION SO FAR:\n" + ("\n".join(turns) or "(empty)")
               + f"\n\nNEW USER MESSAGE:\n{message}{attached}\n\n{reply_rule}")
     fast = fast_path(message, chat, bool(clips))

@@ -34,7 +34,7 @@ def voice_threshold(env: np.ndarray) -> float:
 
 
 def envelope(path: Path, start: float | None = None, duration: float | None = None) -> np.ndarray:
-    """Envelope of a file (or a span of it) – used for cut points and onsets."""
+    """Envelope of a file (or a span of it), used for cut points and onsets."""
     return envelope_db(decode_audio(path, start=start, duration=duration))
 
 

@@ -9,7 +9,7 @@ from dataclasses import dataclass, field
 from difflib import SequenceMatcher
 
 from .. import i18n, playbook
-from ..text import ends_sentence
+from ..text import ends_sentence, no_dashes
 from ..tools import ClippyError, log
 from .assets import Asset, describe
 from .editor import Editor, EditResult
@@ -140,7 +140,7 @@ class PromptFormatter:
 
     @staticmethod
     def _layer(layer, req: EditRequest) -> str:
-        span = f" {layer.span.start:.1f}–{layer.span.end:.1f} s" if layer.span else ""
+        span = f" {layer.span.start:.1f}-{layer.span.end:.1f} s" if layer.span else ""
         if layer.kind == "text":
             where = {"hook": " (first 3 s)", "cta": " (last 3 s)"}.get(layer.role, "")
             return f"{layer.id}: {layer.role} text {json.dumps(layer.text, ensure_ascii=False)}{where}{span}"
@@ -166,7 +166,7 @@ class PromptFormatter:
 
     @staticmethod
     def _speed(tl: Timeline) -> str:
-        parts = [f"×{r.factor:g}" + (f" {r.span.start:.1f}–{r.span.end:.1f} s" if r.span else " whole clip")
+        parts = [f"×{r.factor:g}" + (f" {r.span.start:.1f}-{r.span.end:.1f} s" if r.span else " whole clip")
                  for r in tl.speed]
         return ", ".join(parts) or "normal"
 
@@ -220,6 +220,7 @@ class EditPlanner:
     def plan(self, req: EditRequest, ctx: EditContext) -> PlanResult:
         system = (SYSTEM_PROMPT.replace("{language}", i18n.NAMES[req.language])
                   .replace("{operations}", self.catalogue.describe()) + "\n\n" + playbook.editor_rules()
+                  + "\n" + playbook.DASH_RULE
                   + "\n\n" + EXAMPLES)
         prompt = f"STATE:\n{self.formatter.state(req)}\n\nUSER REQUEST:\n{req.text}"
         attempt = self._attempt(system, prompt, req, ctx)
@@ -238,12 +239,19 @@ class EditPlanner:
         except ClippyError as exc:
             return PlanResult(reply="", result=None, errors=[str(exc)])
         reply = reply if isinstance(reply, dict) else {}
-        items = verbatim(unique(reply.get("operations"))[:MAX_OPERATIONS], req.text)
+        items = verbatim(written(unique(reply.get("operations"))[:MAX_OPERATIONS]), req.text)
         ops, errors = self.catalogue.parse(items)
         result = self.editor.run(req.timeline, ops, ctx) if ops else None
         if result is not None:
             errors += [issue.for_model() for issue in result.issues]
         return PlanResult(reply=str(reply.get("reply") or "").strip(), result=result, operations=ops, errors=errors)
+
+
+def written(items: list) -> list:
+    """Texts the model writes for the video or the post have no long dashes (see text.no_dashes); quotes the user
+    gave are restored letter for letter afterwards by `verbatim`."""
+    return [{**item, **{k: no_dashes(item[k]) for k in ("text", "title") if isinstance(item.get(k), str)}}
+            if isinstance(item, dict) else item for item in items]
 
 
 def unique(items) -> list:

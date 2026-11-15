@@ -10,7 +10,7 @@ from pathlib import Path
 from . import playbook
 from .boundaries import END_OVERFLOW, Boundaries, end_time, start_time
 from .llm import LLM, think_enabled
-from .text import clean_text, ends_sentence
+from .text import ends_sentence, post_clean
 from .tools import ClippyError, fmt_ts, log, report, report_span, write_json
 
 LANG_NAMES = {"hu": "Hungarian", "en": "English", "de": "German", "es": "Spanish", "fr": "French",
@@ -271,7 +271,7 @@ def _ask_windows(llm: LLM, system: str, wins: list[list[dict]], cache: PickCache
     raw, all_cached = [], True
     for n, win in enumerate(wins, 1):
         report(0.8 * (n - 1) / len(wins))
-        log(f"[hook] window {n}/{len(wins)}  ({fmt_ts(win[0]['start'])}–{fmt_ts(win[-1]['end'])})  {llm.describe()}")
+        log(f"[hook] window {n}/{len(wins)}  ({fmt_ts(win[0]['start'])}-{fmt_ts(win[-1]['end'])})  {llm.describe()}")
         text = "TRANSCRIPT:\n" + _format_window(win)
         if cache is None:
             reply, hit = llm.chat_json(system, text, think=think_enabled(), schema=CLIPS_SCHEMA), False
@@ -346,6 +346,7 @@ from the video "{title}". Each clip comes with what is said in it. For every cli
 {title_rule}
 {description_rule}
 Write both in {text_language}, specific to that clip's own moment (never the video's title again).
+{dash_rule}
 Return ONLY JSON: {{"clips": [{{"id": <id>, "title": "...", "description": "..."}}]}}"""
 
 TEXTS_SCHEMA = {
@@ -363,13 +364,14 @@ def write_texts(llm: LLM, clips: list[Clip], words: list[dict], title: str, text
     Returns how many clips got new texts."""
     lines = [f"id={i} | {c.duration:.0f}s\n{_clip_text(c, words)}" for i, c in enumerate(clips)]
     prompt = TEXTS_PROMPT.format(text_language=text_language, title=title.replace('"', "'"),
-                                 title_rule=playbook.TITLE_RULE, description_rule=playbook.DESCRIPTION_RULE)
+                                 title_rule=playbook.TITLE_RULE, description_rule=playbook.DESCRIPTION_RULE,
+                                 dash_rule=playbook.DASH_RULE)
     reply = llm.chat_json(prompt, "\n\n".join(lines), think=think_enabled(), schema=TEXTS_SCHEMA)
     changed = 0
     for item in reply.get("clips", []) if isinstance(reply, dict) else []:
         try:
             c = clips[int(item["id"])]
-            new_title, new_description = clean_text(str(item["title"]))[:100], clean_text(str(item["description"]))
+            new_title, new_description = post_clean(str(item["title"]))[:100], post_clean(str(item["description"]))
         except (KeyError, ValueError, IndexError, TypeError):
             continue
         if new_title:
@@ -405,7 +407,7 @@ def _polish_hooks(llm: LLM, clips: list[Clip], language: str, max_words: int = p
         return
     for item in reply.get("hooks", []) if isinstance(reply, dict) else []:
         try:
-            i, hook = int(item["id"]), clean_text(str(item["hook"]))
+            i, hook = int(item["id"]), post_clean(str(item["hook"]))
         except (KeyError, ValueError, TypeError):
             continue
         if 0 <= i < len(texts) and hook and len(hook.split()) <= max_words + 2:
@@ -462,7 +464,7 @@ class PickCache:
 
 
 def _avoiding(exclude) -> str:
-    spans = ", ".join(f"{fmt_ts(c.start)}–{fmt_ts(c.end)}" for c in exclude)
+    spans = ", ".join(f"{fmt_ts(c.start)}-{fmt_ts(c.end)}" for c in exclude)
     return (f"\n\nThese moments are already clips; pick DIFFERENT moments that do not overlap them: {spans}"
             if spans else "")
 
@@ -512,7 +514,7 @@ def find_highlights(transcript: dict, llm: LLM, max_clips: int = 5, min_len: flo
         _check_endings(llm, chosen, words, bounds, min_len, max_len, language)
     for c in chosen:
         c.hook, c.title, c.alt_hook, c.question, c.description = map(
-            clean_text, (c.hook, c.title, c.alt_hook, c.question, c.description))
+            post_clean, (c.hook, c.title, c.alt_hook, c.question, c.description))
     if llm.backend != "none":
         with report_span(0.9, 1.0):
             _polish_hooks(llm, chosen, text_language)

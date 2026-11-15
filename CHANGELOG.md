@@ -49,9 +49,11 @@ change, what changed rather than how; dates are ISO 8601.
 - Short videos (a TikTok, a Reel) become one clip of nearly all of it; a short one without speech becomes one
   clip of all of it.
 - Clear download errors in both languages: sign-in needed, deleted or region-locked, rate-limited, live stream,
-  profile / channel / playlist link, no video in the post, no sound – each with what helps.
+  profile / channel / playlist link, no video in the post, no sound, each with what helps.
 
 ### Changed
+- No long dashes (em / en dash) in anything Clippy writes: the picker, the editor and the post texts are told
+  not to use them and a filter replaces any that slip through; the interface and the docs use none either.
 - Nicer layout without a facecam: the stream layout follows the action like the automatic one, and a wide shot
   with no face to follow shows its centre square (twice as large on a phone) on the blurred frame instead of a
   small strip.
@@ -97,7 +99,7 @@ change, what changed rather than how; dates are ISO 8601.
   and when the camera stays in one area only that strip of the 4K frame is sent from the decoder (the pipe, not
   the decoder, was the limit).
 - A new clip's render also writes the editor's base in the same pass (pixel-identical to a separate base render),
-  so the first edit of every clip skips a ~20–40 s base render.
+  so the first edit of every clip skips a ~20-40 s base render.
 - Together: 3 clips of a 4K video in 46.9 s instead of 73.3 s, with the edit bases included; final clips are
   bit-identical to before.
 - A new video's sound is downloaded first: voice isolation, the transcript and clip picking run while the video
@@ -109,7 +111,7 @@ change, what changed rather than how; dates are ISO 8601.
   only once; shared resources (one video's cache, render slots, the GPU) are locked in one fixed order, checked
   at runtime, so parallel jobs cannot deadlock; the GPU runs Demucs, Whisper and the LLM one at a time.
 
-## [1.0.0] – 2026-11-13
+## [1.0.0] - 2026-11-13
 
 First public release.
 

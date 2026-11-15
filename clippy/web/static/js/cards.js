@@ -44,7 +44,7 @@ export function cardHtml(id) {
     <div class="meta">
       <h3 class="hook">${esc(d.title || d.hook || "")}</h3>
       ${d.description ? `<p class="desc">${esc(d.description)}</p>` : ""}
-      <div class="facts"><span>${fmtTs(d.start)}–${fmtTs(d.end)}</span><span>${duration.toFixed(1)} s</span>
+      <div class="facts"><span>${fmtTs(d.start)}-${fmtTs(d.end)}</span><span>${duration.toFixed(1)} s</span>
         ${d.score != null ? `<span>${esc(t("card.score", { s: Math.round(d.score) }))}</span>` : ""}${removed}${fmt ? `<span>${esc(fmt)}</span>` : ""}${kind}${risky}</div>
       ${(d.hashtags || []).length ? `<div class="tags">${esc(d.hashtags.join(" "))}</div>` : ""}
       ${whyHtml(d)}

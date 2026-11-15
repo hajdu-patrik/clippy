@@ -109,7 +109,7 @@ def post_text(clip: Clip, source: str, info: dict, links: list[str] | tuple = ()
         notes.append(f"{tr('post.hook')}{kind}: {clip.hook}")
     if clip.alt_hook:
         notes.append(f"{tr('post.alt_hook')}: {clip.alt_hook}")
-    notes += [f"{tr('post.source')}: {source}  ({fmt_ts(clip.start)}–{fmt_ts(clip.end)})",
+    notes += [f"{tr('post.source')}: {source}  ({fmt_ts(clip.start)}-{fmt_ts(clip.end)})",
               tr("post.length", s=f"{info['duration_out']:.1f}", removed=f"{info['dead_air_removed']:.1f}"),
               f"{tr('post.score')}: {clip.score:.0f}", f"{tr('post.why')}: {clip.reason}"]
     if clip.risks:
