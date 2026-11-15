@@ -36,6 +36,14 @@ const UI = {
     "prompt.promo": "📣 Promo clips\nMake 4 clips, 15–30 seconds each, to promote the product, service, channel or event in the video.\nPick where it is said most clearly what the viewer gets: the main benefit or result, a demonstration, a strong claim or number, a review or recommendation.\nStructure: hook → proof → call to action. The point lands in the first 2 seconds, and every clip ends on a complete thought.\nFraming: follow the speaker. Sound: tuned for speech. Cut dead air and filler words.\nPut the suggested opening text on the first 3 seconds and this CTA at the end: “Details in bio!”\nExtra wishes: \nVideo: ",
     "prompt.quick": "⚡ Quick short clips\nMake 3 clips, 10–25 seconds each.\nPick the punchiest moments that work on their own: a joke, a punchline, a surprising line or reaction.\nStart right on the point and end right after the payoff. Cut dead air and filler words.\nOnly captions of the speech on it, nothing else.\nExtra wishes: \nVideo: ",
     "live.chatDeleted": "This chat was deleted in another window.",
+    "side.settings": "Settings",
+    "settings.title": "Settings",
+    "settings.links": "Your profile links",
+    "settings.hint": "One per line, e.g. TikTok: https://… – they go under every clip's post text (Copy text and the .txt file), with the link of the full video.",
+    "settings.cancel": "Cancel",
+    "settings.save": "Save",
+    "settings.saved": "Saved.",
+    "settings.failed": "Could not save: {error}",
     "composer.label": "Message",
     "composer.attach": "Attach image, music, video or LUT",
     "attach.drop": "Drop files to attach",
@@ -135,6 +143,14 @@ const UI = {
     "prompt.promo": "📣 Promóciós klipek\nKészíts 4 klipet, egyenként 15–30 másodperceset, a videóban bemutatott termék, szolgáltatás, csatorna vagy esemény népszerűsítésére.\nMit válassz: ahol a legvilágosabban elhangzik, mit kap a néző – a fő előnyt vagy eredményt, egy bemutatót, egy erős állítást vagy számot, egy véleményt vagy ajánlást.\nFelépítés: horog → bizonyíték → felhívás. A lényeg már az első 2 másodpercben hangozzék el, és a klip egy teljes gondolattal záruljon.\nKép: a beszélőt kövesse. Hang: beszédre hangolva. A csendek és a töltelékszavak kerüljenek ki.\nKerüljön rá a javasolt nyitó felirat az első 3 másodpercre, a végére pedig ez a CTA: „Részletek a bióban!”\nEgyéb kérés: \nVideó: ",
     "prompt.quick": "⚡ Gyors rövid klipek\nKészíts 3 klipet, egyenként 10–25 másodperceset.\nMit válassz: a legütősebb, önmagukban is működő pillanatokat – poént, csattanót, meglepő mondatot vagy reakciót.\nRögtön a lényeggel induljon, és a csattanó után azonnal érjen véget. A csendek és a töltelékszavak kerüljenek ki.\nCsak a beszéd felirata legyen rajta, más semmi.\nEgyéb kérés: \nVideó: ",
     "live.chatDeleted": "Ezt a chatet egy másik ablakban törölték.",
+    "side.settings": "Beállítások",
+    "settings.title": "Beállítások",
+    "settings.links": "Profil linkjeid",
+    "settings.hint": "Soronként egy, pl. TikTok: https://… – minden klip posztszövegének aljára kerülnek (Szöveg másolása és a .txt fájl), a teljes videó linkje mellé.",
+    "settings.cancel": "Mégse",
+    "settings.save": "Mentés",
+    "settings.saved": "Elmentve.",
+    "settings.failed": "Nem sikerült menteni: {error}",
     "composer.label": "Üzenet",
     "composer.attach": "Kép, zene, videó vagy LUT csatolása",
     "attach.drop": "Engedd el a csatoláshoz",
@@ -225,6 +241,15 @@ export const getLang = () => lang;
 export function t(key, params) {
   const text = UI[lang][key] ?? server[lang][key] ?? UI.en[key] ?? server.en[key] ?? key;
   return fill(text, params);
+}
+
+export function textIn(language, key, params) {
+  return fill(server[language]?.[key] ?? server.en[key] ?? key, params);
+}
+
+export function languageOf(text) {
+  const s = String(text || "");
+  return /[őűŐŰ]/.test(s) || (s.match(/[áéíóöúüÁÉÍÓÖÚÜ]/g) || []).length >= 2 ? "hu" : "en";
 }
 
 export function tx(obj, fallback = "") {

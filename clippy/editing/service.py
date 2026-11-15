@@ -9,6 +9,7 @@ from pathlib import Path
 
 from ..highlights import Clip
 from ..pipeline import post_text
+from ..settings import Settings
 from ..tools import atomic_write_text
 from .assets import AssetService
 from .changes import Change
@@ -87,7 +88,8 @@ class EditService:
         hook = timeline.text_with_role("hook")
         clip["hook"] = rendered.info.get("hook") or (hook.text if hook else clip.get("hook", ""))
         txt = out.with_suffix(".txt")
-        atomic_write_text(txt, post_text(Clip.from_dict(clip), project.source, rendered.info))
+        atomic_write_text(txt, post_text(Clip.from_dict(clip), project.source, rendered.info,
+                                         Settings(self.storage).profile_links()))
         version = NewVersion(clip, rendered.info, str(out), str(out.with_suffix(".jpg")), str(txt), timeline.to_json())
         return EditOutcome(number, plan.reply, changes, version=version)
 

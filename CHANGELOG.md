@@ -6,6 +6,9 @@ change, what changed rather than how; dates are ISO 8601.
 ## [Unreleased]
 
 ### Added
+- Post text for every clip: a curiosity title (honest clickbait), a 1-2 sentence teaser description, the comment
+  question, the full video's link, your own profile links and the hashtags, in the clip's language. Profile
+  links (TikTok, Instagram…) are set once under Settings and stay on this computer (data/web/settings.json).
 - Live in every window: chats, messages, progress, clips, renames and deletions show up at once in all open
   windows and on paired phones; a browser keeps one live connection that its windows share.
 - Four ready-made prompts on the start screen (podcast, gameplay & stream, video & promo, quick shorts) in Hungarian

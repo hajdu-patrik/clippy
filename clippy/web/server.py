@@ -22,6 +22,7 @@ from .. import i18n
 from ..editing.assets import LIMITS
 from ..tools import ClippyError
 from ..llm import create_llm
+from ..settings import Settings
 from ..storage import Storage
 from .chats import ChatService, NotFound
 from .clips import ClipLibrary, ClipPresenter
@@ -65,6 +66,10 @@ def error_detail(exc: ClippyError) -> dict:
 
 class ChatPatch(BaseModel):
     title: str = Field(max_length=200)
+
+
+class SettingsPatch(BaseModel):
+    profile_links: str = Field(max_length=2000)
 
 
 def create_app(storage: Storage | None = None, db_path: Path | None = None, runner: Runner | None = None,
@@ -119,6 +124,21 @@ def create_app(storage: Storage | None = None, db_path: Path | None = None, runn
     @app.post("/api/lan/forget")
     def lan_forget(request: Request):
         return {"forgotten": lan_from_this_computer(request).forget_all()}
+
+    settings = Settings(storage)
+
+    @app.get("/api/settings")
+    def get_settings():
+        return settings.load()
+
+    @app.put("/api/settings")
+    def put_settings(body: SettingsPatch):
+        try:
+            saved = settings.set_profile_links(body.profile_links)
+        except ClippyError as exc:
+            raise HTTPException(400, error_detail(exc)) from None
+        hub.publish(None, {"type": "settings", "settings": saved})
+        return saved
 
     @app.get("/api/i18n")
     def catalog():

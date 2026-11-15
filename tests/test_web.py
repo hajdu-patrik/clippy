@@ -468,3 +468,19 @@ def test_a_failed_job_is_fixed_and_tried_again_and_a_bad_clip_is_skipped(env, mo
     assert card["data"]["job"]["payload"]["fixes"] == {"isolate": "off"}
     notes = [m["data"]["t"] for m in messages if (m.get("data") or {}).get("t")]
     assert notes == [{"key": "note.clip_failed", "params": {"clip": 3, "error": "broken frame"}}]
+
+
+def test_profile_links_are_saved_locally_and_checked(env):
+    client, runner, storage = env
+    assert client.get("/api/settings").json() == {"profile_links": []}
+    saved = client.put("/api/settings", json={"profile_links": "https://www.tiktok.com/@someone?lang=hu-HU\n\n"
+                                                             "Insta: https://www.instagram.com/someone/"}).json()
+    assert saved["profile_links"] == ["TikTok: https://www.tiktok.com/@someone?lang=hu-HU",
+                                      "Insta: https://www.instagram.com/someone/"]
+    assert client.get("/api/settings").json() == saved and storage.settings_file.is_file()
+    bad = client.put("/api/settings", json={"profile_links": "my tiktok"})
+    assert bad.status_code == 400 and bad.json()["detail"]["key"] == "error.bad_link"
+    many = client.put("/api/settings", json={"profile_links": "\n".join(f"https://x.com/{i}" for i in range(7))})
+    assert many.json()["detail"]["key"] == "error.too_many_links"
+    assert client.get("/api/settings").json() == saved
+    assert TestClient(client.app).put("/api/settings", json={"profile_links": ""}).status_code == 403

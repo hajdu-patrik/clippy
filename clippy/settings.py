@@ -1,0 +1,59 @@
+"""The user's own settings, kept in data/web/settings.json and never in the repository: the profile links that go
+under every clip's post text (TikTok, Instagram…)."""
+
+from __future__ import annotations
+
+import json
+import re
+from urllib.parse import urlsplit
+
+from .storage import Storage
+from .tools import ClippyError, write_json
+
+MAX_LINKS, MAX_LINE = 6, 200
+URL = re.compile(r"https?://\S+")
+SITES = {"tiktok.com": "TikTok", "instagram.com": "Instagram", "youtube.com": "YouTube", "youtu.be": "YouTube",
+         "facebook.com": "Facebook", "x.com": "X", "twitter.com": "X", "twitch.tv": "Twitch", "kick.com": "Kick",
+         "threads.net": "Threads"}
+
+
+def _site(url: str) -> str:
+    host = (urlsplit(url).hostname or "").removeprefix("www.").removeprefix("m.")
+    return next((name for domain, name in SITES.items() if host == domain or host.endswith("." + domain)), host)
+
+
+def clean_links(text: str) -> list[str]:
+    """One link per line, "Label: https://…" or a bare link (it gets the site's name as its label)."""
+    out = []
+    for raw in str(text or "").splitlines():
+        line = " ".join(raw.split())[:MAX_LINE]
+        if not line:
+            continue
+        found = URL.search(line)
+        if found is None or not urlsplit(found.group()).hostname:
+            raise ClippyError(key="error.bad_link", line=line[:60])
+        out.append(line if line != found.group() else f"{_site(line)}: {line}")
+    if len(out) > MAX_LINKS:
+        raise ClippyError(key="error.too_many_links", max=MAX_LINKS)
+    return out
+
+
+class Settings:
+    def __init__(self, storage: Storage):
+        self.path = storage.settings_file
+
+    def load(self) -> dict:
+        try:
+            data = json.loads(self.path.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            return {"profile_links": []}
+        links = data.get("profile_links") if isinstance(data, dict) else None
+        return {"profile_links": [str(x) for x in links][:MAX_LINKS] if isinstance(links, list) else []}
+
+    def profile_links(self) -> list[str]:
+        return self.load()["profile_links"]
+
+    def set_profile_links(self, text: str) -> dict:
+        data = {**self.load(), "profile_links": clean_links(text)}
+        write_json(self.path, data)
+        return data

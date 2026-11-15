@@ -49,5 +49,8 @@ export const api = {
     request(`/api/chats/${id}/messages`, { method: "POST", body: JSON.stringify({ text, attachments }) }),
   upload,
   undo: (id, number) => request(`/api/chats/${id}/clips/${number}/undo`, { method: "POST" }),
+  settings: () => request("/api/settings"),
+  saveSettings: (profileLinks) =>
+    request("/api/settings", { method: "PUT", body: JSON.stringify({ profile_links: profileLinks }) }),
   events: () => new EventSource("/api/events"),
 };

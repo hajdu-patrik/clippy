@@ -32,6 +32,10 @@ class Storage:
     def web(self) -> Path:
         return self._dir("web")
 
+    @property
+    def settings_file(self) -> Path:
+        return self.web / "settings.json"
+
     def chat_clips(self, chat_id: int) -> Path:
         return self._dir("chats", int(chat_id), "clips")
 

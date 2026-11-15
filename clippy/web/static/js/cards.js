@@ -1,5 +1,5 @@
-import { t } from "./i18n.js";
-import { state } from "./state.js";
+import { languageOf, t, textIn } from "./i18n.js";
+import { currentChat, state } from "./state.js";
 import { esc, fmtTs, toast } from "./util.js";
 
 function whyHtml(d) {
@@ -16,7 +16,12 @@ function whyHtml(d) {
 }
 
 function postCaption(d) {
-  return [d.title, d.question, (d.hashtags || []).join(" ")].filter(Boolean).join("\n\n");
+  const source = currentChat()?.source;
+  const links = state.settings.profile_links || [];
+  const lang = languageOf(`${d.title} ${d.description || ""} ${d.question || ""}`);
+  return [d.title, d.description, d.question, source && textIn(lang, "post.full_video", { url: source }),
+    links.length && [`${textIn(lang, "post.follow")}:`, ...links].join("\n"), (d.hashtags || []).join(" ")]
+    .filter(Boolean).join("\n\n");
 }
 
 export function cardHtml(id) {
@@ -38,6 +43,7 @@ export function cardHtml(id) {
     </div>
     <div class="meta">
       <h3 class="hook">${esc(d.title || d.hook || "")}</h3>
+      ${d.description ? `<p class="desc">${esc(d.description)}</p>` : ""}
       <div class="facts"><span>${fmtTs(d.start)}–${fmtTs(d.end)}</span><span>${duration.toFixed(1)} s</span>
         ${d.score != null ? `<span>${esc(t("card.score", { s: Math.round(d.score) }))}</span>` : ""}${removed}${fmt ? `<span>${esc(fmt)}</span>` : ""}${kind}${risky}</div>
       ${(d.hashtags || []).length ? `<div class="tags">${esc(d.hashtags.join(" "))}</div>` : ""}

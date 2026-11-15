@@ -19,6 +19,7 @@ from .captions import CaptionStyle
 from .concurrency import GPU, SOURCE, GuardedLLM
 from .download import Remote, cached_video, fetch, fetch_audio, fetch_video, is_url, probe
 from .highlights import Clip, PickCache, find_highlights
+from .settings import Settings
 from .llm import create_llm
 from .render import RenderSettings, prepare_fonts, render_clip
 from .storage import Storage
@@ -90,14 +91,18 @@ class Options:
             punch=self.punch, audio_mode=self.audio, encoder=self.encoder, audio_src=audio_src)
 
 
-def post_text(clip: Clip, source: str, info: dict) -> str:
-    """Ready to paste: the post caption (title, comment question, hashtags), the pinned comment, then the notes."""
+def post_text(clip: Clip, source: str, info: dict, links: list[str] | tuple = ()) -> str:
+    """Ready to paste: the post caption (title, description, comment question, the full video, the creator's own
+    profile links, hashtags), the pinned comment, then the notes."""
     lang = i18n.detect(f"{clip.title} {clip.hook}")
 
     def tr(key: str, **params) -> str:
         return i18n.t(lang, key, **params)
 
-    caption = "\n\n".join(x for x in (clip.title, clip.question, " ".join(clip.hashtags)) if x)
+    follow = "\n".join([f"{tr('post.follow')}:", *links]) if links else ""
+    caption = "\n\n".join(x for x in (clip.title, clip.description, clip.question,
+                                       tr("post.full_video", url=source) if source else "", follow,
+                                       " ".join(clip.hashtags)) if x)
     kind = f" ({tr('hooktype.' + clip.hook_type)})" if clip.hook_type else ""
     notes = [f"{tr('post.pinned')}: {tr('post.full_video', url=source)}"]
     if clip.hook:
@@ -311,7 +316,8 @@ class Project:
                                prepare_fonts(self.storage.cache("fonts")), settings, analysis)
             if info.get("hook"):
                 clip.hook = info["hook"]
-            atomic_write_text(out_file.with_suffix(".txt"), post_text(clip, self.source, info))
+            atomic_write_text(out_file.with_suffix(".txt"),
+                              post_text(clip, self.source, info, Settings(self.storage).profile_links()))
             move_atomic(draft.with_suffix(".jpg"), out_file.with_suffix(".jpg"))
             move_atomic(draft, out_file)
             if keep_base and settings.base_out.is_file():

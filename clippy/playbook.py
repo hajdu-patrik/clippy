@@ -126,7 +126,11 @@ def writing_rules(text_language: str) -> str:
 - "question": one short question (max {QUESTION_MAX_WORDS} words) addressed to the VIEWER about their own
   opinion or experience, tied to this clip, that they want to answer in the comments ("Would you have taken the
   deal?", "Te mit tettél volna a helyében?"); not a quiz about the speaker; never "like and follow".
-- "title": the post title, max 70 characters, the topic or guest keyword early (it is searchable).
+- "title": the post title, max 70 characters: a curiosity-gap headline people must click (honest clickbait: a
+  bold claim, a surprising number, an unfinished story, "nobody expected…"), the topic or guest keyword early (it
+  is searchable); it never promises what the clip does not show.
+- "description": 1-2 short sentences under the title that tease what happens and why it matters, without giving
+  away the payoff; no hashtags, no links, no emojis.
 - "hashtags": 3-5 specific ones (topic, guest, niche); no generic #fyp / #viral.
 - "risks": the risks that apply, from:
 {risk_guide()}

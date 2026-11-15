@@ -23,6 +23,7 @@
   <link rel="modulepreload" href="/static/js/state.js">
   <link rel="modulepreload" href="/static/js/chat.js">
   <link rel="modulepreload" href="/static/js/live.js">
+  <link rel="modulepreload" href="/static/js/settings.js">
   <link rel="modulepreload" href="/static/js/messages.js">
   <link rel="modulepreload" href="/static/js/cards.js">
   <link rel="modulepreload" href="/static/js/progress.js">
@@ -59,6 +60,7 @@
     <symbol id="i-film" viewBox="0 0 24 24"><rect x="3.5" y="4.5" width="17" height="15" rx="2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M8 4.5v15M16 4.5v15M3.5 9.5H8M3.5 14.5H8M16 9.5h4.5M16 14.5h4.5" fill="none" stroke="currentColor" stroke-width="1.8"/></symbol>
     <symbol id="i-palette" viewBox="0 0 24 24"><path d="M12 3.5a8.5 8.5 0 1 0 0 17c1.2 0 1.8-.9 1.4-2l-.4-1a1.5 1.5 0 0 1 1.4-2h2.1A4 4 0 0 0 20.5 11.5c0-4.4-3.8-8-8.5-8z" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="7.8" cy="11" r="1.2" fill="currentColor"/><circle cx="10.5" cy="7.5" r="1.2" fill="currentColor"/><circle cx="14.8" cy="7.8" r="1.2" fill="currentColor"/></symbol>
     <symbol id="i-undo" viewBox="0 0 24 24"><path d="M9 7L4.5 11.5 9 16M5 11.5h9a5 5 0 0 1 0 10h-2" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 2.8v2.4M12 18.8v2.4M2.8 12h2.4M18.8 12h2.4M5.5 5.5l1.7 1.7M16.8 16.8l1.7 1.7M5.5 18.5l1.7-1.7M16.8 7.2l1.7-1.7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
     <symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 8v5M12 16.5v.5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></symbol>
   </svg>
 
@@ -88,6 +90,10 @@
           <button type="button" role="radio" data-lang="hu" aria-checked="false" title="Magyar" lang="hu">HU</button>
           <button type="button" role="radio" data-lang="en" aria-checked="false" title="English" lang="en">EN</button>
         </div>
+        <button class="icon-btn" id="settingsBtn" aria-label="Settings" title="Settings"
+          data-i18n-attr="aria-label:side.settings;title:side.settings">
+          <svg aria-hidden="true"><use href="#i-gear"/></svg>
+        </button>
         <button class="icon-btn" id="themeBtn" aria-label="Light / dark theme" title="Light / dark theme"
           data-i18n-attr="aria-label:side.theme;title:side.theme">
           <svg aria-hidden="true"><use href="#i-theme"/></svg>
@@ -146,6 +152,19 @@
       </footer>
     </main>
   </div>
+  <dialog class="settings-dialog" id="settingsDialog" aria-labelledby="settingsTitle">
+    <form method="dialog" id="settingsForm">
+      <h2 id="settingsTitle" data-i18n="settings.title">Settings</h2>
+      <label for="profileLinks" data-i18n="settings.links">Your profile links</label>
+      <p class="hint" id="profileLinksHint" data-i18n="settings.hint">One per line. They go under every clip's post text.</p>
+      <textarea id="profileLinks" rows="4" maxlength="2000" aria-describedby="profileLinksHint"
+        placeholder="TikTok: https://www.tiktok.com/@…&#10;Instagram: https://www.instagram.com/…/"></textarea>
+      <div class="dialog-btns">
+        <button type="button" class="ghost" id="settingsCancel" data-i18n="settings.cancel">Cancel</button>
+        <button type="submit" class="primary" id="settingsSave" data-i18n="settings.save">Save</button>
+      </div>
+    </form>
+  </dialog>
   <div class="drop-overlay" id="dropOverlay" hidden><div><svg aria-hidden="true"><use href="#i-clip"/></svg>
     <span data-i18n="attach.drop">Drop files to attach</span></div></div>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>

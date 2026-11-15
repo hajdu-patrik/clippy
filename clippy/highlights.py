@@ -35,8 +35,8 @@ Find the moments that would make the strongest STANDALONE clips.
 - "reason": one sentence (English is fine) why this works.
 
 Return ONLY JSON: {{"clips": [{{"start": <seconds>, "end": <seconds>, "score": <0-100>, "hook": "...",
-"hook_type": "...", "alt_hook": "...", "question": "...", "title": "...", "hashtags": ["#..."], "risks": [],
-"reason": "..."}}]}}"""
+"hook_type": "...", "alt_hook": "...", "question": "...", "title": "...", "description": "...", "hashtags": ["#..."],
+"risks": [], "reason": "..."}}]}}"""
 
 RERANK_PROMPT = """You are the head editor of a viral clips channel. Your team proposed candidate clips from
 the video "{title}" (spoken language: {language}). Compare them AGAINST EACH OTHER and pick the best {n}
@@ -63,12 +63,13 @@ CLIPS_SCHEMA = {
                     "score": {"type": "integer", "minimum": 0, "maximum": 100},
                     "hook": {"type": "string"}, "hook_type": {"type": "string", "enum": list(playbook.HOOK_KEYS)},
                     "alt_hook": {"type": "string"}, "question": {"type": "string"}, "title": {"type": "string"},
+                    "description": {"type": "string"},
                     "hashtags": {"type": "array", "items": {"type": "string"}},
                     "risks": {"type": "array", "items": {"type": "string", "enum": list(playbook.RISK_KEYS)}},
                     "reason": {"type": "string"},
                 },
-                "required": ["start", "end", "score", "hook", "hook_type", "alt_hook", "question", "title", "hashtags",
-                             "risks", "reason"],
+                "required": ["start", "end", "score", "hook", "hook_type", "alt_hook", "question", "title",
+                             "description", "hashtags", "risks", "reason"],
             },
         }
     },
@@ -104,6 +105,7 @@ class Clip:
     hook_type: str = ""
     alt_hook: str = ""
     question: str = ""
+    description: str = ""
     risks: list[str] = field(default_factory=list)
 
     @property
@@ -383,6 +385,7 @@ def parse_clip(c: dict) -> Clip | None:
             hook_type=playbook.known_hook_type(c.get("hook_type")),
             alt_hook=playbook.tidy_hook(str(c.get("alt_hook", ""))),
             question=str(c.get("question", "")).strip(), risks=risks,
+            description=str(c.get("description", "")).strip()[:300],
         )
     except (KeyError, TypeError, ValueError, AttributeError):
         return None
@@ -467,7 +470,8 @@ def find_highlights(transcript: dict, llm: LLM, max_clips: int = 5, min_len: flo
     if llm.backend != "none" and chosen:
         _check_endings(llm, chosen, words, bounds, min_len, max_len, language)
     for c in chosen:
-        c.hook, c.title, c.alt_hook, c.question = map(clean_text, (c.hook, c.title, c.alt_hook, c.question))
+        c.hook, c.title, c.alt_hook, c.question, c.description = map(
+            clean_text, (c.hook, c.title, c.alt_hook, c.question, c.description))
     if llm.backend != "none":
         with report_span(0.9, 1.0):
             _polish_hooks(llm, chosen, text_language)
