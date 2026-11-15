@@ -66,12 +66,20 @@ class CropCompositor:
 
 
 class FitCompositor:
-    """The whole frame on a darkened, blurred copy of itself."""
+    """The whole frame on a darkened, blurred copy of itself. `square`: a wide frame shows its centre square instead,
+    twice as large on a phone (the automatic layout's shots without a face to follow)."""
+
+    def __init__(self, square: bool = False):
+        self.square = square
 
     def compose(self, frame: np.ndarray, plan: FramePlan) -> np.ndarray:
         H, W = frame.shape[:2]
         bg = cv2.GaussianBlur(cover(frame, 108, 192), (0, 0), 5)
         bg = cv2.convertScaleAbs(cv2.resize(bg, (OUT_W, OUT_H), interpolation=cv2.INTER_CUBIC), alpha=0.55, beta=0)
+        if self.square and W > H:
+            fg = cover(frame, OUT_W, OUT_W)
+            bg[(OUT_H - OUT_W) // 2: (OUT_H + OUT_W) // 2] = fg
+            return bg
         fh = int(round(OUT_W * H / W))
         if fh > OUT_H:
             fw = int(round(OUT_H * W / H))
@@ -125,7 +133,8 @@ class LayoutCompositor:
     """Dispatches each frame to the compositor of its plan's mode."""
 
     def __init__(self, facecam: tuple[float, float, float, float] | None = None):
-        self.by_mode: dict[str, Compositor] = {"crop": CropCompositor(), "fit": FitCompositor()}
+        self.by_mode: dict[str, Compositor] = {"crop": CropCompositor(), "fit": FitCompositor(),
+                                               "square": FitCompositor(square=True)}
         if facecam:
             self.by_mode["stream"] = StreamCompositor(facecam)
 

@@ -52,6 +52,9 @@ change, what changed rather than how; dates are ISO 8601.
   profile / channel / playlist link, no video in the post, no sound – each with what helps.
 
 ### Changed
+- Nicer layout without a facecam: the stream layout follows the action like the automatic one, and a wide shot
+  with no face to follow shows its centre square (twice as large on a phone) on the blurred frame instead of a
+  small strip.
 - A facecam must stay put: faces that move around (game characters, cutscenes) no longer pass as one, so
   such videos get the whole frame instead of an empty crop on top.
 - Clips end on a complete thought: they start at a sentence start and end where the sentence is over and the

@@ -109,8 +109,9 @@ class ClipRenderer:
                           exclude=self.s.exclude)
         with report_span(0.0, 0.3):
             an = analysis or analyze(self.video, self.start, self.span)
-        plans, shots = plan_frames(an, self.s.layout, edit.join_frames, edit.sentence_frames, punch=self.s.punch)
-        facecam = self._facecam(an, shots)
+        facecam = self._facecam(an) if self.s.layout == "stream" else None
+        layout = self.s.layout if facecam or self.s.layout != "stream" else "auto"
+        plans, shots = plan_frames(an, layout, edit.join_frames, edit.sentence_frames, punch=self.s.punch)
         prebuilt = facecam is not None and bool(plans) and all(p.mode == "stream" for p in plans)
         compositor = Prebuilt() if prebuilt else LayoutCompositor(facecam)
         self._graph = StreamCompositor(facecam).graph(self.meta["width"], self.meta["height"]) if prebuilt else None
@@ -155,16 +156,16 @@ class ClipRenderer:
         return {"words": edit.words,
                 "intervals": [(round(self.start + a, 4), round(self.start + b, 4)) for a, b in edit.intervals]}
 
-    def _facecam(self, an: ClipAnalysis, shots) -> tuple[float, float, float, float] | None:
-        if not any(m == "stream" for _, _, m in shots):
-            return None
+    def _facecam(self, an: ClipAnalysis) -> tuple[float, float, float, float] | None:
+        """The streamer's camera: given, or found as a face that stays put. Without one the stream layout becomes
+        the automatic one (the camera follows the faces, other shots show the whole frame)."""
         if self.s.facecam:
             x, y, w, h = self.s.facecam
             W, H = self.meta["width"], self.meta["height"]
             return x / W, y / H, w / W, h / H
         cam = guess_facecam(an)
         if not cam:
-            log("[render] no facecam found: the stream layout falls back to the blurred full frame")
+            log("[render] no facecam found: the camera follows the action instead")
         return cam or None
 
     def _needed_height(self, plans, facecam) -> float:
@@ -174,9 +175,9 @@ class ClipRenderer:
         modes = {p.mode for p in plans}
         if "stream" in modes and facecam:
             return float(H)
-        need = 0.0
+        need = float(OUT_W) if "square" in modes and W > H else 0.0
         if "crop" in modes:
-            need = OUT_H * max((p.zoom for p in plans if p.mode == "crop"), default=1.0)
+            need = max(need, OUT_H * max((p.zoom for p in plans if p.mode == "crop"), default=1.0))
         if "fit" in modes or "stream" in modes:
             need = max(need, OUT_W * H / W if W * OUT_H >= H * OUT_W else float(OUT_H))
         return need or float(H)

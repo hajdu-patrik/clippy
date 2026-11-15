@@ -12,7 +12,7 @@ from clippy.edit import build_edit
 from clippy.highlights import Clip, _snap, _windows, sentences
 from clippy.llm import parse_json_reply
 from clippy.text import clean_text, ends_clause, ends_sentence, is_filler, merge_suffixes
-from clippy.compositing import CropCompositor, FitCompositor
+from clippy.compositing import CropCompositor, FitCompositor, cover
 from clippy.director import FramePlan
 
 SAMPLE = Path(__file__).parent / "sample" / "sample.mp4"
@@ -146,11 +146,11 @@ def test_plan_switches_to_active_speaker_with_hard_cut():
     assert (jumps > 0.2).sum() == 1
 
 
-def test_plan_uses_fit_for_faceless_shots_and_punch_on_joins():
+def test_plan_shows_the_centre_square_of_faceless_shots_and_punches_on_joins():
     def faces(i):
         return [FaceObs(0.45, 0.25, 0.12, 0.25, 0.9, 0.33, track=1)] if i >= 50 else []
     plans, shots = plan_frames(_fake_analysis(150, faces, cuts=(0, 50)), join_frames=[100], punch=True)
-    assert plans[10].mode == "fit" and plans[60].mode == "crop"
+    assert plans[10].mode == "square" and plans[60].mode == "crop"
     assert plans[99].zoom == 1.0 and plans[100].zoom > 1.05
 
 
@@ -158,6 +158,8 @@ def test_compose_shapes():
     frame = np.random.randint(0, 255, (1080, 1920, 3), np.uint8)
     assert CropCompositor().compose(frame, FramePlan("crop", 0.3, 0.5, 1.1)).shape == (1920, 1080, 3)
     assert FitCompositor().compose(frame, FramePlan("fit")).shape == (1920, 1080, 3)
+    square = FitCompositor(square=True).compose(frame, FramePlan("square"))
+    assert square.shape == (1920, 1080, 3) and (square[420:1500] == cover(frame, 1080, 1080)).all()
 
 
 def test_romanize_for_aligner():

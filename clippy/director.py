@@ -44,7 +44,7 @@ def _shot_modes(an: ClipAnalysis, layout: str) -> list[tuple[int, int, str]]:
             mode = "crop"
         else:
             with_face = [i for i in range(s, e) if an.faces[i]]
-            mode = "fit"
+            mode = "square" if an.width > an.height else "fit"
             if len(with_face) >= 0.5 * (e - s):
                 sizes = [max(f.h for f in an.faces[i]) for i in with_face]
                 if float(np.median(sizes)) >= 0.07:
@@ -171,7 +171,7 @@ def plan_frames(an: ClipAnalysis, layout: str = "auto", join_frames=(), sentence
     zmax = max_zoom(an)
     joins, sents = set(join_frames), set(sentence_frames)
     for s, e, mode in shots:
-        if mode in ("fit", "stream"):
+        if mode in ("fit", "square", "stream"):
             for i in range(s, e):
                 plans[i] = FramePlan(mode)
             continue
