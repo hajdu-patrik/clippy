@@ -3,11 +3,13 @@ import { openChat } from "./chat.js";
 import { bindComposer } from "./composer.js";
 import { bindDrawer, closeDrawer } from "./drawer.js";
 import { applyStatic, getLang, loadCatalog, setLang } from "./i18n.js";
+import { startLive } from "./live.js";
 import { bindScroll } from "./messages.js";
 import { loadChats, setWorker } from "./sidebar.js";
 import { $, store } from "./util.js";
 
 const THEME_KEY = "clippy-theme";
+const LANG_KEY = "clippy-lang";
 const STATUS_POLL_MS = 4000;
 
 function applyTheme(theme, animate = false) {
@@ -76,6 +78,10 @@ function bindChrome() {
     }
   });
   window.addEventListener("hashchange", route);
+  window.addEventListener("storage", (e) => {
+    if (e.key === THEME_KEY && e.newValue && e.newValue !== document.documentElement.dataset.theme) applyTheme(e.newValue, true);
+    if (e.key === LANG_KEY && e.newValue && e.newValue !== getLang()) setLang(e.newValue);
+  });
   document.addEventListener("visibilitychange", () => { if (!document.hidden) refreshStatus(); });
   bindDrawer();
   bindScroll();
@@ -89,6 +95,7 @@ bindChrome();
 bindComposer();
 await loadChats();
 await refreshStatus();
+startLive();
 setInterval(refreshStatus, STATUS_POLL_MS);
 route();
 if (matchMedia("(pointer: fine)").matches) $("#input").focus();

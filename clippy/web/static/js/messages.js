@@ -133,12 +133,18 @@ export function showPending(text, attachments = []) {
   user.className = "msg user";
   user.id = "pending-user";
   user.innerHTML = `<div class="bubble">${esc(text)}</div>${attachmentsHtml(attachments)}`;
+  $("#messages").append(user);
+  showTyping();
+}
+
+export function showTyping() {
+  if (document.getElementById("typing")) return;
   const typing = document.createElement("div");
   typing.className = "msg assistant";
   typing.id = "typing";
   typing.innerHTML = `${AVATAR}<div class="body"><span class="thinking" role="status"><span class="typing" aria-hidden="true">`
     + `<i></i><i></i><i></i></span><span class="think-text">${esc(t("thread.thinking"))}</span></span></div>`;
-  $("#messages").append(user, typing);
+  $("#messages").append(typing);
   const started = Date.now();
   const label = typing.querySelector(".think-text");
   const timer = setInterval(() => {
@@ -148,7 +154,11 @@ export function showPending(text, attachments = []) {
   }, 1000);
 }
 
-export function clearPending() {
+export function hideTyping() {
   document.getElementById("typing")?.remove();
+}
+
+export function clearPending() {
+  hideTyping();
   document.getElementById("pending-user")?.remove();
 }

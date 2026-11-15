@@ -38,17 +38,22 @@ class ChatService:
         return chat
 
     def create(self) -> dict:
-        return self.db.create_chat(NEW_TITLE)
+        chat = self.db.create_chat(NEW_TITLE)
+        self.hub.publish(chat["id"], {"type": "chat", "chat": chat})
+        return chat
 
     def rename(self, chat_id: int, title: str) -> dict:
         self.get(chat_id)
-        return self.db.update_chat(chat_id, title=title.strip()[:120] or NEW_TITLE)
+        chat = self.db.update_chat(chat_id, title=title.strip()[:120] or NEW_TITLE)
+        self.hub.publish(chat_id, {"type": "chat", "chat": chat})
+        return chat
 
     def delete(self, chat_id: int) -> None:
         """The chat, its versions and scratch files go; the source cache goes too unless another chat uses it.
         Finished copies in the video library stay."""
         chat = self.get(chat_id)
         self.db.delete_chat(chat_id)
+        self.hub.publish(chat_id, {"type": "chat_deleted"})
         self.runner.forget(chat_id)
         if not self.runner.is_running(chat_id):
             self.storage.purge_chat(chat_id)
@@ -116,8 +121,12 @@ class ChatService:
             self.hub.publish(chat_id, {"type": "chat", "chat": chat})
         project = self.runner.projects.get(chat_id)
         excerpt = project.transcript_text if project is not None and project.transcript is not None else None
-        result = agent.run_agent(self.llm_factory(), chat, self.db.current_clips(chat_id), history, text, excerpt,
-                                 tuple(attached))
+        self.hub.publish(chat_id, {"type": "thinking", "on": True})
+        try:
+            result = agent.run_agent(self.llm_factory(), chat, self.db.current_clips(chat_id), history, text, excerpt,
+                                     tuple(attached))
+        finally:
+            self.hub.publish(chat_id, {"type": "thinking", "on": False})
         notes = list(result["notes"])
         actions, jobs = [], []
         for action in result["actions"]:

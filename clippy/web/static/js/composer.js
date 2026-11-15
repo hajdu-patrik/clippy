@@ -37,7 +37,7 @@ function usePrompt(template) {
 async function ensureChat() {
   if (state.current) return state.current;
   const chat = await api.createChat();
-  state.chats.unshift(chat);
+  if (!state.chats.some((c) => c.id === chat.id)) state.chats.unshift(chat);
   history.replaceState(null, "", `#/chat/${chat.id}`);
   await openChat(chat.id);
   return chat.id;

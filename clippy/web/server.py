@@ -71,7 +71,7 @@ def create_app(storage: Storage | None = None, db_path: Path | None = None, runn
                llm_factory=None, start_worker: bool = True, lan: Lan | None = None) -> FastAPI:
     storage = storage or Storage()
     db = DB(db_path or storage.web / "clippy.db")
-    hub = Hub()
+    hub = runner.hub if runner is not None else Hub()
     media = MediaStore(storage)
     presenter, library = ClipPresenter(media), ClipLibrary(storage)
     runner = runner or Runner(db, hub, storage, presenter, library, start=start_worker)
@@ -187,14 +187,16 @@ def create_app(storage: Storage | None = None, db_path: Path | None = None, runn
     def undo_clip(chat_id: int, number: int):
         return found(chats.undo, chat_id, number)
 
-    @app.get("/api/chats/{chat_id}/events")
-    async def events(chat_id: int, request: Request):
-        found(chats.get, chat_id)
-        q = hub.subscribe(chat_id)
+    @app.get("/api/events")
+    async def events(request: Request):
+        """One stream per browser (the windows share it): every chat's events, tagged with the chat id. It starts
+        with "hello", so a window that reconnects knows it may have missed something and reloads."""
+        q = hub.subscribe()
 
         async def stream():
             try:
-                yield f"data: {json.dumps({'type': 'status', 'status': runner.status()}, ensure_ascii=False)}\n\n"
+                hello = {"type": "hello", "chat_id": None, "status": runner.status()}
+                yield f"data: {json.dumps(hello, ensure_ascii=False)}\n\n"
                 while not await request.is_disconnected():
                     try:
                         event = await asyncio.wait_for(q.get(), timeout=15)
@@ -202,7 +204,7 @@ def create_app(storage: Storage | None = None, db_path: Path | None = None, runn
                     except asyncio.TimeoutError:
                         yield ": ping\n\n"
             finally:
-                hub.unsubscribe(chat_id, q)
+                hub.unsubscribe(q)
 
         return StreamingResponse(stream(), media_type="text/event-stream",
                                  headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})

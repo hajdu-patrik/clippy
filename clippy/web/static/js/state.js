@@ -3,7 +3,6 @@ export const state = {
   current: null,
   messages: new Map(),
   clips: new Map(),
-  events: null,
   sending: false,
   status: null,
 };

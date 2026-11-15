@@ -366,3 +366,31 @@ def test_without_lan_mode_nothing_changes(env):
     client, _, _ = env
     assert client.get("/api/status").json()["lan"] is False
     assert client.post("/api/lan/pair").status_code == 404
+
+
+def test_every_window_hears_every_chat(env, monkeypatch):
+    import asyncio
+
+    client, runner, _ = env
+    seen = []
+    monkeypatch.setattr(runner.hub, "publish", lambda chat_id, event: seen.append((chat_id, event["type"])))
+    cid = client.post("/api/chats").json()["id"]
+    client.patch(f"/api/chats/{cid}", json={"title": "Podcast"})
+    say(client, cid, "szia", {"reply": "Szia!", "actions": [{"type": "none"}]})
+    client.delete(f"/api/chats/{cid}")
+    assert [kind for _, kind in seen] == ["chat", "chat", "message", "thinking", "thinking", "message", "chat_deleted"]
+    assert {chat_id for chat_id, _ in seen} == {cid}
+
+    async def listen():
+        hub = Hub()
+        first, second = hub.subscribe(), hub.subscribe()
+        hub.publish(7, {"type": "message"})
+        hub.publish(None, {"type": "status"})
+        got = [await q.get() for q in (first, second) for _ in range(2)]
+        hub.unsubscribe(first)
+        hub.publish(8, {"type": "chat"})
+        return got, first.qsize(), await second.get()
+
+    got, left, last = asyncio.run(listen())
+    assert got == [{"type": "message", "chat_id": 7}, {"type": "status", "chat_id": None}] * 2
+    assert left == 0 and last == {"type": "chat", "chat_id": 8}

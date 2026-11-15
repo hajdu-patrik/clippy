@@ -6,6 +6,8 @@ change, what changed rather than how; dates are ISO 8601.
 ## [Unreleased]
 
 ### Added
+- Live in every window: chats, messages, progress, clips, renames and deletions show up at once in all open
+  windows and on paired phones; a browser keeps one live connection that its windows share.
 - Four ready-made prompts on the start screen (podcast, gameplay & stream, video & promo, quick shorts) in Hungarian
   and English: a button fills the message box, the link goes after "Videó:", and the same preset always gives the
   same settings and picking rules.
