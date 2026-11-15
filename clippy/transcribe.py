@@ -66,7 +66,7 @@ def detect_language(model, audio) -> str:
     try:
         _, _, scores = model.detect_language(audio, vad_filter=True, language_detection_segments=6)
         probs = dict(scores)
-    except Exception as exc:  # noqa: BLE001 - detection is a hint; English is the safe fallback
+    except Exception as exc:
         log(f"[transcribe] language detection failed ({type(exc).__name__}), assuming English")
         return DEFAULT
     best = max(SUPPORTED, key=lambda code: probs.get(code, 0.0))

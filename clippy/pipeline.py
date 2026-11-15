@@ -181,7 +181,7 @@ class Project:
                 if remote.sound_track:
                     try:
                         sound = fetch_audio(remote, downloads, o.cookies_from_browser)
-                    except Exception as exc:  # noqa: BLE001 - the video itself still carries the sound
+                    except Exception as exc:
                         log(f"[download] the sound alone failed ({type(exc).__name__}); waiting for the video")
                         key = self.video
                 else:
@@ -294,7 +294,7 @@ class Project:
         future = self._analyses.pop((round(clip.start, 3), round(clip.end, 3)), None)
         try:
             return future.result() if future else None
-        except Exception as exc:  # noqa: BLE001 - the renderer simply analyses the clip itself
+        except Exception as exc:
             log(f"[render] prefetched analysis failed ({type(exc).__name__}); analysing again")
             return None
 

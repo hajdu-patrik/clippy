@@ -79,7 +79,7 @@ def _ensure_yunet() -> bool:
             YUNET_PATH.parent.mkdir(parents=True, exist_ok=True)
             YUNET_PATH.write_bytes(r.content)
         _yunet_ok = True
-    except Exception as exc:  # noqa: BLE001 - any failure falls back to the bundled Haar detector
+    except Exception as exc:
         log(f"[faces] YuNet unavailable ({exc}); falling back to the Haar detector.")
         _yunet_ok = False
     return _yunet_ok

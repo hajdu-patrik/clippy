@@ -184,7 +184,6 @@ chat (removed with the chat, together with any cache no other chat uses), comman
 * **[docs/local-llm.md](docs/local-llm.md)** – Qwen3-14B Q6_K tuned for a 16 GB GPU: quantisation, context, sampling, VRAM scheduling.
 * **[docs/BRAND.md](docs/BRAND.md)** – the logo, colours, type and motion rules (icons and the social image are
   regenerated with `dev/make_icons.py` and `dev/make_og.py`).
-* **[docs/editor-design.md](docs/editor-design.md)** – design of the chat-driven editor (timeline, edit operations, attachments, voice input): the roadmap for 2.x.
 
 ## Security
 
@@ -240,7 +239,7 @@ cutting parts out, undo. Edits re-render in seconds from a cached base.
 **What hardware?** Windows 10/11 and Python 3.12; an NVIDIA GPU with 12–16 GB VRAM is recommended, the CPU works too.
 
 Project page: [hajdu-patrik.github.io/clippy](https://hajdu-patrik.github.io/clippy/) · machine-readable summary:
-[llms.txt](llms.txt).
+[llms.txt](docs/llms.txt).
 
 ## License
 

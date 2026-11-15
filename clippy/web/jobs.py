@@ -411,7 +411,7 @@ class JobHandler(ABC):
                             raise
                         failed.append((k, exc))
                         continue
-                    except Exception as exc:  # noqa: BLE001 - one clip must not sink the others
+                    except Exception as exc:
                         failed.append((k, exc))
                         continue
                     row = ctx.store(first + k, 1, clip.to_dict(), overrides, info, info["mp4"], info["jpg"], info["txt"])
@@ -434,7 +434,7 @@ class JobHandler(ABC):
                     ctx.keep_base(row, info)
                     stored += 1
                     continue
-                except Exception as again:  # noqa: BLE001 - reported below, the other clips are done
+                except Exception as again:
                     exc = again
             lost.append((k, exc))
         if lost and not stored:
@@ -511,7 +511,7 @@ class EditJob(JobHandler):
                 for number, task in zip(numbers, tasks):
                     try:
                         outcome = task.result()
-                    except Exception as exc:  # noqa: BLE001 - the other clips' edits still count
+                    except Exception as exc:
                         failed.append((number, exc))
                         continue
                     edited += self.report(ctx, rows[number], outcome)
@@ -753,7 +753,7 @@ class Runner:
         try:
             summary = self._attempts(job, progress)
             progress.finish(summary or job.label_t)
-        except Exception as exc:  # noqa: BLE001 - every failure must reach the chat and the worker must survive
+        except Exception as exc:
             if not isinstance(exc, ClippyError):
                 traceback.print_exc()
             if isinstance(exc, ClippyError):
@@ -762,7 +762,7 @@ class Runner:
                 message = tx("error.unexpected", error=f"{type(exc).__name__}: {exc}")
             try:
                 progress.finish(message, error=True)
-            except Exception:  # noqa: BLE001 - the chat may be gone
+            except Exception:
                 pass
         finally:
             self._release(job)
@@ -803,7 +803,7 @@ class Runner:
                     self._broadcast_status()
                     continue
                 self.run_one(job)
-            except Exception:  # noqa: BLE001 - the worker thread must never die
+            except Exception:
                 traceback.print_exc()
                 self._release(job)
 
@@ -814,6 +814,6 @@ class Runner:
             if progress is not None:
                 try:
                     progress.queued(position)
-                except Exception:  # noqa: BLE001 - the chat may have been deleted meanwhile
+                except Exception:
                     pass
         self.hub.publish(None, {"type": "status", "status": self.status()})

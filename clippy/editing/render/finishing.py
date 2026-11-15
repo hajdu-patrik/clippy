@@ -41,7 +41,6 @@ class RenderProfile:
         return ["-c:v", "libx264", "-preset", "veryfast", "-crf", "28"]
 
 
-PREVIEW = RenderProfile("preview", 0.5, False, "128k")
 FINAL = RenderProfile("final", 1.0, True, "256k")
 
 

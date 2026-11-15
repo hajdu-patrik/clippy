@@ -273,9 +273,6 @@ class Timeline(Frozen):
         """Same key, same base render: only the cut and the camera matter."""
         return _digest({"cut": self.cut.model_dump(), "camera": self.camera.model_dump()})
 
-    def finish_key(self) -> str:
-        return _digest(self.model_dump(exclude={"version"}))
-
     def to_json(self) -> str:
         return self.model_dump_json()
 

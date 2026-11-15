@@ -23,10 +23,9 @@ def test_timelines_are_immutable_and_validated(timeline):
 
 def test_keys_separate_base_work_from_finishing_work(timeline):
     restyled = timeline.with_layer(ColorLayer(id="color"))
-    assert restyled.base_key() == timeline.base_key() and restyled.finish_key() != timeline.finish_key()
+    assert restyled.base_key() == timeline.base_key()
     recut = timeline.evolve(cut=timeline.cut.evolve(source=TimeRange(start=101, end=120)))
     assert recut.base_key() != timeline.base_key()
-    assert timeline.next_version().finish_key() == timeline.finish_key()
 
 
 def test_json_round_trip_keeps_every_layer_type(timeline):

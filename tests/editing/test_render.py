@@ -12,13 +12,14 @@ from clippy.editing.editor import Editor
 from clippy.editing.factory import timeline_from_clip
 from clippy.editing.operations import EditContext, OperationCatalogue
 from clippy.editing.render.base import BaseRender, BaseStore
-from clippy.editing.render.finishing import FINAL, PREVIEW, FinishingRenderer
+from clippy.editing.render.finishing import FINAL, FinishingRenderer, RenderProfile
 from clippy.editing.render.planner import TimelineRenderer
 from clippy.editing.timeref import TimeResolver
 from clippy.render import Encoder, fonts_dir_for, prepare_fonts
 from clippy.storage import Storage
 from clippy.tools import ffmpeg_path, probe_media
 
+PREVIEW = RenderProfile("preview", 0.5, False, "128k")
 WORDS = [{"start": 0.2, "end": 0.6, "word": "Ez"}, {"start": 0.7, "end": 1.2, "word": "egy"},
          {"start": 1.3, "end": 2.0, "word": "próba."}]
 
@@ -154,7 +155,7 @@ def test_speed_effects_stickers_sounds_broll_and_a_joined_clip_render(setup):
                "yuv420p", "-c:a", "aac", str(path))
     service = AssetService(Storage(root / "data", root / "library"))
     broll = service.add(1, "broll.mp4", io.BytesIO(broll_file.read_bytes()))
-    at = lambda s: {"type": "at", "at": s}  # noqa: E731
+    at = lambda s: {"type": "at", "at": s}
     ops = [{"kind": "add_effect", "effect": effect, "span": {"start": at(s)}}
            for effect, s in (("zoom", 0.2), ("shake", 1.2), ("flash", 2.2), ("fade_black", 3.0))]
     ops += [{"kind": "add_effect", "effect": e, "span": {"start": at(3.0), "end": at(4.0)}}

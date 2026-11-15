@@ -333,7 +333,7 @@ def run_agent(llm, chat: dict, clips: list[dict], history: list[dict], message: 
         out = llm.chat_json(SYSTEM_PROMPT, prompt, think=False, schema=AGENT_SCHEMA)
         if isinstance(out, dict):
             reply, raw_actions = str(out.get("reply", "")).strip(), out.get("actions", [])
-    except Exception as exc:  # noqa: BLE001 - an unreachable LLM must not break the chat
+    except Exception as exc:
         if not fast:
             return {"reply": i18n.t(lang, "error.llm_unreachable", error=exc), "actions": [], "notes": [], "lang": lang}
     validator = ActionValidator({c["number"] for c in clips}, chat, message, lang, tuple(a["id"] for a in attachments))

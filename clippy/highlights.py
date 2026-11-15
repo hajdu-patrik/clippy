@@ -314,7 +314,7 @@ def _check_endings(llm: LLM, clips: list[Clip], words: list[dict], bounds: Bound
     try:
         reply = llm.chat_json(ENDINGS_PROMPT.format(language=language), "\n\n".join(lines), think=False,
                               schema=ENDINGS_SCHEMA)
-    except Exception as exc:  # noqa: BLE001 - the snapped endings are already whole sentences
+    except Exception as exc:
         log(f"[hook] ending check skipped: {exc}")
         return
     for item in reply.get("clips", []) if isinstance(reply, dict) else []:
