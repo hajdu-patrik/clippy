@@ -6,6 +6,10 @@ change, what changed rather than how; dates are ISO 8601.
 ## [Unreleased]
 
 ### Added
+- Four ready-made prompts on the start screen (podcast, gameplay & stream, video & promo, quick shorts) in Hungarian
+  and English: a button fills the message box, the link goes after "Videó:", and the same preset always gives the
+  same settings and picking rules.
+- The stream layout falls back to the blurred full frame when the video has no facecam, instead of stopping.
 - Full editing from the chat: speed (slow motion or faster, whole clip or a part, pitch kept), aspect ratios (9:16,
   1:1, 4:5, and 16:9 built from the whole source frame), effects at a word or a second (punch-in zoom, shake, flash,
   dip to black, black and white, blur, vignette), colour emoji stickers with motion, built-in sound effects or your
