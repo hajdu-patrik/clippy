@@ -129,6 +129,33 @@ class Boundaries:
              else next((j for j in reversed(ends) if self.words[j]["end"] <= t + 0.05), None))
         return None if j is None else end_time(self.words, j)
 
+    def sentence_at(self, t: float) -> tuple[int, int] | None:
+        """First and last word of the sentence being spoken at `t`; None in a pause or outside the speech."""
+        inside = next((i for i, w in enumerate(self.words) if w["start"] <= t <= w["end"]
+                       or (i + 1 < len(self.words) and w["end"] < t < self.words[i + 1]["start"]
+                           and not self.level[i] >= OPEN_PAUSE)), None)
+        if inside is None:
+            return None
+        first = next(i for i in range(inside, -1, -1) if self.opens[i])
+        last = next((j for j in range(inside, len(self.words)) if self.level[j] >= OPEN_PAUSE), len(self.words) - 1)
+        return first, last
+
+    def cut_point(self, t: float) -> float:
+        """A cut at `t` moved out of the sentence it falls in, to whichever edge of that sentence is nearer, so the
+        sentence goes or stays whole; a cut in a pause stays where it is."""
+        sentence = self.sentence_at(t)
+        if sentence is None:
+            return t
+        first, last = sentence
+        if t - self.words[first]["start"] <= self.words[last]["end"] - t:
+            return start_time(self.words, first)
+        return self.after(last)
+
+    def after(self, i: int) -> float:
+        """Just after word i, before the next word starts."""
+        later = self.words[i]["end"] + 0.06
+        return round(min(later, self.words[i + 1]["start"]) if i + 1 < len(self.words) else later, 3)
+
     def index_at_end(self, t: float) -> int | None:
         """The last word that ends by `t`."""
         return next((i for i in range(len(self.words) - 1, -1, -1) if self.words[i]["end"] <= t + 0.05), None)

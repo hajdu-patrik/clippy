@@ -6,7 +6,7 @@ from typing import ClassVar, Literal
 
 from pydantic import Field
 
-from ...boundaries import Boundaries
+from ...boundaries import Boundaries, start_time
 from ...tools import ClippyError
 from ..assets import AssetKind
 from ..changes import Change
@@ -15,6 +15,7 @@ from ..timeref import Span
 from . import MIN_CLIP_SECONDS, Applied, EditContext, Operation, operation
 
 CUT_EFFECT_SECONDS = 0.4
+TIMED = ("at", "edge")
 
 
 def merged(ranges: list[TimeRange]) -> tuple[TimeRange, ...]:
@@ -41,6 +42,7 @@ class CutRange(Operation):
         out = ctx.span(self.span)
         if out is None:
             raise ClippyError(key="edit.bad_range", start=0, end=0)
+        out = self._whole_sentences(out, ctx)
         if ctx.resolver.duration - out.duration < MIN_CLIP_SECONDS:
             raise ClippyError(key="edit.too_short", min=MIN_CLIP_SECONDS)
         source = TimeRange(start=ctx.clock.to_source(out.start), end=ctx.clock.to_source(out.end))
@@ -52,6 +54,23 @@ class CutRange(Operation):
                 id=ctx.new_id(timeline, "effect"), effect=self.transition,
                 span=TimeRange(start=round(at, 3), end=round(at + CUT_EFFECT_SECONDS, 3))))
         return timeline, [Change.removed("cut", start=round(out.start, 1), end=round(out.end, 1))]
+
+    def _whole_sentences(self, out: TimeRange, ctx: EditContext) -> TimeRange:
+        """An edge given in seconds that falls inside a sentence moves to that sentence's nearer edge, so no
+        sentence is cut in two; edges given by words are already exact and stay."""
+        span, words = self.span, ctx.resolver.words
+        if not words:
+            return out
+        bounds = Boundaries(words)
+        start = bounds.cut_point(out.start) if span.start is None or span.start.type in TIMED else out.start
+        end = bounds.cut_point(out.end) if span.end is None or span.end.type in TIMED else out.end
+        if end <= start:
+            sentence = bounds.sentence_at(out.start) or bounds.sentence_at(out.end)
+            if sentence is None:
+                return out
+            first, last = sentence
+            start, end = start_time(words, first), bounds.after(last)
+        return TimeRange(start=round(min(start, ctx.resolver.duration), 3), end=round(min(end, ctx.resolver.duration), 3))
 
 
 @operation

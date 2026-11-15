@@ -47,6 +47,8 @@ A clip starts where a sentence starts and ends where a thought is complete (`cli
   mid-sentence.
 - **Payoff check:** an LLM check then looks at each chosen clip's last sentences and what follows. It may move the
   end by whole sentences to land the punchline, never into the middle of one.
-- **Chat edits:** moving a clip's start or end in the chat lands on whole sentences too.
+- **Chat edits:** moving a clip's start or end in the chat lands on whole sentences too. A cut given in seconds
+  that falls inside a sentence moves to that sentence's nearer edge, so the sentence goes or stays whole. A cut
+  that falls in a pause stays where it is, and a cut given by words stays word-exact.
 
 On the cached GTA stream transcript, 200 random picks ended mid-thought 60% of the time before this and 0% after.

@@ -74,16 +74,27 @@ def test_music_levels_and_speech_volume(timeline, ctx):
 
 def test_cut_range_maps_to_source_time_and_merges(timeline, ctx):
     assert CutRange.touches_base
-    tl, changes = CutRange(span=Span(start=At(at=6), end=At(at=11))).apply(timeline, ctx)
-    assert tl.cut.removed == (TimeRange(start=106, end=113),)
+    tl, changes = CutRange(span=Span(start=At(at=3), end=At(at=11))).apply(timeline, ctx)
+    assert tl.cut.removed == (TimeRange(start=103, end=113),)
     tl, _ = CutRange(span=Span(start=At(at=14), end=At(at=16))).apply(tl, ctx)
-    assert tl.cut.removed == (TimeRange(start=106, end=113), TimeRange(start=116, end=118))
-    tl, _ = CutRange(span=Span(start=At(at=10), end=At(at=12))).apply(tl, ctx)
-    assert tl.cut.removed == (TimeRange(start=106, end=114), TimeRange(start=116, end=118))
-    assert texts(changes) == ["Removed the part 6.0–11.0 s"]
+    assert tl.cut.removed == (TimeRange(start=103, end=113), TimeRange(start=116, end=118))
+    tl, _ = CutRange(span=Span(start=At(at=11), end=At(at=12))).apply(tl, ctx)
+    assert tl.cut.removed == (TimeRange(start=103, end=114), TimeRange(start=116, end=118))
+    assert texts(changes) == ["Removed the part 3.0–11.0 s"]
     with pytest.raises(ClippyError) as short:
         CutRange(span=Span(start=At(at=1), end=At(at=19))).apply(timeline, ctx)
     assert short.value.key == "edit.too_short"
+
+
+def test_a_cut_in_seconds_never_splits_a_sentence(timeline, ctx):
+    tl, changes = CutRange(span=Span(start=At(at=6), end=At(at=7))).apply(timeline, ctx)
+    [removed] = tl.cut.removed
+    assert (removed.start, removed.end) == (106.56, 107.0)
+    assert texts(changes) == ["Removed the part 6.6–7.0 s"], "the sentence ends at 6.5 s: it stays whole"
+    tl, changes = CutRange(span=Span(start=At(at=5.2), end=At(at=5.6))).apply(timeline, ctx)
+    assert texts(changes) == ["Removed the part 4.8–6.6 s"], "inside one sentence: that sentence goes whole"
+    tl, changes = CutRange(span=Span(start=Word(word="keresni"), end=At(at=7))).apply(timeline, ctx)
+    assert texts(changes) == ["Removed the part 5.6–7.0 s"], "a word edge stays exact"
 
 
 def test_trim_camera_and_bumpers(timeline, ctx):
