@@ -101,8 +101,9 @@ class Progress:
     PUBLISH_EVERY = 0.4
     SAVE_EVERY = 2.0
 
-    def __init__(self, db, hub: Hub, chat_id: int, label_t: dict, stages: tuple[str, ...], clips: int = 1):
-        self.db, self.hub, self.chat_id, self.label_t = db, hub, chat_id, label_t
+    def __init__(self, db, hub: Hub, chat_id: int, label_t: dict, stages: tuple[str, ...], clips: int = 1,
+                 job: dict | None = None):
+        self.db, self.hub, self.chat_id, self.label_t, self.job = db, hub, chat_id, label_t, job
         self.weight = {st.key: st.weight for st in STAGES}
         self.weight["render"] = RENDER_WEIGHT_PER_CLIP * max(1, clips)
         self.created = time.time()
@@ -136,7 +137,7 @@ class Progress:
             "percent": round(100 * (1.0 if done else self.overall()), 1),
             "eta": None if done or self.eta is None else round(self.eta),
             "detail": self.detail, "detail_t": self.detail_t, "label_t": self.label_t, "lines": self.lines, "done": done,
-            "created": self.created, "started": self.started, **extra,
+            "created": self.created, "started": self.started, **({"job": self.job} if self.job else {}), **extra,
         }
 
     def queued(self, position: int) -> None:
@@ -526,8 +527,37 @@ class Runner:
         self._lock = threading.Lock()
         self._wake = threading.Condition(self._lock)
         if start:
+            self.resume()
             for i in range(workers):
                 threading.Thread(target=self._loop, name=f"clippy-worker-{i + 1}", daemon=True).start()
+
+    def resume(self) -> int:
+        """Jobs the last server left unfinished (a restart, a crash) start again; their old cards say so. A card that
+        does not carry its job takes it from the reply that started it, when that reply started exactly one job;
+        otherwise it asks for the request again. Returns how many jobs were started again."""
+        started = 0
+        for row in self.db.unfinished_jobs():
+            data = row.get("data") or {}
+            job = data.get("job") or self._job_of_reply(row)
+            alive = self.db.get_chat(row["chat_id"]) is not None
+            again = alive and isinstance(job, dict) and job.get("kind") in HANDLERS
+            summary = tx("job.interrupted" if again else "job.interrupted_lost")
+            for st in data.get("stages") or []:
+                if st.get("state") == "active":
+                    st["state"] = "failed"
+            data.update(phase="done", done=True, error=True, eta=None, summary_t=summary, finished=time.time())
+            self.db.update_message(row["id"], content=english(summary), kind="error", data=data)
+            if again:
+                self.submit(row["chat_id"], job["kind"], job.get("payload") or {})
+                started += 1
+        return started
+
+    def _job_of_reply(self, card: dict) -> dict | None:
+        before = [m for m in self.db.list_messages(card["chat_id"]) if m["id"] < card["id"] and m["role"] == "assistant"
+                  and m["kind"] == "text"]
+        actions = [a for a in ((before[-1].get("data") or {}).get("actions") or [] if before else [])
+                   if isinstance(a, dict) and a.get("type") in HANDLERS]
+        return {"kind": actions[0]["type"], "payload": actions[0]} if len(actions) == 1 else None
 
     @property
     def current(self) -> Job | None:
@@ -538,7 +568,8 @@ class Runner:
         if kind not in HANDLERS:
             raise ValueError(kind)
         job = Job(next(self._ids), chat_id, kind, payload)
-        progress = Progress(self.db, self.hub, chat_id, job.label_t, HANDLERS[kind].stages, expected_clips(payload))
+        progress = Progress(self.db, self.hub, chat_id, job.label_t, HANDLERS[kind].stages, expected_clips(payload),
+                            job={"kind": kind, "payload": payload})
         with self._wake:
             self.pending.append(job)
             self.progress[job.id] = progress

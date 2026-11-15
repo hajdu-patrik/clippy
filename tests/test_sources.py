@@ -175,3 +175,41 @@ def test_a_missing_cookies_file_is_a_clear_error(tmp_path, monkeypatch):
     assert missing.value.key == "error.cookies_file_missing" and str(tmp_path) not in str(missing.value.params)
     monkeypatch.delenv("CLIPPY_COOKIES_FILE")
     assert download.cookies_file() is None
+
+
+def test_a_refused_link_is_asked_for_again(tmp_path, monkeypatch):
+    from clippy import download
+    import yt_dlp
+
+    calls = []
+
+    class FakeYDL:
+        def __init__(self, opts):
+            self.opts = opts
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *exc):
+            return False
+
+        def extract_info(self, url, download=True):
+            calls.append(url)
+            if len(calls) < 3:
+                raise yt_dlp.utils.DownloadError("ERROR: unable to download video data: HTTP Error 403: Forbidden")
+            Path(self.opts["outtmpl"].replace("%(ext)s", "mkv")).write_bytes(b"video")
+
+    monkeypatch.setattr(download, "_yt_dlp", lambda: type("M", (), {"YoutubeDL": FakeYDL, "utils": yt_dlp.utils}))
+    monkeypatch.setattr(download, "RETRY_PAUSE", 0.0)
+    remote = download.Remote("https://www.youtube.com/watch?v=x", {}, "vid1", "Video")
+    done = download._download(remote, tmp_path, "vid1", {}, 1)
+    assert done == tmp_path / "vid1.mkv" and done.read_bytes() == b"video" and len(calls) == 3
+    assert not list(tmp_path.glob(".part-*"))
+
+    calls.clear()
+    monkeypatch.setattr(download, "FORBIDDEN_RETRIES", 1)
+    again = tmp_path / "again"
+    again.mkdir()
+    with pytest.raises(ClippyError):
+        download._download(remote, again, "vid1", {}, 1)
+    assert len(calls) == 2

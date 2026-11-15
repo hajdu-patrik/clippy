@@ -9,6 +9,7 @@ import re
 import shutil
 import socket
 import tempfile
+import time
 import uuid
 from contextlib import contextmanager
 from dataclasses import dataclass
@@ -42,6 +43,11 @@ def require_public_url(url: str) -> str:
     return url.strip()
 
 
+CHUNK_BYTES = 10 * 2 ** 20
+FORBIDDEN_RETRIES = 3
+RETRY_PAUSE = 2.0
+
+
 def _video_id(info: dict) -> str:
     raw = str(info.get("id") or "")
     return raw if re.fullmatch(r"[\w-]{1,64}", raw) else slugify(raw or str(info.get("title") or "video"), 64)
@@ -58,6 +64,7 @@ def _ydl_options(target: Path, max_height: int, cookies_from_browser: str | None
         "playlist_items": "1:10",
         "quiet": True,
         "noprogress": True,
+        "http_chunk_size": CHUNK_BYTES,
     }
     runtimes = {name: {} for name in ("deno", "node") if shutil.which(name)}
     if runtimes:
@@ -226,6 +233,21 @@ def cached_video(downloads: Path, vid: str) -> Path | None:
 
 
 def _download(remote: Remote, downloads: Path, name: str, opts: dict, parts: int) -> Path:
+    """A refused media link (HTTP 403, YouTube does it now and then mid-download) is asked for again: every attempt
+    resolves the page anew, so it gets fresh links."""
+    with _site_errors(remote.url):
+        for attempt in range(1, FORBIDDEN_RETRIES + 2):
+            try:
+                return _download_once(remote, downloads, name, opts, parts)
+            except _yt_dlp().utils.DownloadError as exc:
+                if "403" not in str(exc) or attempt > FORBIDDEN_RETRIES:
+                    raise
+                log(f"[download] the site refused a link (HTTP 403); new links, attempt {attempt + 1}")
+                time.sleep(RETRY_PAUSE * attempt)
+    raise ClippyError(key="error.download_missing")
+
+
+def _download_once(remote: Remote, downloads: Path, name: str, opts: dict, parts: int) -> Path:
     """yt-dlp works in a private folder; only the finished file is renamed into the cache (all or nothing). The link
     is resolved again in the same session: TikTok and others tie their media URLs to that session's cookies."""
     partial = downloads / f".part-{remote.vid}-{uuid.uuid4().hex[:8]}"
@@ -233,7 +255,7 @@ def _download(remote: Remote, downloads: Path, name: str, opts: dict, parts: int
     try:
         opts = {**opts, "outtmpl": str(partial / f"{name}.%(ext)s"), "progress_hooks": [_progress_hook(parts)],
                 **({"playlist_items": str(remote.item)} if remote.item else {})}
-        with _site_errors(remote.url), _session(opts) as ydl:
+        with _session(opts) as ydl:
             ydl.extract_info(remote.url, download=True)
         done = next((f for f in sorted(partial.iterdir()) if f.is_file() and f.name.startswith(f"{name}.")
                      and f.suffix != ".part"), None)

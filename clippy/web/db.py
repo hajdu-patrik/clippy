@@ -155,6 +155,11 @@ class DB:
     def get_message(self, msg_id: int) -> dict | None:
         return self._one("SELECT * FROM messages WHERE id = ?", (msg_id,))
 
+    def unfinished_jobs(self) -> list[dict]:
+        """Progress cards of jobs that never finished (the server stopped while they waited or ran), oldest first."""
+        rows = self._all("SELECT * FROM messages WHERE kind = 'progress' ORDER BY id")
+        return [r for r in rows if not (r.get("data") or {}).get("done")]
+
     def list_messages(self, chat_id: int) -> list[dict]:
         return self._all("SELECT * FROM messages WHERE chat_id = ? ORDER BY id", (chat_id,))
 

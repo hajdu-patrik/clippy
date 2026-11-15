@@ -46,6 +46,10 @@ change, what changed rather than how; dates are ISO 8601.
   profile / channel / playlist link, no video in the post, no sound – each with what helps.
 
 ### Changed
+- Jobs survive a restart: a job cut off by a restart or a crash starts again by itself, and `clippy restart`
+  waits for running jobs (`--force` restarts at once).
+- A media link the site refuses mid-download (HTTP 403, YouTube does it now and then) is resolved again and the
+  download retried, up to three times; downloads go in 10 MB chunks.
 - Deleting a chat also deletes its clips from the video library (an emptied folder goes too); clips made
   with the command line or by other chats stay.
 - A new clip is only the moment, framed vertically, with captions: the opening text and punch-in zooms are off by

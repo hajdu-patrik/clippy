@@ -407,3 +407,24 @@ def test_every_window_hears_every_chat(env, monkeypatch):
     got, left, last = asyncio.run(listen())
     assert got == [{"type": "message", "chat_id": 7}, {"type": "status", "chat_id": None}] * 2
     assert left == 0 and last == {"type": "chat", "chat_id": 8}
+
+
+def test_jobs_cut_off_by_a_restart_start_again(env):
+    client, runner, storage = env
+    cid = client.post("/api/chats").json()["id"]
+    runner.submit(cid, "more", {"n": 2, "instructions": "funny"})
+    legacy = runner.db.add_message(cid, "assistant", "Processing", kind="progress", data={"phase": "running"})
+    runner.db.add_message(cid, "assistant", "Sure", data={"actions": [{"type": "more", "n": 1}]})
+    older = runner.db.add_message(cid, "assistant", "Processing", kind="progress", data={"phase": "queued"})
+    after = Runner(runner.db, Hub(), storage, runner.presenter, runner.library, project_factory=FakeProject,
+                   start=False)
+    assert after.resume() == 2
+    assert [(j.kind, j.payload) for j in after.pending] == [("more", {"n": 2, "instructions": "funny"}),
+                                                            ("more", {"type": "more", "n": 1})]
+    cards = [m for m in runner.db.list_messages(cid) if m["kind"] in ("progress", "error")]
+    old, lost, recovered, *new = cards
+    assert old["kind"] == "error" and old["data"]["summary_t"]["key"] == "job.interrupted"
+    assert lost["id"] == legacy["id"] and lost["data"]["summary_t"]["key"] == "job.interrupted_lost"
+    assert recovered["id"] == older["id"] and recovered["data"]["summary_t"]["key"] == "job.interrupted"
+    assert [m["data"]["job"]["kind"] for m in new] == ["more", "more"] and not new[0]["data"]["done"]
+    assert after.resume() == 2, "still unfinished after another restart: they start again"

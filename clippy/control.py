@@ -318,6 +318,21 @@ def status_line() -> str:
     return f"{G}●{N} {tr('cli.running')}  {D}·{N}  {URL}{lan}  {D}·{N}  {work}  {D}·{N}  {llm}"
 
 
+def wait_until_idle(poll: float = 2.0) -> bool:
+    """A restart waits for running and queued jobs (they would start again anyway, but from the beginning)."""
+    shown = False
+    try:
+        while (st := running()) and (st.get("busy") or st.get("queue")):
+            if not shown:
+                say(f"{Y}{tr('cli.restart_wait')}{N}")
+                shown = True
+            time.sleep(poll)
+    except KeyboardInterrupt:
+        say(tr("cli.restart_cancelled"))
+        return False
+    return True
+
+
 def status() -> int:
     print(status_line())
     return 0 if running() else 1
@@ -381,6 +396,8 @@ def main(argv: list[str] | None = None) -> int:
         return down(stop_ollama="--all" in args)
     if cmd == "restart":
         lan = lan_wanted(args) or bool((running() or {}).get("lan"))
+        if "--force" not in args and not wait_until_idle():
+            return 1
         down()
         time.sleep(1)
         return start(open_ui="--no-browser" not in args, lan=lan)
