@@ -1,5 +1,5 @@
 import { t } from "./i18n.js";
-import { openPostDialog, postsHtml } from "./publish.js";
+import { cancelPlanned, openPostDialog, postsHtml } from "./publish.js";
 import { state } from "./state.js";
 import { $, copyText, esc, fmtTs, toast } from "./util.js";
 
@@ -71,7 +71,8 @@ export function bindCopyDialog() {
 }
 
 async function onCardClick(event) {
-  const act = event.target.closest("button")?.dataset.act;
+  const pressed = event.target.closest("button");
+  const act = pressed?.dataset.act;
   const card = event.target.closest(".card");
   if (!act || !card) return;
   const clip = state.clips.get(Number(card.dataset.cid));
@@ -82,6 +83,8 @@ async function onCardClick(event) {
     } else {
       showCopyDialog(text);
     }
+  } else if (act === "unschedule") {
+    cancelPlanned(Number(pressed.dataset.sid));
   } else if (act === "post") {
     openPostDialog(clip);
   } else if (act === "edit") {

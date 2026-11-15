@@ -58,5 +58,11 @@ export const api = {
   instagramToken: (token) => request("/api/accounts/instagram", { method: "PUT", body: JSON.stringify({ token }) }),
   publish: (id, number, body) =>
     request(`/api/chats/${id}/clips/${number}/publish`, { method: "POST", body: JSON.stringify(body) }),
+  cancelScheduled: (id) => request(`/api/scheduled/${id}`, { method: "DELETE" }),
+  watches: () => request("/api/watches"),
+  addWatch: (body) => request("/api/watches", { method: "POST", body: JSON.stringify(body) }),
+  toggleWatch: (id, enabled) => request(`/api/watches/${id}`, { method: "PATCH", body: JSON.stringify({ enabled }) }),
+  checkWatch: (id) => request(`/api/watches/${id}/check`, { method: "POST" }),
+  deleteWatch: (id) => request(`/api/watches/${id}`, { method: "DELETE" }),
   events: () => new EventSource("/api/events"),
 };

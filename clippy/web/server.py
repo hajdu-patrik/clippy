@@ -35,6 +35,7 @@ from .jobs import Runner
 from .media import MediaStore
 from .lan import Lan, is_loopback
 from .security import SecurityMiddleware
+from .watch import EVERY_MINUTES, Watcher, present_watch, watch_settings
 
 STATIC = Path(__file__).resolve().parent / "static"
 
@@ -82,6 +83,24 @@ class PublishRequest(BaseModel):
     platforms: list[Platform] = Field(min_length=1, max_length=3)
     youtube_privacy: Literal["public", "unlisted", "private"] = "public"
     tiktok_mode: Literal["draft", "private"] = "draft"
+    at: float | None = Field(default=None, gt=0)
+
+
+class NewWatch(BaseModel):
+    url: str = Field(min_length=8, max_length=500)
+    n: int = Field(default=0, ge=0, le=12)
+    preset: str = Field(default="", max_length=20)
+    instructions: str = Field(default="", max_length=400)
+    every: int = 60
+    platforms: list[Platform] = Field(default_factory=list, max_length=3)
+    youtube_privacy: Literal["public", "unlisted", "private"] = "public"
+    tiktok_mode: Literal["draft", "private"] = "draft"
+    slots: str = Field(default="", max_length=120)
+    latest: bool = False
+
+
+class WatchPatch(BaseModel):
+    enabled: bool
 
 
 class InstagramToken(BaseModel):
@@ -97,7 +116,10 @@ def create_app(storage: Storage | None = None, db_path: Path | None = None, runn
     presenter, library = ClipPresenter(media, db), ClipLibrary(storage)
     runner = runner or Runner(db, hub, storage, presenter, library, start=start_worker)
     chats = ChatService(db, hub, runner, storage, presenter, library, llm_factory or create_llm)
+    watcher = Watcher(db, runner, hub)
+    chats.watcher = watcher
     if start_worker:
+        watcher.start()
         threading.Thread(target=lambda: (llm_factory or create_llm)().warm(), name="clippy-llm-warmup",
                          daemon=True).start()
 
@@ -304,7 +326,51 @@ def create_app(storage: Storage | None = None, db_path: Path | None = None, runn
         if missing:
             raise HTTPException(400, error_detail(ClippyError(key="error.account_missing", platform=LABELS[missing[0]])))
         options = {"youtube": {"privacy": body.youtube_privacy}, "tiktok": {"mode": body.tiktok_mode}}
-        return found(chats.publish, chat_id, number, list(dict.fromkeys(body.platforms)), options)
+        try:
+            return found(chats.publish, chat_id, number, list(dict.fromkeys(body.platforms)), options, body.at)
+        except ClippyError as exc:
+            raise HTTPException(400, error_detail(exc)) from None
+
+    @app.delete("/api/scheduled/{item_id}")
+    def cancel_scheduled(item_id: int):
+        if not chats.cancel_scheduled(item_id):
+            raise HTTPException(404, "Not planned")
+        return {"ok": True}
+
+    @app.get("/api/watches")
+    def list_watches():
+        return {"watches": [present_watch(w) for w in db.list_watches()], "every": list(EVERY_MINUTES)}
+
+    @app.post("/api/watches")
+    def add_watch(body: NewWatch):
+        try:
+            settings = watch_settings(body.n, body.preset, body.instructions, body.every, body.platforms,
+                                      body.youtube_privacy, body.tiktok_mode, body.slots)
+            return present_watch(watcher.add(body.url, settings, body.latest))
+        except ClippyError as exc:
+            raise HTTPException(400, error_detail(exc)) from None
+
+    @app.patch("/api/watches/{watch_id}")
+    def toggle_watch(watch_id: int, body: WatchPatch):
+        if db.get_watch(watch_id) is None:
+            raise HTTPException(404, "No such watch")
+        watch = db.update_watch(watch_id, enabled=int(body.enabled))
+        watcher.changed()
+        return present_watch(watch)
+
+    @app.post("/api/watches/{watch_id}/check")
+    def check_watch(watch_id: int):
+        watch = db.get_watch(watch_id)
+        if watch is None:
+            raise HTTPException(404, "No such watch")
+        return {"new": watcher.check(watch)}
+
+    @app.delete("/api/watches/{watch_id}")
+    def delete_watch(watch_id: int):
+        if not db.delete_watch(watch_id):
+            raise HTTPException(404, "No such watch")
+        watcher.changed()
+        return {"ok": True}
 
     @app.get("/api/events")
     async def events(request: Request):

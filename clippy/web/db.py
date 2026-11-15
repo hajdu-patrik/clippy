@@ -53,12 +53,34 @@ CREATE TABLE IF NOT EXISTS posts (
     problem TEXT NOT NULL DEFAULT '{}',
     created REAL NOT NULL
 );
+CREATE TABLE IF NOT EXISTS watches (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    url TEXT NOT NULL,
+    title TEXT NOT NULL DEFAULT '',
+    settings TEXT NOT NULL DEFAULT '{}',
+    seen TEXT NOT NULL DEFAULT '[]',
+    enabled INTEGER NOT NULL DEFAULT 1,
+    checked REAL NOT NULL DEFAULT 0,
+    problem TEXT NOT NULL DEFAULT '{}',
+    created REAL NOT NULL
+);
+CREATE TABLE IF NOT EXISTS scheduled (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    chat_id INTEGER NOT NULL REFERENCES chats(id) ON DELETE CASCADE,
+    number INTEGER NOT NULL,
+    platforms TEXT NOT NULL DEFAULT '[]',
+    settings TEXT NOT NULL DEFAULT '{}',
+    due REAL NOT NULL,
+    state TEXT NOT NULL DEFAULT 'planned',
+    created REAL NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_scheduled_due ON scheduled(state, due);
 CREATE INDEX IF NOT EXISTS idx_post_clip ON posts(chat_id, number, platform, id);
 CREATE INDEX IF NOT EXISTS idx_msg_chat ON messages(chat_id, id);
 CREATE INDEX IF NOT EXISTS idx_clip_chat ON clips(chat_id, number, version);
 """
 
-_JSON_COLS = {"options", "data", "clip", "overrides", "info", "problem"}
+_JSON_COLS = {"options", "data", "clip", "overrides", "info", "problem", "settings", "seen", "platforms"}
 
 
 def _row(r: sqlite3.Row | None) -> dict | None:
@@ -227,3 +249,55 @@ class DB:
         return self._all(
             "SELECT p.* FROM posts p JOIN (SELECT platform, MAX(id) m FROM posts WHERE chat_id = ? AND number = ? "
             "GROUP BY platform) l ON p.id = l.m ORDER BY p.platform", (chat_id, number))
+
+    def add_watch(self, url: str, title: str, settings: dict, seen: list[str], checked: float) -> dict:
+        cur = self._exec("INSERT INTO watches (url, title, settings, seen, checked, created) VALUES (?,?,?,?,?,?)",
+                         (url, title, json.dumps(settings, ensure_ascii=False), json.dumps(seen), checked,
+                          time.time()))
+        return self.get_watch(cur.lastrowid)
+
+    def get_watch(self, watch_id: int) -> dict | None:
+        return self._one("SELECT * FROM watches WHERE id = ?", (watch_id,))
+
+    def list_watches(self) -> list[dict]:
+        return self._all("SELECT * FROM watches ORDER BY id")
+
+    def update_watch(self, watch_id: int, **fields) -> dict | None:
+        allowed = {"title", "settings", "seen", "enabled", "checked", "problem"}
+        sets, args = [], []
+        for k, v in fields.items():
+            if k in allowed:
+                sets.append(f"{k} = ?")
+                args.append(json.dumps(v, ensure_ascii=False) if k in _JSON_COLS else v)
+        if sets:
+            self._exec(f"UPDATE watches SET {', '.join(sets)} WHERE id = ?", (*args, watch_id))
+        return self.get_watch(watch_id)
+
+    def delete_watch(self, watch_id: int) -> bool:
+        return self._exec("DELETE FROM watches WHERE id = ?", (watch_id,)).rowcount > 0
+
+    def add_scheduled(self, chat_id: int, number: int, platforms: list[str], settings: dict, due: float) -> dict:
+        cur = self._exec("INSERT INTO scheduled (chat_id, number, platforms, settings, due, created) VALUES (?,?,?,?,?,?)",
+                         (chat_id, number, json.dumps(platforms), json.dumps(settings, ensure_ascii=False), due,
+                          time.time()))
+        return self._one("SELECT * FROM scheduled WHERE id = ?", (cur.lastrowid,))
+
+    def get_scheduled(self, item_id: int) -> dict | None:
+        return self._one("SELECT * FROM scheduled WHERE id = ?", (item_id,))
+
+    def planned(self, chat_id: int | None = None, number: int | None = None) -> list[dict]:
+        """Posts waiting for their time, soonest first (of one clip, one chat, or all)."""
+        sql, args = "SELECT * FROM scheduled WHERE state = 'planned'", []
+        if chat_id is not None:
+            sql, args = sql + " AND chat_id = ?", [chat_id]
+        if number is not None:
+            sql, args = sql + " AND number = ?", [*args, number]
+        return self._all(sql + " ORDER BY due", tuple(args))
+
+    def due_posts(self, now: float) -> list[dict]:
+        return self._all("SELECT * FROM scheduled WHERE state = 'planned' AND due <= ? ORDER BY due", (now,))
+
+    def set_scheduled_state(self, item_id: int, state: str, only_from: str = "planned") -> bool:
+        """Moves a planned post on (started, cancelled); False when it was not planned any more."""
+        return self._exec("UPDATE scheduled SET state = ? WHERE id = ? AND state = ?",
+                          (state, item_id, only_from)).rowcount > 0

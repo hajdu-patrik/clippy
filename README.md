@@ -162,6 +162,19 @@ tokens stay in `data/web/accounts.json` on this computer. TikTok sends the clip 
 until it reviews your app); YouTube may keep uploads of a new API project private until its audit. Setup, step by
 step: **[docs/publishing.md](docs/publishing.md)**.
 
+## Watching channels and planned posts
+
+Give Clippy a YouTube channel, a Twitch channel or a playlist under *Settings, Watched channels*, or say it in the
+chat (*"figyeld ezt a gaming csatornát: https://www.twitch.tv/…"*). It looks for new videos every 15 minutes to once
+a day; each new video becomes its own chat that makes clips with the kind you chose (podcast, gameplay & stream, video
+& promo, quick shorts). Videos already on the channel are left alone; tick *Clip the newest video now too* for one
+right away. A YouTube channel is read from its uploads and its past streams; live streams wait until they have ended.
+
+Posts can wait for their time: choose *At a set time* in the Post dialog, and the card shows the planned post with a
+*cancel* link. A watched channel can also post its new clips by itself: give it the platforms and the daily times
+(*18:00, 21:00*) and each new clip takes the next free time, one clip per time across all channels. That is off until
+you set both, and it uses your own connected accounts (YouTube public, TikTok drafts).
+
 ## Configuration
 
 `.env` (copied from [.env.example](.env.example)) and environment variables:

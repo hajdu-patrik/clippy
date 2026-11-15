@@ -13,9 +13,21 @@ export async function loadAccounts() {
   return state.accounts;
 }
 
+function whenText(seconds) {
+  return new Date(seconds * 1000).toLocaleString(document.documentElement.lang || undefined,
+    { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+}
+
+function plannedHtml(c) {
+  return (c.scheduled || []).map((s) => `<li class="post planned"><b>🕒 ${esc(whenText(s.due))}</b>
+    ${esc(s.platforms.map((p) => LABELS[p] || p).join(", "))}
+    <button type="button" class="link-btn" data-act="unschedule" data-sid="${s.id}">${esc(t("publish.unschedule"))}</button></li>`).join("");
+}
+
 export function postsHtml(c) {
   const posts = c.posts || [];
-  if (!posts.length) return "";
+  const planned = plannedHtml(c);
+  if (!posts.length && !planned) return "";
   const items = posts.map((p) => {
     const label = esc(LABELS[p.platform] || p.platform);
     if (p.state === "failed") {
@@ -25,7 +37,7 @@ export function postsHtml(c) {
     const link = p.url ? ` <a href="${esc(p.url)}" target="_blank" rel="noopener noreferrer">${esc(t("publish.open"))}</a>` : "";
     return `<li class="post ok"><b>${label}</b> ${what}${link}</li>`;
   }).join("");
-  return `<ul class="posts" aria-label="${esc(t("publish.posts"))}">${items}</ul>`;
+  return `<ul class="posts" aria-label="${esc(t("publish.posts"))}">${planned}${items}</ul>`;
 }
 
 function caption(c) {
@@ -63,6 +75,9 @@ export async function openPostDialog(clip) {
   target = clip;
   $("#postTitle").textContent = t("publish.title", { n: clip.number });
   $("#postCaption").value = caption(clip);
+  $("#postWhen").value = "now";
+  $("#postAt").value = "";
+  syncWhen();
   $("#postPlatforms").innerHTML = "";
   $("#ytOption").hidden = $("#ttOption").hidden = $("#postSend").disabled = true;
   if (state.accounts) renderPlatforms();
@@ -76,14 +91,20 @@ async function send(event) {
   if (!target) return;
   const platforms = chosen();
   if (!platforms.length) return;
+  const later = $("#postWhen").value === "later";
+  const at = later ? new Date($("#postAt").value).getTime() / 1000 : null;
+  if (later && !at) {
+    $("#postAt").focus();
+    return;
+  }
   const button = $("#postSend");
   button.disabled = true;
   try {
     await api.publish(state.current, target.number, {
-      platforms, youtube_privacy: $("#ytPrivacy").value, tiktok_mode: $("#ttMode").value,
+      platforms, youtube_privacy: $("#ytPrivacy").value, tiktok_mode: $("#ttMode").value, at,
     });
     $("#postDialog").close();
-    toast(t("publish.started"));
+    toast(later ? t("publish.planned", { date: whenText(at) }) : t("publish.started"));
   } catch (err) {
     toast(t("publish.failed", { error: tx(err.t, err.message) }));
   } finally {
@@ -91,7 +112,28 @@ async function send(event) {
   }
 }
 
+export async function cancelPlanned(id) {
+  try {
+    await api.cancelScheduled(id);
+    toast(t("publish.unscheduled"));
+  } catch (err) {
+    toast(tx(err.t, err.message));
+  }
+}
+
+function syncWhen() {
+  const later = $("#postWhen").value === "later";
+  $("#postAtBox").hidden = !later;
+  if (later && !$("#postAt").value) {
+    const soon = new Date(Date.now() + 3600 * 1000);
+    soon.setMinutes(0, 0, 0);
+    $("#postAt").value = new Date(soon.getTime() - soon.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+  }
+  $("#postSend").textContent = t(later ? "publish.schedule" : "publish.send");
+}
+
 export function bindPublish() {
+  $("#postWhen").addEventListener("change", syncWhen);
   $("#postCancel").addEventListener("click", () => $("#postDialog").close());
   $("#postForm").addEventListener("submit", send);
   $("#postPlatforms").addEventListener("change", syncOptions);

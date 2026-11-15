@@ -25,6 +25,7 @@
   <link rel="modulepreload" href="/static/js/live.js">
   <link rel="modulepreload" href="/static/js/settings.js">
   <link rel="modulepreload" href="/static/js/publish.js">
+  <link rel="modulepreload" href="/static/js/watches.js">
   <link rel="modulepreload" href="/static/js/messages.js">
   <link rel="modulepreload" href="/static/js/cards.js">
   <link rel="modulepreload" href="/static/js/progress.js">
@@ -183,6 +184,60 @@
           </div>
         </div>
       </section>
+      <section class="watches" aria-labelledby="watchesTitle">
+        <h3 id="watchesTitle" data-i18n="watch.title">Watched channels</h3>
+        <p class="hint" data-i18n="watch.hint">New videos of these channels become clips by themselves.</p>
+        <ul class="account-list" id="watchList"></ul>
+        <details class="watch-add" id="watchAdd">
+          <summary data-i18n="watch.add">Watch a channel</summary>
+          <label for="watchUrl" data-i18n="watch.url">Channel or playlist link</label>
+          <input class="field" id="watchUrl" type="url" maxlength="500" autocomplete="off" spellcheck="false"
+            placeholder="https://www.youtube.com/@… · https://www.twitch.tv/…">
+          <div class="post-options">
+            <div>
+              <label for="watchPreset" data-i18n="watch.kind">Kind of clips</label>
+              <select id="watchPreset">
+                <option value="" data-i18n="watch.preset.auto">Automatic</option>
+                <option value="podcast" data-i18n="watch.preset.podcast">Podcast</option>
+                <option value="gameplay" data-i18n="watch.preset.gameplay">Gameplay &amp; stream</option>
+                <option value="promo" data-i18n="watch.preset.promo">Video &amp; promo</option>
+                <option value="quick" data-i18n="watch.preset.quick">Quick shorts</option>
+              </select>
+            </div>
+            <div>
+              <label for="watchN" data-i18n="watch.n">Clips per video (0: as the kind says)</label>
+              <input class="field" id="watchN" type="number" min="0" max="12" value="0">
+            </div>
+            <div>
+              <label for="watchEvery" data-i18n="watch.everyLabel">Look for new videos</label>
+              <select id="watchEvery">
+                <option value="15" data-i18n="watch.every15">every 15 minutes</option>
+                <option value="30" data-i18n="watch.every30">every 30 minutes</option>
+                <option value="60" selected data-i18n="watch.every60">every hour</option>
+                <option value="180" data-i18n="watch.every180">every 3 hours</option>
+                <option value="360" data-i18n="watch.every360">every 6 hours</option>
+                <option value="1440" data-i18n="watch.every1440">once a day</option>
+              </select>
+            </div>
+          </div>
+          <fieldset class="post-platforms">
+            <legend data-i18n="watch.autopost">Post the new clips automatically (optional)</legend>
+            <div id="watchPlatforms">
+              <label class="check"><input type="checkbox" value="youtube"><span>YouTube</span></label>
+              <label class="check"><input type="checkbox" value="instagram"><span>Instagram</span></label>
+              <label class="check"><input type="checkbox" value="tiktok"><span>TikTok</span></label>
+            </div>
+          </fieldset>
+          <label for="watchSlots" data-i18n="watch.slots">Daily posting times, one clip each</label>
+          <input class="field" id="watchSlots" maxlength="120" autocomplete="off" placeholder="18:00, 21:00"
+            aria-describedby="watchSlotsHint">
+          <p class="hint" id="watchSlotsHint" data-i18n="watch.slotsHint">YouTube goes public, TikTok to your drafts. Leave both empty to post by hand.</p>
+          <label class="check inline"><input type="checkbox" id="watchLatest"><span data-i18n="watch.latest">Clip the newest video now too</span></label>
+          <div class="dialog-btns">
+            <button type="button" class="primary" id="watchSave" data-i18n="watch.save">Start watching</button>
+          </div>
+        </details>
+      </section>
       <div class="dialog-btns">
         <button type="button" class="ghost" id="settingsCancel" data-i18n="settings.cancel">Cancel</button>
         <button type="submit" class="primary" id="settingsSave" data-i18n="settings.save">Save</button>
@@ -211,6 +266,19 @@
             <option value="draft" data-i18n="publish.draft">To drafts, I post it in the TikTok app</option>
             <option value="private" data-i18n="publish.selfOnly">Posted, visible only to me</option>
           </select>
+        </div>
+      </div>
+      <div class="post-options">
+        <div>
+          <label for="postWhen" data-i18n="publish.when">When</label>
+          <select id="postWhen">
+            <option value="now" data-i18n="publish.now">Now</option>
+            <option value="later" data-i18n="publish.later">At a set time</option>
+          </select>
+        </div>
+        <div id="postAtBox" hidden>
+          <label for="postAt" data-i18n="publish.at">Date and time</label>
+          <input class="field" id="postAt" type="datetime-local">
         </div>
       </div>
       <label for="postCaption" data-i18n="publish.caption">Post text</label>

@@ -293,6 +293,65 @@ def fetch_audio(remote: Remote, downloads: Path, cookies_from_browser: str | Non
         return _download(remote, downloads, name, opts, 1)
 
 
+YOUTUBE_CHANNEL = re.compile(r"^/(@[^/]+|channel/[^/]+|c/[^/]+|user/[^/]+)/?$")
+TWITCH_CHANNEL = re.compile(r"^/([A-Za-z0-9_]{3,25})/?$")
+NOT_FINISHED = ("is_live", "is_upcoming", "post_live")
+
+
+@dataclass(frozen=True)
+class Upload:
+    vid: str
+    url: str
+    title: str
+
+
+def channel_lists(url: str) -> list[str]:
+    """The pages that list a channel's finished videos: a YouTube channel's uploads and past streams, a Twitch
+    channel's VODs; a playlist or a channel tab as given."""
+    parts = urlsplit(url)
+    host = (parts.hostname or "").removeprefix("www.").removeprefix("m.")
+    base = f"{parts.scheme}://{parts.hostname}{parts.path.rstrip('/')}"
+    if host == "youtube.com" and YOUTUBE_CHANNEL.match(parts.path):
+        return [f"{base}/videos", f"{base}/streams"]
+    if host == "twitch.tv" and TWITCH_CHANNEL.match(parts.path):
+        return [f"{base}/videos"]
+    return [url]
+
+
+def is_list_url(url: str) -> bool:
+    """A channel, a channel's tab or a playlist rather than one video."""
+    parts = urlsplit(url)
+    return (channel_lists(url) != [url] or "list=" in parts.query
+            or bool(re.search(r"/(videos|streams|playlist|shorts)/?$", parts.path)))
+
+
+def latest_uploads(url: str, limit: int = 10, cookies_from_browser: str | None = None) -> tuple[str, list[Upload]]:
+    """(channel name, its newest finished videos, newest first). Live and upcoming streams are left out: they are
+    picked up once they have ended."""
+    name, found = "", {}
+    for page in channel_lists(url):
+        opts = {**_ydl_options(Path(tempfile.gettempdir()), 2160, cookies_from_browser), "extract_flat": True,
+                "playlistend": limit, "noplaylist": False}
+        opts.pop("playlist_items", None)
+        try:
+            with _site_errors(page), _session(opts) as ydl:
+                info = ydl.extract_info(page, download=False)
+        except ClippyError:
+            if len(channel_lists(url)) > 1:
+                continue
+            raise
+        name = name or str(info.get("channel") or info.get("uploader") or info.get("title") or "")
+        for entry in list(info.get("entries") or [])[:limit]:
+            if not entry or entry.get("_type") == "playlist" or entry.get("live_status") in NOT_FINISHED:
+                continue
+            link = entry.get("url") or entry.get("webpage_url") or ""
+            if entry.get("id") and link.startswith("http"):
+                found.setdefault(str(entry["id"]), Upload(str(entry["id"]), link, str(entry.get("title") or "")))
+    if not found and not name:
+        raise ClippyError(key="error.watch_empty")
+    return re.sub(r"\s+-\s+(Videos|Live|Streams|All Videos.*)$", "", name).strip(), list(found.values())
+
+
 def chat_file(downloads: Path, vid: str) -> Path:
     return downloads / f"{vid}.live_chat.json"
 

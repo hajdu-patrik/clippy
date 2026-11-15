@@ -7,6 +7,7 @@ from pathlib import Path
 
 from ..storage import Storage
 from ..tools import atomic_path, slugify
+from . import schedule
 from .media import MediaStore
 
 INFO_KEYS = ("duration_out", "dead_air_removed", "jump_cuts", "shots", "layout_frames", "encoder", "source",
@@ -36,6 +37,7 @@ class ClipPresenter:
             "jpg": self.media.url_for(row["chat_id"], row.get("jpg")),
             "txt": txt.read_text(encoding="utf-8") if txt and txt.is_file() else "",
             "posts": [present_post(p) for p in self.db.latest_posts(row["chat_id"], row["number"])] if self.db else [],
+            "scheduled": [schedule.present(s) for s in self.db.planned(row["chat_id"], row["number"])] if self.db else [],
         }
         if current is not None:
             out["current"] = current

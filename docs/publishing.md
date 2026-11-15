@@ -85,6 +85,16 @@ TikTok allows two modes:
 Your app works for your own account before TikTok's review; making posts public straight from Clippy needs the
 review (TikTok calls it an audit).
 
+## Planned and automatic posts
+
+- **At a set time:** in the Post dialog choose *At a set time* and a date. The card lists the planned post with a
+  *cancel* link; at its time it starts like a post made by hand. A clip deleted in the meantime is not posted.
+- **Automatically for a watched channel:** under *Settings, Watched channels* give the channel the platforms and the
+  daily times (for example *18:00, 21:00*). Each new clip of that channel takes the next free time, one clip per time
+  across all channels, best clip first. YouTube posts go public, TikTok to your drafts.
+
+Clippy has to be running at the planned time; a post whose time passed while it was off goes out when it starts again.
+
 ## When something goes wrong
 
 The clip card shows each platform's result: a link to the post, or what went wrong and what to do. Posting one

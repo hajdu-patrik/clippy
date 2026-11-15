@@ -6,6 +6,11 @@ change, what changed rather than how; dates are ISO 8601.
 ## [Unreleased]
 
 ### Added
+- Watched channels: a YouTube channel (uploads and past streams), a Twitch channel or a playlist is checked for new
+  videos on a schedule, from Settings or the chat ("figyeld ezt a csatornát"); every new video becomes its own chat
+  with clips of the chosen kind.
+- Planned posts: a clip can be posted at a set time (and cancelled from its card), and a watched channel can post its
+  new clips by itself into daily time slots, once the user sets the platforms and the times.
 - Gameplay and stream peaks without words: loud moments, laughter, sudden action on screen and the chat of YouTube
   stream replays mark the transcript for the picker and add moments of their own, with titles written from the
   reactions and what the chat wrote. A long video without speech is now clipped by its reactions instead of

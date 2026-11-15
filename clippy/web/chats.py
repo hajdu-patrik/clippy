@@ -14,6 +14,7 @@ from ..publish import LABELS, PLATFORMS
 from ..storage import Storage
 from ..tools import ClippyError
 from . import agent
+from . import schedule
 from .clips import ClipLibrary, ClipPresenter
 from .hub import Hub
 from .jobs import PLACEHOLDER_TITLE, Runner
@@ -28,6 +29,7 @@ class NotFound(LookupError):
 class ChatService:
     def __init__(self, db, hub: Hub, runner: Runner, storage: Storage, presenter: ClipPresenter,
                  library: ClipLibrary, llm_factory: Callable[[], LLM], assets: AssetService | None = None):
+        self.watcher = None
         self.db, self.hub, self.runner, self.storage = db, hub, runner, storage
         self.presenter, self.library, self.llm_factory = presenter, library, llm_factory
         self.assets = assets or AssetService(storage)
@@ -112,12 +114,27 @@ class ChatService:
         job = self.runner.submit(chat_id, "undo", {"clips": [number]})
         return {"job": job.id}
 
-    def publish(self, chat_id: int, number: int, platforms: list[str], options: dict) -> dict:
+    def publish(self, chat_id: int, number: int, platforms: list[str], options: dict, at: float | None = None) -> dict:
+        """Now (a posting job) or at `at` (a planned post the watch loop starts on time)."""
         self.get(chat_id)
-        if not any(c["number"] == number for c in self.db.current_clips(chat_id)):
+        row = next((c for c in self.db.current_clips(chat_id) if c["number"] == number), None)
+        if row is None:
             raise NotFound(number)
+        if at is not None:
+            item = schedule.plan(self.db, chat_id, number, platforms, options, at)
+            self.hub.publish(chat_id, {"type": "clip", "clip": self.presenter.present(row, current=True)})
+            return {"scheduled": item["id"]}
         job = self.runner.submit(chat_id, "publish", {"clip": number, "platforms": platforms, "options": options})
         return {"job": job.id}
+
+    def cancel_scheduled(self, item_id: int) -> bool:
+        item = self.db.get_scheduled(item_id)
+        if item is None or not self.db.set_scheduled_state(item_id, "cancelled"):
+            return False
+        row = next((c for c in self.db.current_clips(item["chat_id"]) if c["number"] == item["number"]), None)
+        if row is not None:
+            self.hub.publish(item["chat_id"], {"type": "clip", "clip": self.presenter.present(row, current=True)})
+        return True
 
     def post_message(self, chat_id: int, text: str, attachments: tuple[str, ...] = ()) -> dict:
         chat = self.get(chat_id)
@@ -168,6 +185,11 @@ class ChatService:
             require_public_url(action["url"])
         if kind == "publish":
             return self._publish_jobs(action)
+        if kind == "watch":
+            from .watch import watch_settings
+
+            self.watcher.add(action["url"], watch_settings(action["n"], action["preset"]))
+            return []
         return [(kind, action)]
 
     def _publish_jobs(self, action: dict) -> list[tuple[str, dict]]:

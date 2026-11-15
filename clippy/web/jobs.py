@@ -33,6 +33,7 @@ from ..tools import ClippyError, SharedProgress, atomic_write_text, log, log_sin
 from .agent import RENDER_KEYS
 from .clips import ClipLibrary, ClipPresenter, slim_info
 from .hub import Hub
+from . import schedule
 
 PLACEHOLDER_TITLE = "Processing video…"
 WORKERS = max(1, int(os.environ.get("CLIPPY_WORKERS", "3")))
@@ -477,7 +478,18 @@ class GenerateJob(JobHandler):
         ctx.runner.hub.publish(chat["id"], {"type": "chat", "chat": ctx.db.update_chat(chat["id"], **updates)})
         existing = [Clip.from_dict(c["clip"]) for c in ctx.current_clips()] if same_video else []
         clips = proj.select(n=p.get("n"), exclude=existing, instructions=p.get("instructions") or "")
+        first = ctx.db.next_number(chat["id"])
         n = self.render_new(ctx, proj, clips, render_options(chat_opts))
+        if p.get("autopost") and not p.get("planned"):
+            numbers = [c["number"] for c in ctx.current_clips() if c["number"] >= first]
+            planned = schedule.plan_in_slots(ctx.db, chat["id"], numbers, p["autopost"])
+            p["planned"] = True
+            ctx.remember()
+            for row in ctx.current_clips():
+                if row["number"] in numbers:
+                    ctx.show(row)
+            if planned:
+                return tx("done.generate_planned", n=n, title=proj.title, count=len(planned))
         return tx("done.generate", n=n, title=proj.title)
 
 

@@ -6,6 +6,7 @@ import re
 
 from .. import i18n, playbook
 from ..captions import COLORS
+from ..download import is_list_url
 from ..render import LAYOUTS
 from ..tools import fmt_ts
 from . import presets
@@ -63,6 +64,9 @@ Actions:
 - {"type": "publish", "clips": [<clip numbers>] or "all", "platforms": ["youtube", "instagram", "tiktok"]}
     POST finished clips to the user's own connected accounts, only when the user asks to post / upload them
     ("posztold ki a 2. klipet YouTube-ra", "upload clip 3 to TikTok"). Empty platforms = every connected account.
+- {"type": "watch", "url": "<channel or playlist url>", "n": <clips per video, 0 = default>}
+    keep watching a YouTube or Twitch channel or a playlist: every NEW video becomes a chat with clips automatically
+    ("figyeld ezt a csatornát", "watch this channel"). Use it only when the user asks to watch / follow a channel.
 - {"type": "none"}  (questions, small talk, unclear requests -> ask a short clarifying question in "reply")
 
 options (all optional, for generate / more):
@@ -118,7 +122,7 @@ AGENT_SCHEMA = {
         "actions": {"type": "array", "items": {
             "type": "object",
             "properties": {
-                "type": {"type": "string", "enum": ["generate", "more", "edit", "delete", "texts", "publish", "none"]},
+                "type": {"type": "string", "enum": ["generate", "more", "edit", "delete", "texts", "publish", "watch", "none"]},
                 "platforms": {"type": "array", "items": {"type": "string"}},
                 "url": {"type": "string"}, "n": {"type": "integer"}, "instructions": {"type": "string"},
                 "clip": {"type": "integer"}, "clips": {}, "hook": {"type": "string"}, "title": {"type": "string"},
@@ -193,6 +197,14 @@ PUBLISH_INTENT = re.compile(r"\b(post\b|posts\b|publish\w*|upload\w*|posztol\w*|
 PLATFORM_WORDS = {"youtube": re.compile(r"\b(youtube\w*|yt|shorts)\b", re.I),
                   "instagram": re.compile(r"\b(insta\w*|ig|reels?)\b", re.I),
                   "tiktok": re.compile(r"\b(tik ?tok\w*)\b", re.I)}
+WATCH_WORDS = re.compile(r"\b(figyeld|figyeljed|figyelj|kövesd|kövessed|kovesd|watch|follow|monitor|keep an eye on)\b",
+                         re.I)
+NEAR = 30
+SENTENCE_END = re.compile(r"[.!?\n]")
+CHANNEL_WORDS = re.compile(r"\b(csatorn\w*|channel\w*|playlist\w*|lejátszási|profil\w*|streamer\w*|új videó\w*|"
+                           r"new videos?)", re.I)
+GAMEPLAY_WORDS = re.compile(r"\b(gam\w*|stream\w*|játék\w*|jatek\w*|twitch|kick)", re.I)
+PODCAST_WORDS = re.compile(r"\b(podcast\w*|interj\w*|interview\w*|beszélget\w*)", re.I)
 PRIVATE_WORDS = re.compile(r"\b(privát\w*|privat\w*|private\w*|csak én)", re.I)
 UNLISTED_WORDS = re.compile(r"\b(unlisted|nem listázott|listázatlan)", re.I)
 
@@ -310,8 +322,36 @@ class ActionValidator:
         return {"type": "publish", "clips": numbers, "platforms": named,
                 "options": {"youtube": {"privacy": privacy}, "tiktok": {"mode": "private" if private else "draft"}}}
 
+    def _watch(self, raw: dict, opts: dict) -> dict | None:
+        """Watching reaches outside on its own later: only a link and the wish from the user's own message count."""
+        lists = [u for u in self.urls if is_list_url(u)]
+        if not wants_watch(self.message) or not lists:
+            return None
+        url = str(raw.get("url") or "").strip()
+        return watch_action(self.message, url if url in lists else lists[0], raw.get("n"))
+
     HANDLERS = {"generate": _generate, "more": _more, "edit": _edit, "delete": _delete, "texts": _texts,
-                "publish": _publish}
+                "publish": _publish, "watch": _watch}
+
+
+def wants_watch(message: str) -> bool:
+    """"Watch this channel": a watching verb and a word about a channel or its new videos, both from the user."""
+    text = message or ""
+    for m in WATCH_WORDS.finditer(text):
+        before = SENTENCE_END.split(text[max(0, m.start() - NEAR):m.start()])[-1]
+        after = SENTENCE_END.split(text[m.end():m.end() + NEAR])[0]
+        if CHANNEL_WORDS.search(before + " " + after):
+            return True
+    return False
+
+
+def watch_action(message: str, url: str, n=None) -> dict:
+    preset = "gameplay" if GAMEPLAY_WORDS.search(message) else "podcast" if PODCAST_WORDS.search(message) else ""
+    try:
+        count = max(0, min(12, int(n or 0)))
+    except (TypeError, ValueError):
+        count = 0
+    return {"type": "watch", "url": url, "n": count, "preset": preset}
 
 
 def build_state(chat: dict, clips: list[dict], excerpt) -> str:
@@ -336,6 +376,8 @@ def fast_path(message: str, chat: dict, has_clips: bool = False) -> dict | None:
     if not url or (url.group(0) == chat.get("source") and has_clips):
         return None
     count = re.search(r"\b(\d{1,2})\s*(?:clips?|db|darab|klip|rész)", message, re.I)
+    if wants_watch(message) and is_list_url(url.group(0)):
+        return watch_action(message, url.group(0), count.group(1) if count else None)
     return {"type": "generate", "url": url.group(0), "n": max(1, min(12, int(count.group(1)))) if count else 5,
             "instructions": URL_RE.sub("", message).strip()[:400], "options": {}}
 
@@ -372,9 +414,11 @@ def run_agent(llm, chat: dict, clips: list[dict], history: list[dict], message: 
             return {"reply": i18n.t(lang, "error.llm_unreachable", error=exc), "actions": [], "notes": [], "lang": lang}
     validator = ActionValidator({c["number"] for c in clips}, chat, message, lang, tuple(a["id"] for a in attachments))
     actions = validator.validate(raw_actions)
-    if fast and not any(a["type"] == "generate" for a in actions):
+    if fast and not any(a["type"] == fast["type"] for a in actions):
+        actions = [a for a in actions if a["type"] not in ("generate", "watch")]
         actions.insert(0, fast)
-        reply = reply or i18n.t(lang, "reply.generate", n=fast["n"])
+        reply = reply or (i18n.t(lang, "reply.watch") if fast["type"] == "watch"
+                          else i18n.t(lang, "reply.generate", n=fast["n"]))
     rerouted = texts_first(message, actions)
     if rerouted != actions:
         reply = i18n.t(lang, "reply.texts")
