@@ -8,20 +8,23 @@ import json
 import re
 import tempfile
 import threading
+import time
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Literal
 
 from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.concurrency import run_in_threadpool
-from fastapi.responses import FileResponse, HTMLResponse, StreamingResponse
+from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.gzip import GZipMiddleware
 from pydantic import BaseModel, Field, StringConstraints
 
 from .. import i18n
 from ..editing.assets import LIMITS
-from ..tools import ClippyError
+from ..tools import ClippyError, log
 from ..llm import create_llm
+from ..publish import LABELS
+from ..publish.oauth import OAuthFlows
 from ..settings import Settings
 from ..storage import Storage
 from .chats import ChatService, NotFound
@@ -72,13 +75,26 @@ class SettingsPatch(BaseModel):
     profile_links: str = Field(max_length=2000)
 
 
+Platform = Literal["youtube", "instagram", "tiktok"]
+
+
+class PublishRequest(BaseModel):
+    platforms: list[Platform] = Field(min_length=1, max_length=3)
+    youtube_privacy: Literal["public", "unlisted", "private"] = "public"
+    tiktok_mode: Literal["draft", "private"] = "draft"
+
+
+class InstagramToken(BaseModel):
+    token: str = Field(min_length=20, max_length=2000)
+
+
 def create_app(storage: Storage | None = None, db_path: Path | None = None, runner: Runner | None = None,
                llm_factory=None, start_worker: bool = True, lan: Lan | None = None) -> FastAPI:
     storage = storage or Storage()
     db = DB(db_path or storage.web / "clippy.db")
     hub = runner.hub if runner is not None else Hub()
     media = MediaStore(storage)
-    presenter, library = ClipPresenter(media), ClipLibrary(storage)
+    presenter, library = ClipPresenter(media, db), ClipLibrary(storage)
     runner = runner or Runner(db, hub, storage, presenter, library, start=start_worker)
     chats = ChatService(db, hub, runner, storage, presenter, library, llm_factory or create_llm)
     if start_worker:
@@ -126,6 +142,79 @@ def create_app(storage: Storage | None = None, db_path: Path | None = None, runn
         return {"forgotten": lan_from_this_computer(request).forget_all()}
 
     settings = Settings(storage)
+    accounts, flows, notices = runner.accounts, OAuthFlows(), {}
+
+    def from_this_computer(request: Request) -> None:
+        if not is_loopback(request.client.host if request.client else ""):
+            raise HTTPException(403, error_detail(ClippyError(key="error.accounts_here_only")))
+
+    def accounts_changed() -> None:
+        hub.publish(None, {"type": "accounts"})
+
+    def redirect_uri(request: Request, platform: str) -> str:
+        return f"http://127.0.0.1:{request.url.port or 80}/oauth/{platform}/callback"
+
+    @app.get("/api/accounts")
+    def get_accounts(request: Request):
+        return {"accounts": accounts.status(), "notices": notices,
+                "here": is_loopback(request.client.host if request.client else "")}
+
+    @app.post("/api/accounts/{platform}/connect")
+    def connect_account(platform: Platform, request: Request):
+        """The sign-in page's address; the browser goes there and the platform sends it back to the callback."""
+        from_this_computer(request)
+        target = accounts.platform(platform)
+        if not target.oauth:
+            raise HTTPException(400, "Paste the token instead")
+        try:
+            state, verifier = flows.start(platform)
+            return {"url": target.auth_url(redirect_uri(request, platform), state, verifier)}
+        except ClippyError as exc:
+            raise HTTPException(400, error_detail(exc)) from None
+
+    @app.get("/oauth/{platform}/callback")
+    def oauth_callback(platform: Platform, request: Request, code: str = "", state: str = "", error: str = ""):
+        from_this_computer(request)
+        verifier = flows.finish(platform, state)
+        notices.pop(platform, None)
+        try:
+            if error:
+                raise ClippyError(key="error.oauth_denied", platform=LABELS[platform])
+            if verifier is None or not code:
+                raise ClippyError(key="error.oauth_state", platform=LABELS[platform])
+            tokens = accounts.platform(platform).exchange(accounts.http, code, verifier,
+                                                          redirect_uri(request, platform), time.time())
+            accounts.save(platform, tokens)
+        except ClippyError as exc:
+            notices[platform] = {"key": exc.key, "params": {k: str(v) for k, v in exc.params.items()}}
+        except Exception as exc:
+            notices[platform] = {"key": "error.platform_network", "params": {"platform": LABELS[platform]}}
+            log(f"[publish] sign-in failed: {type(exc).__name__}: {exc}")
+        accounts_changed()
+        return RedirectResponse("/#settings", status_code=303)
+
+    @app.put("/api/accounts/instagram")
+    def connect_instagram(body: InstagramToken, request: Request):
+        from_this_computer(request)
+        try:
+            tokens = accounts.platform("instagram").connect(accounts.http, body.token, time.time())
+        except ClippyError as exc:
+            raise HTTPException(400, error_detail(exc)) from None
+        except Exception:
+            raise HTTPException(400, error_detail(ClippyError(key="error.platform_network",
+                                                              platform="Instagram"))) from None
+        accounts.save("instagram", tokens)
+        notices.pop("instagram", None)
+        accounts_changed()
+        return accounts.status()["instagram"]
+
+    @app.delete("/api/accounts/{platform}")
+    def disconnect_account(platform: Platform, request: Request):
+        from_this_computer(request)
+        accounts.remove(platform)
+        notices.pop(platform, None)
+        accounts_changed()
+        return {"ok": True}
 
     @app.get("/api/settings")
     def get_settings():
@@ -207,6 +296,15 @@ def create_app(storage: Storage | None = None, db_path: Path | None = None, runn
     @app.post("/api/chats/{chat_id}/clips/{number}/undo")
     def undo_clip(chat_id: int, number: int):
         return found(chats.undo, chat_id, number)
+
+    @app.post("/api/chats/{chat_id}/clips/{number}/publish")
+    def publish_clip(chat_id: int, number: int, body: PublishRequest):
+        status = accounts.status()
+        missing = [p for p in body.platforms if not status[p]["connected"]]
+        if missing:
+            raise HTTPException(400, error_detail(ClippyError(key="error.account_missing", platform=LABELS[missing[0]])))
+        options = {"youtube": {"privacy": body.youtube_privacy}, "tiktok": {"mode": body.tiktok_mode}}
+        return found(chats.publish, chat_id, number, list(dict.fromkeys(body.platforms)), options)
 
     @app.get("/api/events")
     async def events(request: Request):

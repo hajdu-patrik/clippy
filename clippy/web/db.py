@@ -41,11 +41,24 @@ CREATE TABLE IF NOT EXISTS clips (
     deleted INTEGER NOT NULL DEFAULT 0,
     created REAL NOT NULL
 );
+CREATE TABLE IF NOT EXISTS posts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    chat_id INTEGER NOT NULL REFERENCES chats(id) ON DELETE CASCADE,
+    clip_id INTEGER NOT NULL REFERENCES clips(id) ON DELETE CASCADE,
+    number INTEGER NOT NULL,
+    platform TEXT NOT NULL,
+    state TEXT NOT NULL,
+    url TEXT NOT NULL DEFAULT '',
+    remote_id TEXT NOT NULL DEFAULT '',
+    problem TEXT NOT NULL DEFAULT '{}',
+    created REAL NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_post_clip ON posts(chat_id, number, platform, id);
 CREATE INDEX IF NOT EXISTS idx_msg_chat ON messages(chat_id, id);
 CREATE INDEX IF NOT EXISTS idx_clip_chat ON clips(chat_id, number, version);
 """
 
-_JSON_COLS = {"options", "data", "clip", "overrides", "info"}
+_JSON_COLS = {"options", "data", "clip", "overrides", "info", "problem"}
 
 
 def _row(r: sqlite3.Row | None) -> dict | None:
@@ -199,3 +212,18 @@ class DB:
     def mark_deleted(self, chat_id: int, number: int) -> int:
         cur = self._exec("UPDATE clips SET deleted = 1 WHERE chat_id = ? AND number = ?", (chat_id, number))
         return cur.rowcount
+
+    def add_post(self, clip: dict, platform: str, state: str, url: str = "", remote_id: str = "",
+                 problem: dict | None = None) -> dict:
+        cur = self._exec(
+            "INSERT INTO posts (chat_id, clip_id, number, platform, state, url, remote_id, problem, created) "
+            "VALUES (?,?,?,?,?,?,?,?,?)",
+            (clip["chat_id"], clip["id"], clip["number"], platform, state, url, remote_id,
+             json.dumps(problem or {}, ensure_ascii=False), time.time()))
+        return self._one("SELECT * FROM posts WHERE id = ?", (cur.lastrowid,))
+
+    def latest_posts(self, chat_id: int, number: int) -> list[dict]:
+        """The newest post of a clip number on each platform (a failed try is replaced by the next one)."""
+        return self._all(
+            "SELECT p.* FROM posts p JOIN (SELECT platform, MAX(id) m FROM posts WHERE chat_id = ? AND number = ? "
+            "GROUP BY platform) l ON p.id = l.m ORDER BY p.platform", (chat_id, number))

@@ -6,6 +6,10 @@ change, what changed rather than how; dates are ISO 8601.
 ## [Unreleased]
 
 ### Added
+- Posting to YouTube, Instagram and TikTok from the app: a Post button on every clip (platforms, YouTube visibility,
+  TikTok drafts or private) and from the chat in your own words. Accounts are connected once in Settings with your
+  own developer apps (docs/publishing.md); the clip card links each post or says what went wrong, one platform
+  failing never stops the others, and a retry or a restart never posts twice.
 - Post text for every clip: a curiosity title (honest clickbait), a 1-2 sentence teaser description, the comment
   question, the full video's link, your own profile links and the hashtags, in the clip's language. Profile
   links (TikTok, Instagram…) are set once under Settings and stay on this computer (data/web/settings.json).

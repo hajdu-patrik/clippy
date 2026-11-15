@@ -60,6 +60,9 @@ Actions:
     new post TITLES and DESCRIPTIONS for existing clips (e.g. "írj címet és leírást a klipeknek", "generate titles
     and descriptions", "legyen jobb címük"): only the post texts change, the video stays. New clips get them anyway.
 - {"type": "delete", "clip": <clip number>}
+- {"type": "publish", "clips": [<clip numbers>] or "all", "platforms": ["youtube", "instagram", "tiktok"]}
+    POST finished clips to the user's own connected accounts, only when the user asks to post / upload them
+    ("posztold ki a 2. klipet YouTube-ra", "upload clip 3 to TikTok"). Empty platforms = every connected account.
 - {"type": "none"}  (questions, small talk, unclear requests -> ask a short clarifying question in "reply")
 
 options (all optional, for generate / more):
@@ -102,6 +105,8 @@ User: "3 more about the music"
 {"reply": "Looking for 3 more clips about the music.", "actions": [{"type": "more", "n": 3, "instructions": "the parts about music and songs"}]}
 User: "delete the 4th"
 {"reply": "Deleted clip #4.", "actions": [{"type": "delete", "clip": 4}]}
+User: "posztold ki a 2. klipet youtube-ra és tiktokra"
+{"reply": "Kiposztolom a 2. klipet YouTube-ra és TikTokra.", "actions": [{"type": "publish", "clips": [2], "platforms": ["youtube", "tiktok"]}]}
 User: "milyen hosszúak legyenek a klipek tiktokra?"
 {"reply": "Az a legjobb, ami egy teljes gondolatot átad: tesztelésre 20-45 mp, egy erős sztori mehet 60-90 mp-ig is. Egy Shorts-vizsgálatban 11-20 mp-nél volt a legtöbb nézés, de ezek becslések, a saját megtartási grafikonod dönt. Szólj, és rövidebbre vágom a klipeket.", "actions": [{"type": "none"}]}"""
 
@@ -113,7 +118,8 @@ AGENT_SCHEMA = {
         "actions": {"type": "array", "items": {
             "type": "object",
             "properties": {
-                "type": {"type": "string", "enum": ["generate", "more", "edit", "delete", "texts", "none"]},
+                "type": {"type": "string", "enum": ["generate", "more", "edit", "delete", "texts", "publish", "none"]},
+                "platforms": {"type": "array", "items": {"type": "string"}},
                 "url": {"type": "string"}, "n": {"type": "integer"}, "instructions": {"type": "string"},
                 "clip": {"type": "integer"}, "clips": {}, "hook": {"type": "string"}, "title": {"type": "string"},
                 "start_shift": {"type": "number"}, "end_shift": {"type": "number"},
@@ -182,6 +188,13 @@ VIDEO_CHANGE = re.compile(r"\b(felirat\w*|subtitle\w*|captions?\b|vág\w*|cut|ze
                           r"sound|logó|logo|matric\w*|sticker|effekt\w*|effect|gyors\w*|lassí\w*|speed|nyitó|hook|"
                           r"cta|intró|outró|intro|outro|formátum|képarány|format)", re.I)
 DELETE_INTENT = re.compile(r"\b(delete|remove|drop|töröl\w*|kitöröl\w*|torol\w*|szedd ki|vedd ki)", re.I)
+PUBLISH_INTENT = re.compile(r"\b(post\b|posts\b|publish\w*|upload\w*|posztol\w*|poszold\w*|posztold\w*|kiposzt\w*|"
+                            r"tedd ki|rakd ki|tegyél ki|rakj ki|töltsd fel|feltölt\w*|kirak\w*|közzé\w*)", re.I)
+PLATFORM_WORDS = {"youtube": re.compile(r"\b(youtube\w*|yt|shorts)\b", re.I),
+                  "instagram": re.compile(r"\b(insta\w*|ig|reels?)\b", re.I),
+                  "tiktok": re.compile(r"\b(tik ?tok\w*)\b", re.I)}
+PRIVATE_WORDS = re.compile(r"\b(privát\w*|privat\w*|private\w*|csak én)", re.I)
+UNLISTED_WORDS = re.compile(r"\b(unlisted|nem listázott|listázatlan)", re.I)
 
 
 class ActionValidator:
@@ -277,7 +290,28 @@ class ActionValidator:
             numbers = sorted({n for n in (self._clip(v) for v in target) if n is not None})
         return {"type": "texts", "clips": numbers} if numbers else None
 
-    HANDLERS = {"generate": _generate, "more": _more, "edit": _edit, "delete": _delete, "texts": _texts}
+    def _publish(self, raw: dict, opts: dict) -> dict | None:
+        """Posting reaches outside: the user's own words must ask for it and name the platforms (none named means
+        every connected account); the model only picks the clips."""
+        if not PUBLISH_INTENT.search(self.message):
+            self.note("note.publish_needs_request")
+            return None
+        target = raw.get("clips", raw.get("clip", "all"))
+        if target in ("all", None) or target == ["all"]:
+            numbers = sorted(self.numbers)
+        else:
+            target = target if isinstance(target, list) else [target]
+            numbers = sorted({n for n in (self._clip(v) for v in target) if n is not None})
+        if not numbers:
+            return None
+        named = [name for name, words in PLATFORM_WORDS.items() if words.search(self.message)]
+        private = bool(PRIVATE_WORDS.search(self.message))
+        privacy = "private" if private else "unlisted" if UNLISTED_WORDS.search(self.message) else "public"
+        return {"type": "publish", "clips": numbers, "platforms": named,
+                "options": {"youtube": {"privacy": privacy}, "tiktok": {"mode": "private" if private else "draft"}}}
+
+    HANDLERS = {"generate": _generate, "more": _more, "edit": _edit, "delete": _delete, "texts": _texts,
+                "publish": _publish}
 
 
 def build_state(chat: dict, clips: list[dict], excerpt) -> str:

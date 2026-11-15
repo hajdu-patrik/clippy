@@ -17,9 +17,15 @@ def slim_info(info: dict) -> dict:
     return {k: info.get(k) for k in INFO_KEYS}
 
 
+def present_post(post: dict) -> dict:
+    problem = post.get("problem") or {}
+    return {"platform": post["platform"], "state": post["state"], "url": post["url"], "created": post["created"],
+            **({"error_t": problem} if problem.get("key") else {})}
+
+
 class ClipPresenter:
-    def __init__(self, media: MediaStore):
-        self.media = media
+    def __init__(self, media: MediaStore, db=None):
+        self.media, self.db = media, db
 
     def present(self, row: dict, current: bool | None = None) -> dict:
         txt = Path(row["txt"]) if row.get("txt") else None
@@ -29,6 +35,7 @@ class ClipPresenter:
             "mp4": self.media.url_for(row["chat_id"], row.get("mp4")),
             "jpg": self.media.url_for(row["chat_id"], row.get("jpg")),
             "txt": txt.read_text(encoding="utf-8") if txt and txt.is_file() else "",
+            "posts": [present_post(p) for p in self.db.latest_posts(row["chat_id"], row["number"])] if self.db else [],
         }
         if current is not None:
             out["current"] = current

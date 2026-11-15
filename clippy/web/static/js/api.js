@@ -52,5 +52,11 @@ export const api = {
   settings: () => request("/api/settings"),
   saveSettings: (profileLinks) =>
     request("/api/settings", { method: "PUT", body: JSON.stringify({ profile_links: profileLinks }) }),
+  accounts: () => request("/api/accounts"),
+  connectAccount: (platform) => request(`/api/accounts/${platform}/connect`, { method: "POST" }),
+  disconnectAccount: (platform) => request(`/api/accounts/${platform}`, { method: "DELETE" }),
+  instagramToken: (token) => request("/api/accounts/instagram", { method: "PUT", body: JSON.stringify({ token }) }),
+  publish: (id, number, body) =>
+    request(`/api/chats/${id}/clips/${number}/publish`, { method: "POST", body: JSON.stringify(body) }),
   events: () => new EventSource("/api/events"),
 };

@@ -24,6 +24,7 @@
   <link rel="modulepreload" href="/static/js/chat.js">
   <link rel="modulepreload" href="/static/js/live.js">
   <link rel="modulepreload" href="/static/js/settings.js">
+  <link rel="modulepreload" href="/static/js/publish.js">
   <link rel="modulepreload" href="/static/js/messages.js">
   <link rel="modulepreload" href="/static/js/cards.js">
   <link rel="modulepreload" href="/static/js/progress.js">
@@ -167,9 +168,58 @@
       <p class="hint" id="profileLinksHint" data-i18n="settings.hint">One per line. They go under every clip's post text.</p>
       <textarea id="profileLinks" rows="4" maxlength="2000" aria-describedby="profileLinksHint"
         placeholder="TikTok: https://www.tiktok.com/@…&#10;Instagram: https://www.instagram.com/…/"></textarea>
+      <section class="accounts" aria-labelledby="accountsTitle">
+        <h3 id="accountsTitle" data-i18n="accounts.title">Accounts for posting</h3>
+        <p class="hint" data-i18n="accounts.hint">Post clips straight to your own channels. Set up once: docs/publishing.md.</p>
+        <p class="hint warn" id="accountsHere" hidden data-i18n="accounts.hereOnly">Connect accounts on the computer that runs Clippy; posting works from here too.</p>
+        <ul class="account-list" id="accountList"></ul>
+        <div class="token-box" id="igTokenBox" hidden>
+          <label for="igToken" data-i18n="accounts.tokenLabel">Instagram access token</label>
+          <p class="hint" id="igTokenHint" data-i18n="accounts.tokenHint">From your Meta app: Instagram, API setup with Instagram login, Generate token.</p>
+          <div class="token-row">
+            <input id="igToken" type="password" autocomplete="off" spellcheck="false" maxlength="2000"
+              aria-describedby="igTokenHint">
+            <button type="button" class="primary" id="igSave" data-i18n="accounts.tokenSave">Connect</button>
+          </div>
+        </div>
+      </section>
       <div class="dialog-btns">
         <button type="button" class="ghost" id="settingsCancel" data-i18n="settings.cancel">Cancel</button>
         <button type="submit" class="primary" id="settingsSave" data-i18n="settings.save">Save</button>
+      </div>
+    </form>
+  </dialog>
+  <dialog class="settings-dialog" id="postDialog" aria-labelledby="postTitle">
+    <form method="dialog" id="postForm">
+      <h2 id="postTitle" data-i18n="publish.titlePlain">Post clip</h2>
+      <fieldset class="post-platforms">
+        <legend data-i18n="publish.where">Where to</legend>
+        <div id="postPlatforms"></div>
+      </fieldset>
+      <div class="post-options">
+        <div id="ytOption">
+          <label for="ytPrivacy" data-i18n="publish.ytPrivacy">YouTube visibility</label>
+          <select id="ytPrivacy">
+            <option value="public" data-i18n="publish.public">Public</option>
+            <option value="unlisted" data-i18n="publish.unlisted">Unlisted</option>
+            <option value="private" data-i18n="publish.private">Private</option>
+          </select>
+        </div>
+        <div id="ttOption">
+          <label for="ttMode" data-i18n="publish.ttMode">TikTok</label>
+          <select id="ttMode">
+            <option value="draft" data-i18n="publish.draft">To drafts, I post it in the TikTok app</option>
+            <option value="private" data-i18n="publish.selfOnly">Posted, visible only to me</option>
+          </select>
+        </div>
+      </div>
+      <label for="postCaption" data-i18n="publish.caption">Post text</label>
+      <textarea id="postCaption" rows="7" readonly></textarea>
+      <p class="hint" id="postNote"></p>
+      <div class="dialog-btns">
+        <button type="button" class="ghost" id="postSettings" hidden data-i18n="publish.toSettings">Settings</button>
+        <button type="button" class="ghost" id="postCancel" data-i18n="settings.cancel">Cancel</button>
+        <button type="submit" class="primary" id="postSend" data-i18n="publish.send">Post</button>
       </div>
     </form>
   </dialog>

@@ -16,6 +16,9 @@ FINAL = frozenset({
     "error.chat_deleted", "error.cookies_file_missing", "error.download_gone", "error.download_live",
     "error.download_login", "error.download_playlist", "error.download_unsupported", "error.empty_transcript",
     "error.no_clip", "error.no_sound", "error.no_video", "error.not_public", "error.only_http", "error.unresolvable",
+    "error.account_missing", "error.account_expired", "error.platform_not_configured", "error.platform_audit",
+    "error.platform_rejected", "error.platform_slow", "error.clip_too_long_for", "error.no_platform",
+    "error.unknown_platform", "error.bad_token",
 })
 
 
@@ -42,7 +45,8 @@ RULES = (
     Rule("length", keys=("error.no_suitable_clip",), steps=({"min_len": 10.0, "max_len": 90.0},)),
     Rule("llm", ("ollama", "llm"), keys=("error.llm_unreachable",)),
     Rule("network", ("403", "429", "timed out", "timeout", "connection", "temporarily", "network", "unable to download",
-                     "http error"), keys=("error.download_failed", "error.download_busy", "error.download_missing")),
+                     "http error"), keys=("error.download_failed", "error.download_busy", "error.download_missing",
+                           "error.platform_network")),
 )
 
 

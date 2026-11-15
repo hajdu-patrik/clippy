@@ -27,8 +27,9 @@ from ..settings import Settings
 from ..llm import create_llm
 from ..i18n import t
 from ..pipeline import Options, Project, post_text
+from ..publish import LABELS, PLATFORMS, PostText, Upload
 from ..storage import Storage
-from ..tools import ClippyError, SharedProgress, atomic_write_text, log, log_sink
+from ..tools import ClippyError, SharedProgress, atomic_write_text, log, log_sink, report_span
 from .agent import RENDER_KEYS
 from .clips import ClipLibrary, ClipPresenter, slim_info
 from .hub import Hub
@@ -72,6 +73,7 @@ STAGES = (
     Stage("select", "Picking", ("[hook]", "[plan]"), 40),
     Stage("render", "Render", ("[faces]", "[render]"), 0),
     Stage("edit", "Edit", ("[edit]", "[render]", "[faces]"), 10),
+    Stage("publish", "Posting", ("[publish]",), 10),
 )
 CLIP_STAGES = ("download", "audio", "transcribe", "align", "select", "render")
 RENDER_WEIGHT_PER_CLIP = 5
@@ -200,6 +202,11 @@ class Progress:
             self._detail(tx("detail.retry", n=attempt, max=recovery.MAX_ATTEMPTS))
             if self.active:
                 self.state[self.active] = "active"
+            self._push(force=True)
+
+    def save(self) -> None:
+        """Stores the card now, with its job: what the job wrote into its payload survives a restart."""
+        with self._lock:
             self._push(force=True)
 
     def finish(self, summary_t: dict, error: bool = False) -> None:
@@ -358,6 +365,15 @@ class JobContext:
         self.runner.library.publish(self.chat, row)
         self._show(row)
         return row
+
+    def remember(self) -> None:
+        progress = self.runner.progress.get(self.job.id)
+        if progress is not None:
+            progress.save()
+
+    def show(self, row: dict) -> None:
+        self.runner.hub.publish(self.job.chat_id, {"type": "clip",
+                                                   "clip": self.runner.presenter.present(row, current=True)})
 
     def say(self, content: str, kind: str = "text", data: dict | None = None) -> None:
         msg = self.db.add_message(self.job.chat_id, "assistant", content, kind=kind, data=data)
@@ -598,7 +614,75 @@ class UndoJob(JobHandler):
         return tx("done.undo", clip=number) if EditJob.report(ctx, row, outcome) else tx("done.nothing")
 
 
-HANDLERS: dict[str, JobHandler] = {h.kind: h for h in (GenerateJob(), MoreJob(), EditJob(), UndoJob(), TextsJob())}
+def post_of(row: dict) -> PostText:
+    """What goes up with the video: the clip's title and the caption part of its post text (not the notes)."""
+    clip = Clip.from_dict(row["clip"])
+    txt = Path(row["txt"]) if row.get("txt") else None
+    caption = txt.read_text(encoding="utf-8").split("\n\n---\n", 1)[0].strip() if txt and txt.is_file() else ""
+    return PostText(clip.title, caption or clip.description or clip.title, tuple(clip.hashtags))
+
+
+def problem_of(exc: Exception) -> dict:
+    if isinstance(exc, ClippyError):
+        return tx(exc.key, **exc.params) if exc.key else tx("error.plain", error=str(exc))
+    return tx("error.unexpected", error=f"{type(exc).__name__}: {str(exc)[:160]}")
+
+
+class PublishJob(JobHandler):
+    """Posts one clip to the chosen platforms one after the other. One platform failing does not stop the others,
+    and a platform that has the clip already is never posted to again by a retry or a restart (payload "done")."""
+
+    kind = "publish"
+    stages = ("publish",)
+
+    def run(self, ctx: JobContext) -> dict:
+        import requests
+
+        p, number = ctx.job.payload, int(ctx.job.payload.get("clip") or 0)
+        row = next((c for c in ctx.current_clips() if c["number"] == number), None)
+        if row is None or not row.get("mp4") or not Path(row["mp4"]).is_file():
+            raise ClippyError(key="error.no_clip", clip=number)
+        platforms = [x for x in dict.fromkeys(p.get("platforms") or []) if x in PLATFORMS]
+        if not platforms:
+            raise ClippyError(key="error.no_platform")
+        upload = Upload(Path(row["mp4"]), float((row.get("info") or {}).get("duration_out") or 0.0))
+        post, accounts = post_of(row), ctx.runner.accounts
+        done, failed = p.setdefault("done", {}), p.setdefault("failed", {})
+        network = []
+        for i, name in enumerate(platforms):
+            if name in done or name in failed:
+                continue
+            log(f"[publish] {LABELS[name]}")
+            with report_span(i / len(platforms), (i + 1) / len(platforms)):
+                try:
+                    result = accounts.platform(name).publish(accounts.http, accounts.tokens(name), upload, post,
+                                                             (p.get("options") or {}).get(name) or {})
+                except (ClippyError, requests.RequestException, OSError) as exc:
+                    error = exc if isinstance(exc, ClippyError) else ClippyError(key="error.platform_network",
+                                                                                 platform=LABELS[name])
+                    ctx.db.add_post(row, name, "failed", problem=problem_of(error))
+                    if error.key == "error.platform_network":
+                        network.append(LABELS[name])
+                    else:
+                        failed[name] = problem_of(error)
+                else:
+                    ctx.db.add_post(row, name, result.state, result.url, result.remote_id)
+                    done[name] = result.state
+                ctx.remember()
+            ctx.show(row)
+        if network:
+            raise ClippyError(key="error.platform_network", platform=", ".join(network))
+        if failed and not done:
+            first = next(iter(failed.values()))
+            raise ClippyError(key=first["key"], **first["params"])
+        names = ", ".join(LABELS[n] for n in platforms if n in done)
+        if failed:
+            return tx("done.publish_some", clip=number, ok=names, failed=", ".join(LABELS[n] for n in failed))
+        return tx("done.publish", clip=number, platforms=names)
+
+
+HANDLERS: dict[str, JobHandler] = {h.kind: h for h in (GenerateJob(), MoreJob(), EditJob(), UndoJob(), TextsJob(),
+                                                       PublishJob())}
 
 
 def default_edit_service(runner: "Runner") -> Callable[[Project], EditService]:
@@ -614,8 +698,9 @@ class Runner:
 
     def __init__(self, db, hub: Hub, storage: Storage, presenter: ClipPresenter, library: ClipLibrary,
                  project_factory=Project, start: bool = True, edit_service: Callable | None = None,
-                 workers: int = WORKERS):
+                 workers: int = WORKERS, accounts=None):
         self.db, self.hub, self.storage = db, hub, storage
+        self._accounts = accounts
         self.edit_service = edit_service or default_edit_service(self)
         self.presenter, self.library, self.project_factory = presenter, library, project_factory
         self.projects: dict[int, Project] = {}
@@ -657,6 +742,14 @@ class Runner:
         actions = [a for a in ((before[-1].get("data") or {}).get("actions") or [] if before else [])
                    if isinstance(a, dict) and a.get("type") in HANDLERS]
         return {"kind": actions[0]["type"], "payload": actions[0]} if len(actions) == 1 else None
+
+    @property
+    def accounts(self):
+        if self._accounts is None:
+            from ..publish.accounts import AccountStore
+
+            self._accounts = AccountStore(self.storage)
+        return self._accounts
 
     @property
     def current(self) -> Job | None:

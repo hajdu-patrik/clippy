@@ -4,7 +4,8 @@ import { bindComposer } from "./composer.js";
 import { bindDrawer, closeDrawer } from "./drawer.js";
 import { applyStatic, getLang, loadCatalog, setLang } from "./i18n.js";
 import { startLive } from "./live.js";
-import { bindSettings, loadSettings } from "./settings.js";
+import { bindSettings, loadSettings, openSettingsFromLink } from "./settings.js";
+import { bindPublish } from "./publish.js";
 import { bindCopyDialog } from "./cards.js";
 import { bindScroll } from "./messages.js";
 import { loadChats, setWorker } from "./sidebar.js";
@@ -88,6 +89,7 @@ function bindChrome() {
   bindDrawer();
   bindScroll();
   bindSettings();
+  bindPublish();
   bindCopyDialog();
 }
 
@@ -103,4 +105,5 @@ await loadSettings();
 startLive();
 setInterval(refreshStatus, STATUS_POLL_MS);
 route();
+openSettingsFromLink();
 if (matchMedia("(pointer: fine)").matches) $("#input").focus();

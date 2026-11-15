@@ -153,6 +153,15 @@ Rendering is split in two: the camera-framed **base** is rendered once per cut a
 colour, overlay or music edit only re-runs a fast finishing pass (about 7 s for a 1080p clip instead of a full
 re-render). Older versions stay playable.
 
+## Posting
+
+A finished clip goes straight to your own YouTube, Instagram and TikTok with the **Post** button on its card, or from
+the chat (*"posztold ki a 2. klipet YouTube-ra"*). It goes up with its post text and, on YouTube, its title; the card
+then links each post. You make a free developer app per platform once and sign in on the platform's own page: the
+tokens stay in `data/web/accounts.json` on this computer. TikTok sends the clip to your drafts (or posts it as private
+until it reviews your app); YouTube may keep uploads of a new API project private until its audit. Setup, step by
+step: **[docs/publishing.md](docs/publishing.md)**.
+
 ## Configuration
 
 `.env` (copied from [.env.example](.env.example)) and environment variables:
@@ -171,6 +180,8 @@ re-render). Older versions stay playable.
 | `CLIPPY_LANG` | `clippy lang`, else the OS | `hu` or `en` for one terminal |
 | `CLIPPY_COOKIES_FROM_BROWSER` | - | `firefox` (or another browser) when a site only shows a video to signed-in users (Instagram, Vimeo, Reddit…); Chrome's cookies cannot be read on Windows |
 | `CLIPPY_COOKIES_FILE` | - | a `cookies.txt` (Netscape format) exported from any signed-in browser with an extension; Clippy only reads it, each download uses a private copy. Keep it in `data/` (ignored), it is as good as your login |
+| `CLIPPY_YOUTUBE_CLIENT_ID`, `CLIPPY_YOUTUBE_CLIENT_SECRET` | - | your Google "Desktop app" OAuth client, for posting to YouTube ([docs/publishing.md](docs/publishing.md)) |
+| `CLIPPY_TIKTOK_CLIENT_KEY`, `CLIPPY_TIKTOK_CLIENT_SECRET` | - | your TikTok developer app, for posting to TikTok |
 | `CLIPPY_WORKERS`, `CLIPPY_RENDER_SLOTS` | `3`, `3` | jobs of different chats at once, clips rendered at once (the GPU always runs one heavy model at a time) |
 
 **Where files go.** Finished clips: `<CLIPPY_LIBRARY>\<video title>\` (mp4 + cover jpg + post text), never removed
@@ -180,6 +191,7 @@ chat (removed with the chat, together with any cache no other chat uses), comman
 ## Guides
 
 * **[docs/cli.md](docs/cli.md)**: every command and `clippy clip` option, with examples.
+* **[docs/publishing.md](docs/publishing.md)**: connecting YouTube, Instagram and TikTok to post clips from the app.
 * **[docs/playbook.md](docs/playbook.md)**: what works on TikTok, Shorts and Reels (hooks, length, captions, CTA,
   posting, rights) and where Clippy applies it.
 * **[docs/quality.md](docs/quality.md)**: what each stage does for the picture, the sound and the captions, and how hooks are scored.
@@ -194,7 +206,9 @@ code becomes an HttpOnly, SameSite=Strict device cookie whose hash alone is stor
 allow-list (DNS rebinding), a same-origin check plus a custom header on every state-changing request (CSRF), a strict
 Content-Security-Policy with no inline script or style, a media endpoint that serves only a chat's own clip files,
 SSRF filtering of video links, parameterised SQL, a pinned hash for the downloaded face model and prompt-injection
-guards (transcript text is fenced as data; deleting or downloading needs the user's own words).
+guards (transcript text is fenced as data; deleting, downloading or posting needs the user's own words).
+Accounts for posting are connected from this computer only, with a single-use sign-in state and PKCE; their tokens
+never reach the browser.
 Dependencies are checked with `pip-audit`.
 
 ## Development

@@ -10,6 +10,7 @@ from ..download import require_public_url
 from ..editing.assets import Asset, AssetService
 from ..editing.repository import TimelineRepository
 from ..llm import LLM
+from ..publish import LABELS, PLATFORMS
 from ..storage import Storage
 from ..tools import ClippyError
 from . import agent
@@ -111,6 +112,13 @@ class ChatService:
         job = self.runner.submit(chat_id, "undo", {"clips": [number]})
         return {"job": job.id}
 
+    def publish(self, chat_id: int, number: int, platforms: list[str], options: dict) -> dict:
+        self.get(chat_id)
+        if not any(c["number"] == number for c in self.db.current_clips(chat_id)):
+            raise NotFound(number)
+        job = self.runner.submit(chat_id, "publish", {"clip": number, "platforms": platforms, "options": options})
+        return {"job": job.id}
+
     def post_message(self, chat_id: int, text: str, attachments: tuple[str, ...] = ()) -> dict:
         chat = self.get(chat_id)
         history = self.db.list_messages(chat_id)
@@ -135,7 +143,7 @@ class ChatService:
                 jobs.extend(self._execute(chat, action))
                 actions.append(action)
             except ClippyError as exc:
-                notes.append(str(exc))
+                notes.append(i18n.t(result["lang"], exc.key, **exc.params) if exc.key else str(exc))
         prefix = i18n.t(result["lang"], "note.prefix")
         reply = result["reply"] + (f"\n\n_{prefix}: " + "; ".join(notes) + "_" if notes else "")
         assistant = self._say(chat_id, "assistant", reply, data={"actions": actions})
@@ -158,4 +166,16 @@ class ChatService:
             return []
         if kind == "generate":
             require_public_url(action["url"])
+        if kind == "publish":
+            return self._publish_jobs(action)
         return [(kind, action)]
+
+    def _publish_jobs(self, action: dict) -> list[tuple[str, dict]]:
+        status = self.runner.accounts.status()
+        connected = [p for p in PLATFORMS if status[p]["connected"]]
+        platforms = [p for p in action["platforms"] if p in connected] if action["platforms"] else connected
+        if not platforms:
+            missing = action["platforms"][0] if action["platforms"] else "youtube"
+            raise ClippyError(key="error.account_missing", platform=LABELS[missing])
+        action["platforms"] = platforms
+        return [("publish", {"clip": n, "platforms": platforms, "options": action["options"]}) for n in action["clips"]]

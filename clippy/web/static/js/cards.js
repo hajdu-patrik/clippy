@@ -1,4 +1,5 @@
 import { t } from "./i18n.js";
+import { openPostDialog, postsHtml } from "./publish.js";
 import { state } from "./state.js";
 import { $, copyText, esc, fmtTs, toast } from "./util.js";
 
@@ -46,10 +47,12 @@ export function cardHtml(id) {
         ${d.score != null ? `<span>${esc(t("card.score", { s: Math.round(d.score) }))}</span>` : ""}${removed}${fmt ? `<span>${esc(fmt)}</span>` : ""}${kind}${risky}</div>
       ${(d.hashtags || []).length ? `<div class="tags">${esc(d.hashtags.join(" "))}</div>` : ""}
       ${whyHtml(d)}
+      ${postsHtml(c)}
       <div class="btns">
         <a href="${esc(c.mp4 || "#")}" download>${esc(t("card.download"))}</a>
         <button type="button" data-act="copy">${esc(t("card.copy"))}</button>
         <button type="button" data-act="edit">${esc(t("card.edit"))}</button>
+        ${old || c.deleted ? "" : `<button type="button" class="post-btn" data-act="post">${esc(t("card.post"))}</button>`}
       </div>
     </div>
   </article>`;
@@ -79,6 +82,8 @@ async function onCardClick(event) {
     } else {
       showCopyDialog(text);
     }
+  } else if (act === "post") {
+    openPostDialog(clip);
   } else if (act === "edit") {
     document.dispatchEvent(new CustomEvent("clippy:compose", { detail: t("card.editPrefix", { n: clip.number }) }));
   }
