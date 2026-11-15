@@ -209,14 +209,23 @@ def plan_frames(an: ClipAnalysis, layout: str = "auto", join_frames=(), sentence
     return plans, shots
 
 
+FACECAM_DRIFT = 0.05
+FACECAM_PRESENCE = 0.4
+FACECAM_MAX_WIDTH = 0.2
+
+
 def guess_facecam(an: ClipAnalysis) -> tuple[float, float, float, float] | None:
-    """For stream layouts: a 16:9 box (normalised) around the usually small, static streamer face."""
+    """For stream layouts: a 16:9 box (normalised) around the usually small, static streamer face. Faces that move
+    around (game characters, a cutscene) are not a facecam: then there is none, and the frame is shown whole."""
     flat = [f for fl in an.faces for f in fl]
     if len(flat) < max(3, an.n_frames * 0.3):
         return None
     cx = float(np.median([f.cx for f in flat]))
     cy = float(np.median([f.cy for f in flat]))
     fw = float(np.median([f.w for f in flat]))
+    steady = sum(any(abs(f.cx - cx) <= FACECAM_DRIFT and abs(f.cy - cy) <= FACECAM_DRIFT for f in fl) for fl in an.faces)
+    if steady < FACECAM_PRESENCE * an.n_frames or fw > FACECAM_MAX_WIDTH:
+        return None
     bw = min(1.0, fw * 3.4)
     bh = min(1.0, bw * an.width / an.height * 9 / 16)
     x = max(0.0, min(1.0 - bw, cx - bw / 2))

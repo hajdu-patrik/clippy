@@ -18,7 +18,7 @@ from .analysis import ClipAnalysis, analyze
 from .captions import CaptionStyle
 from .concurrency import GPU, SOURCE, GuardedLLM
 from .download import Remote, cached_video, fetch, fetch_audio, fetch_video, is_url, probe
-from .highlights import Clip, find_highlights
+from .highlights import Clip, PickCache, find_highlights
 from .llm import create_llm
 from .render import RenderSettings, prepare_fonts, render_clip
 from .storage import Storage
@@ -244,7 +244,8 @@ class Project:
         self.llm_desc = llm.describe()
         clips = find_highlights(self.transcript, llm, max_clips=n, min_len=min_len, max_len=max_len,
                                 title=self.title, exclude=list(exclude), text_language=o.captions,
-                                instructions=o.instructions if instructions is None else instructions)
+                                instructions=o.instructions if instructions is None else instructions,
+                                cache=PickCache(self.storage.cache("picks"), self.video_stem) if self.video_stem else None)
         if not clips:
             raise ClippyError(key="error.no_suitable_clip")
         if short:

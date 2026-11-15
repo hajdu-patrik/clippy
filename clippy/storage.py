@@ -12,7 +12,7 @@ from .tools import ROOT, safe_name
 
 DATA = ROOT / "data"
 DEFAULT_LIBRARY = Path.home() / "Videos" / "Clippy"
-CACHE_KINDS = ("downloads", "audio", "transcripts")
+CACHE_KINDS = ("downloads", "audio", "transcripts", "picks")
 
 
 class Storage:

@@ -99,6 +99,27 @@ class StreamCompositor:
         out[self.TOP_H - 3: self.TOP_H + 3] = 0
         return out
 
+    def graph(self, W: int, H: int) -> str:
+        """The same layout as an FFmpeg filter chain on the source frame: the layout never moves, so the decoder
+        can build the whole 1080x1920 frame and the full-size source never has to pass through Python."""
+        x, y, w, h = self.facecam
+        cw, ch = max(2, int(w * W)) // 2 * 2, max(2, int(h * H)) // 2 * 2
+        cx, cy = int(x * W) // 2 * 2, int(y * H) // 2 * 2
+        game = OUT_H - self.TOP_H
+        return (f"split=2[cam][game];"
+                f"[cam]crop={cw}:{ch}:{cx}:{cy},scale={OUT_W}:{self.TOP_H}:force_original_aspect_ratio=increase:"
+                f"flags=lanczos,crop={OUT_W}:{self.TOP_H}[top];"
+                f"[game]scale={OUT_W}:{game}:force_original_aspect_ratio=increase:flags=lanczos,"
+                f"crop={OUT_W}:{game}[bottom];"
+                f"[top][bottom]vstack,drawbox=x=0:y={self.TOP_H - 3}:w={OUT_W}:h=6:color=black:t=fill")
+
+
+class Prebuilt:
+    """Frames the decoder already composed (see StreamCompositor.graph)."""
+
+    def compose(self, frame: np.ndarray, plan: FramePlan) -> np.ndarray:
+        return frame
+
 
 class LayoutCompositor:
     """Dispatches each frame to the compositor of its plan's mode."""

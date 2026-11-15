@@ -6,6 +6,7 @@ too, a little lower. Nothing here guesses with an LLM; the clip picker's payoff 
 from __future__ import annotations
 
 import re
+from bisect import bisect_left, bisect_right
 from typing import Sequence
 
 from .playbook import CONNECTORS
@@ -38,10 +39,17 @@ def _plain(word: str) -> str:
 
 
 class Boundaries:
+    """Every lookup is a binary search over the word times (a long podcast has tens of thousands of words)."""
+
     def __init__(self, words: Sequence[dict]):
         self.words = list(words)
+        self.starts = [w["start"] for w in self.words]
+        self.ends = [w["end"] for w in self.words]
         self.level = [self._end_level(i) for i in range(len(self.words))]
         self.opens = [self._starts(i) for i in range(len(self.words))]
+        self.open_at = [i for i, ok in enumerate(self.opens) if ok]
+        self.end_at_list = ([j for j, level in enumerate(self.level) if level >= COMPLETE_PAUSE]
+                            or [j for j, level in enumerate(self.level) if level >= OPEN_PAUSE])
 
     def _gap_after(self, i: int) -> float:
         return self.words[i + 1]["start"] - self.words[i]["end"] if i + 1 < len(self.words) else 99.0
@@ -64,12 +72,21 @@ class Boundaries:
         return i == 0 or ends_sentence(self.words[i - 1]["word"]) or self._gap_after(i - 1) >= PAUSE
 
     def duration(self, i0: int, i1: int) -> float:
-        return self.words[i1]["end"] - self.words[i0]["start"]
+        return self.ends[i1] - self.starts[i0]
+
+    def _upto(self, i0: int, max_dur: float) -> range:
+        """Word indices from i0 whose end is within max_dur of word i0's start."""
+        return range(i0, bisect_right(self.ends, self.starts[i0] + max_dur))
+
+    def index_at_start(self, t: float) -> int | None:
+        """The first word that starts at or after `t`."""
+        i = bisect_left(self.starts, t)
+        return i if i < len(self.words) else None
 
     def start_near(self, t: float, reach: float = START_REACH) -> int | None:
         """The sentence start at or shortly before `t`, else the next one after it. A sentence that opens with a
         connector ("and…", "mert…") leans on the one before it, so that one is taken too when it is short."""
-        first = next((i for i, w in enumerate(self.words) if w["start"] >= t - 0.35), None)
+        first = self.index_at_start(t - 0.35)
         if first is None:
             return None
         back = next((i for i in range(first, -1, -1) if self.opens[i]), None)
@@ -87,7 +104,7 @@ class Boundaries:
         """The end for a clip from word i0 whose picker wanted it to end near `t`: a complete thought inside the
         length limits (the one nearest `t`), else the first complete one a little past the maximum, else a sentence
         end that the next sentence carries on, else the clearest pause. Never inside a run of words."""
-        span = [j for j in range(i0, len(self.words)) if self.duration(i0, j) <= max_len + overflow]
+        span = self._upto(i0, max_len + overflow)
         if not span:
             return None
 
@@ -111,30 +128,24 @@ class Boundaries:
 
     def complete_ends(self, i0: int, max_dur: float) -> list[int]:
         """Every complete end after word i0 up to a duration, in order (for moving an end by whole sentences)."""
-        return [j for j in range(i0, len(self.words)) if self.duration(i0, j) <= max_dur
-                and self.level[j] >= COMPLETE_PAUSE]
+        return [j for j in self._upto(i0, max_dur) if self.level[j] >= COMPLETE_PAUSE]
 
     def start_at(self, t: float, later: bool) -> float | None:
         """A start time moved to a sentence start: the first at or after `t`, or the last at or before it."""
-        opens = [i for i, ok in enumerate(self.opens) if ok]
-        i = (next((i for i in opens if self.words[i]["start"] >= t - 0.05), None) if later
-             else next((i for i in reversed(opens) if self.words[i]["start"] <= t + 0.05), None))
-        return None if i is None else start_time(self.words, i)
+        times = [self.starts[i] for i in self.open_at]
+        k = bisect_left(times, t - 0.05) if later else bisect_right(times, t + 0.05) - 1
+        return start_time(self.words, self.open_at[k]) if 0 <= k < len(times) else None
 
     def end_at(self, t: float, later: bool) -> float | None:
         """An end time moved to a complete end: the first at or after `t`, or the last at or before it."""
-        ends = ([j for j, level in enumerate(self.level) if level >= COMPLETE_PAUSE]
-                or [j for j, level in enumerate(self.level) if level >= OPEN_PAUSE])
-        j = (next((j for j in ends if self.words[j]["end"] >= t - 0.05), None) if later
-             else next((j for j in reversed(ends) if self.words[j]["end"] <= t + 0.05), None))
-        return None if j is None else end_time(self.words, j)
+        times = [self.ends[j] for j in self.end_at_list]
+        k = bisect_left(times, t - 0.05) if later else bisect_right(times, t + 0.05) - 1
+        return end_time(self.words, self.end_at_list[k]) if 0 <= k < len(times) else None
 
     def sentence_at(self, t: float) -> tuple[int, int] | None:
         """First and last word of the sentence being spoken at `t`; None in a pause or outside the speech."""
-        inside = next((i for i, w in enumerate(self.words) if w["start"] <= t <= w["end"]
-                       or (i + 1 < len(self.words) and w["end"] < t < self.words[i + 1]["start"]
-                           and not self.level[i] >= OPEN_PAUSE)), None)
-        if inside is None:
+        inside = bisect_right(self.starts, t) - 1
+        if inside < 0 or (t > self.ends[inside] and (inside + 1 >= len(self.words) or self.level[inside] >= OPEN_PAUSE)):
             return None
         first = next(i for i in range(inside, -1, -1) if self.opens[i])
         last = next((j for j in range(inside, len(self.words)) if self.level[j] >= OPEN_PAUSE), len(self.words) - 1)
@@ -158,4 +169,5 @@ class Boundaries:
 
     def index_at_end(self, t: float) -> int | None:
         """The last word that ends by `t`."""
-        return next((i for i in range(len(self.words) - 1, -1, -1) if self.words[i]["end"] <= t + 0.05), None)
+        i = bisect_right(self.ends, t + 0.05) - 1
+        return i if i >= 0 else None

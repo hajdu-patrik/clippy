@@ -147,10 +147,16 @@ def _iou(a, b) -> float:
 
 
 def decode_cmd(video: Path, start: float, duration: float, w: int, h: int, rate: str, matrix: str = "bt709",
-               rng: str = "tv", columns: tuple[int, int] | None = None) -> list[str]:
+               rng: str = "tv", columns: tuple[int, int] | None = None, graph: str | None = None) -> list[str]:
     """Raw BGR frames at a fixed CFR rate (same grid for analysis and render). `columns` (x0, x1): only that
-    vertical strip of the converted frame is sent, with exactly the pixels the full frame has there."""
+    vertical strip of the converted frame is sent, with exactly the pixels the full frame has there. `graph`: a
+    filter chain that builds the w x h frame itself (a fixed layout), converted to BGR at the end."""
     strip = f",crop={columns[1] - columns[0]}:{h}:{columns[0]}:0" if columns else ""
+    if graph:
+        return [ffmpeg_path(), "-hide_banner", "-loglevel", "error", "-ss", f"{start:.3f}", "-t", f"{duration:.3f}",
+                "-i", str(video), "-an", "-sn", "-dn",
+                "-vf", f"{graph},scale=in_color_matrix={matrix}:in_range={rng},format=bgr24",
+                "-fps_mode", "cfr", "-r", rate, "-f", "rawvideo", "-"]
     return [ffmpeg_path(), "-hide_banner", "-loglevel", "error", "-ss", f"{start:.3f}", "-t", f"{duration:.3f}",
             "-i", str(video), "-an", "-sn", "-dn",
             "-vf", f"scale={w}:{h}:flags=lanczos:in_color_matrix={matrix}:in_range={rng},format=bgr24{strip}",

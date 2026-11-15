@@ -17,7 +17,7 @@ from .concurrency import RENDER
 from . import audio as aud
 from .analysis import ClipAnalysis, analyze, decode_cmd
 from .captions import CaptionStyle, write_ass
-from .compositing import OUT_H, OUT_W, CropCompositor, LayoutCompositor
+from .compositing import OUT_H, OUT_W, CropCompositor, LayoutCompositor, Prebuilt, StreamCompositor
 from .director import guess_facecam, plan_frames
 from .edit import EditPlan, build_edit
 from .tools import (ROOT, ClippyError, atomic_path, ffmpeg_features, ffmpeg_path, fps_rational, log, probe_video,
@@ -32,6 +32,8 @@ INFLIGHT = 16
 PIPE_BUFFER = 1 << 20
 WORKERS = min(8, os.cpu_count() or 4)
 
+
+DECODE_HEADROOM = 1.25
 
 @dataclass
 class RenderSettings:
@@ -99,6 +101,7 @@ class ClipRenderer:
         self.s = settings
         self.meta = probe_video(video)
         self.rate, self.fps = fps_rational(self.meta["fps"])
+        self._graph: str | None = None
 
     def render(self, out_file: Path, work: Path, fonts: Path, analysis: ClipAnalysis | None = None) -> dict:
         edit = build_edit(self.words, self.start, self.end, self.fps,
@@ -107,7 +110,10 @@ class ClipRenderer:
         with report_span(0.0, 0.3):
             an = analysis or analyze(self.video, self.start, self.span)
         plans, shots = plan_frames(an, self.s.layout, edit.join_frames, edit.sentence_frames, punch=self.s.punch)
-        compositor = LayoutCompositor(self._facecam(an, shots))
+        facecam = self._facecam(an, shots)
+        prebuilt = facecam is not None and bool(plans) and all(p.mode == "stream" for p in plans)
+        compositor = Prebuilt() if prebuilt else LayoutCompositor(facecam)
+        self._graph = StreamCompositor(facecam).graph(self.meta["width"], self.meta["height"]) if prebuilt else None
         words, hook = self.s.translate(edit.words, self.s.hook) if self.s.translate else (edit.words, self.s.hook)
         if not self.s.mezzanine:
             write_ass(work / "captions.ass", words, 0.0, edit.duration, self.s.style or CaptionStyle(),
@@ -115,8 +121,12 @@ class ClipRenderer:
         audio_src = self.s.audio_src or self.video
         measured = aud.measure(audio_src, self.start, self.span, edit.intervals, self.s.audio_mode)
         encoder = Encoder.choose(self.s.encoder)
-        dw, dh = self._decode_size()
-        upscale = OUT_H / dh * max((p.zoom for p in plans if p.mode == "crop"), default=1.0)
+        if prebuilt:
+            dw, dh, upscale = OUT_W, OUT_H, OUT_H / min(self.meta["height"], 2160)
+        else:
+            need = self._needed_height(plans, facecam)
+            dw, dh = self._decode_size(need)
+            upscale = need / dh
         v_graph = self._video_graph(work, fonts, upscale)
         a_graph = aud.final_graph(edit.intervals, self.s.audio_mode, measured, src="1:a")
         if self.s.base_out:
@@ -157,8 +167,24 @@ class ClipRenderer:
             log("[render] no facecam found: the stream layout falls back to the blurred full frame")
         return cam or None
 
-    def _decode_size(self) -> tuple[int, int]:
-        dh = min(self.meta["height"], 2160)
+    def _needed_height(self, plans, facecam) -> float:
+        """The source height the output really uses: a crop shows H/zoom source rows on 1920 output rows, a fitted
+        frame is 1080 wide, a facecam split mixed with other shots keeps every source pixel."""
+        W, H = self.meta["width"], self.meta["height"]
+        modes = {p.mode for p in plans}
+        if "stream" in modes and facecam:
+            return float(H)
+        need = 0.0
+        if "crop" in modes:
+            need = OUT_H * max((p.zoom for p in plans if p.mode == "crop"), default=1.0)
+        if "fit" in modes or "stream" in modes:
+            need = max(need, OUT_W * H / W if W * OUT_H >= H * OUT_W else float(OUT_H))
+        return need or float(H)
+
+    def _decode_size(self, need: float) -> tuple[int, int]:
+        """Decoding a 4K source at full size only to shrink it moves 25 MB per frame through the pipe; a little
+        above what the output uses keeps the downscale sharp."""
+        dh = int(min(self.meta["height"], 2160, need * DECODE_HEADROOM))
         dh -= dh % 2
         dw = int(round(self.meta["width"] * dh / self.meta["height"]))
         return dw - dw % 2, dh
@@ -218,7 +244,7 @@ class ClipRenderer:
         with open(log_path, "w", encoding="utf-8") as err:
             enc = subprocess.Popen(cmd, stdin=subprocess.PIPE, stderr=err, cwd=work)
             dec = subprocess.Popen(decode_cmd(self.video, self.start, self.span, dw, dh, self.rate,
-                                              self.meta["matrix"], self.meta["range"], strip),
+                                              self.meta["matrix"], self.meta["range"], strip, self._graph),
                                    stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, bufsize=PIPE_BUFFER)
             inflight: deque = deque()
             submitted = 0

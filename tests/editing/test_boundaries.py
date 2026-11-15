@@ -101,3 +101,40 @@ def test_the_payoff_check_moves_endings_only_by_whole_sentences():
                     RuntimeError("model gone")):
         _check_endings(Reply(garbage), clips, words, bounds, 2, 30, "English")
     assert [(c.start, c.end) for c in clips] == before
+
+
+class WindowLLM:
+    """Answers every transcript window with the same moments; counts the window calls."""
+
+    backend = "ollama"
+
+    def __init__(self, spans):
+        self.spans, self.windows, self.systems = spans, 0, []
+
+    def describe(self):
+        return "fake"
+
+    def chat_json(self, system, prompt, **kwargs):
+        if not prompt.startswith("TRANSCRIPT:"):
+            return {}
+        self.windows += 1
+        self.systems.append(system)
+        return {"clips": [{"start": a, "end": b, "score": 90 - i, "hook": "h", "hook_type": "question",
+                           "title": f"t{i}", "hashtags": [], "risks": [], "reason": "r"}
+                          for i, (a, b) in enumerate(self.spans)]}
+
+
+def test_more_clips_reuse_the_window_answers_until_they_run_out(tmp_path):
+    from clippy.highlights import PickCache, find_highlights
+
+    words = speech(GTA * 4)
+    transcript = {"segments": [{"words": words}], "language": "en"}
+    llm = WindowLLM([(0.0, 9.0), (20.0, 29.0), (40.0, 49.0)])
+    cache = PickCache(tmp_path, "vid")
+    first = find_highlights(transcript, llm, max_clips=1, min_len=5, max_len=15, cache=cache)
+    asked = llm.windows
+    second = find_highlights(transcript, llm, max_clips=1, min_len=5, max_len=15, exclude=first, cache=cache)
+    assert llm.windows == asked and second and second[0].start != first[0].start
+    assert sorted(p.name.split(".")[0] for p in tmp_path.iterdir()) == ["vid"] * asked
+    find_highlights(transcript, llm, max_clips=2, min_len=5, max_len=15, exclude=first + second, cache=cache)
+    assert llm.windows == 2 * asked and "already clips" in llm.systems[-1]

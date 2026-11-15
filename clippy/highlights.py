@@ -2,13 +2,16 @@
 
 from __future__ import annotations
 
+import hashlib
+import json
 from dataclasses import asdict, dataclass, field
+from pathlib import Path
 
 from . import playbook
 from .boundaries import END_OVERFLOW, Boundaries, end_time, start_time
 from .llm import LLM, think_enabled
 from .text import clean_text, ends_sentence
-from .tools import ClippyError, fmt_ts, log, report, report_span
+from .tools import ClippyError, fmt_ts, log, report, report_span, write_json
 
 LANG_NAMES = {"hu": "Hungarian", "en": "English", "de": "German", "es": "Spanish", "fr": "French",
               "it": "Italian", "pl": "Polish", "ro": "Romanian", "sk": "Slovak", "cs": "Czech"}
@@ -261,14 +264,45 @@ def _words_text(words: list[dict]) -> str:
     return " ".join(w["word"] for w in words)
 
 
+def _ask_windows(llm: LLM, system: str, wins: list[list[dict]], cache: PickCache | None) -> tuple[list[Clip], bool]:
+    """Every window's candidates, and whether all of them came from the cache."""
+    raw, all_cached = [], True
+    for n, win in enumerate(wins, 1):
+        report(0.8 * (n - 1) / len(wins))
+        log(f"[hook] window {n}/{len(wins)}  ({fmt_ts(win[0]['start'])}–{fmt_ts(win[-1]['end'])})  {llm.describe()}")
+        text = "TRANSCRIPT:\n" + _format_window(win)
+        if cache is None:
+            reply, hit = llm.chat_json(system, text, think=think_enabled(), schema=CLIPS_SCHEMA), False
+        else:
+            reply, hit = cache.ask(llm, system, text)
+        all_cached = all_cached and hit
+        for c in reply.get("clips", []) if isinstance(reply, dict) else []:
+            clip = parse_clip(c)
+            if clip and clip.end > clip.start:
+                raw.append(clip)
+    return raw, all_cached
+
+
+def _fresh(raw: list[Clip], words: list[dict], min_len: float, max_len: float, exclude,
+           bounds: Boundaries | None = None) -> list[Clip]:
+    """Candidates snapped to whole thoughts, best first, overlapping neither each other nor existing clips."""
+    bounds = bounds or Boundaries(words)
+    snapped = [c for c in (_snap(Clip(**asdict(c)), words, min_len, max_len, bounds) for c in raw) if c]
+    snapped.sort(key=lambda c: c.score, reverse=True)
+    unique: list[Clip] = []
+    for c in snapped:
+        if all(_overlap(c, o) < 0.15 for o in unique) and all(_overlap(c, o) < 0.15 for o in exclude):
+            unique.append(c)
+    return unique
+
+
 def _check_endings(llm: LLM, clips: list[Clip], words: list[dict], bounds: Boundaries, min_len: float,
                    max_len: float, language: str) -> None:
     """The picker's last word on each ending: an end may move by whole sentences (to another complete boundary
     within the length limits), never into the middle of one."""
     spans = []
     for c in clips:
-        i0 = next((i for i, w in enumerate(words) if w["start"] >= c.start - 0.01), None)
-        i1 = bounds.index_at_end(c.end)
+        i0, i1 = bounds.index_at_start(c.start - 0.01), bounds.index_at_end(c.end)
         spans.append((i0, i1) if i0 is not None and i1 is not None and i1 >= i0 else None)
     lines = [f"id={k}\n{_words_text(words[max(i0, i1 - TAIL_WORDS + 1):i1 + 1])}\nNEXT: "
              f"{_words_text(words[i1 + 1:i1 + 1 + NEXT_WORDS]) or '(the video ends)'}"
@@ -357,12 +391,46 @@ def parse_clip(c: dict) -> Clip | None:
     return clip
 
 
+@dataclass(frozen=True)
+class PickCache:
+    """The picker's answer for one transcript window, kept per video (data/cache/picks/<video>.<key>.json). The
+    same window, prompt and model give the same answer, so "more clips" reads instead of asking the LLM again; a
+    new model, prompt, wish or transcript is a new key."""
+
+    folder: Path
+    stem: str
+
+    def _path(self, llm: LLM, system: str, text: str) -> Path:
+        key = hashlib.sha256(f"{llm.describe()}\n{system}\n{text}".encode("utf-8")).hexdigest()[:24]
+        return self.folder / f"{self.stem}.{key}.json"
+
+    def ask(self, llm: LLM, system: str, text: str) -> tuple[dict, bool]:
+        """The window's reply and whether it came from the cache."""
+        path = self._path(llm, system, text)
+        try:
+            return json.loads(path.read_text(encoding="utf-8")), True
+        except (OSError, ValueError):
+            pass
+        reply = llm.chat_json(system, text, think=think_enabled(), schema=CLIPS_SCHEMA)
+        if isinstance(reply, dict) and reply.get("clips"):
+            write_json(path, reply)
+        return reply, False
+
+
+def _avoiding(exclude) -> str:
+    spans = ", ".join(f"{fmt_ts(c.start)}–{fmt_ts(c.end)}" for c in exclude)
+    return (f"\n\nThese moments are already clips; pick DIFFERENT moments that do not overlap them: {spans}"
+            if spans else "")
+
+
 def find_highlights(transcript: dict, llm: LLM, max_clips: int = 5, min_len: float = 20,
                     max_len: float = 60, window_sec: float = 480, overlap_sec: float = 60,
                     title: str = "", exclude: list[Clip] | tuple = (), instructions: str = "",
-                    text_language: str | None = None) -> list[Clip]:
+                    text_language: str | None = None, cache: PickCache | None = None) -> list[Clip]:
     """`exclude`: clips that already exist (new picks must not overlap them).
-    `instructions`: free-text wishes from the user ("the funniest parts", "only the parts about music"…)."""
+    `instructions`: free-text wishes from the user ("the funniest parts", "only the parts about music"…).
+    `cache`: earlier window answers for this video; when they no longer hold enough new moments, the windows are
+    asked again, told which moments are taken."""
     words = [w for s in transcript["segments"] for w in s["words"]]
     if not words:
         raise ClippyError(key="error.empty_transcript")
@@ -382,22 +450,13 @@ def find_highlights(transcript: dict, llm: LLM, max_clips: int = 5, min_len: flo
             system += ("\n\nThe channel owner's specific wishes for THIS selection (follow them, they override "
                        f"the generic preferences above):\n{instructions.strip()}")
         wins = _windows(sents, window_sec, overlap_sec)
-        for n, win in enumerate(wins, 1):
-            report(0.8 * (n - 1) / len(wins))
-            log(f"[hook] window {n}/{len(wins)}  ({fmt_ts(win[0]['start'])}–{fmt_ts(win[-1]['end'])})  {llm.describe()}")
-            reply = llm.chat_json(system, "TRANSCRIPT:\n" + _format_window(win), think=think_enabled(), schema=CLIPS_SCHEMA)
-            for c in reply.get("clips", []) if isinstance(reply, dict) else []:
-                clip = parse_clip(c)
-                if clip and clip.end > clip.start:
-                    raw.append(clip)
+        raw, cached = _ask_windows(llm, system, wins, cache)
+        if exclude and cached and len(_fresh(raw, words, min_len, max_len, exclude)) < max_clips:
+            log("[hook] the earlier picks are used up: asking for new moments")
+            raw += _ask_windows(llm, system + _avoiding(exclude), wins, cache)[0]
 
     bounds = Boundaries(words)
-    snapped = [c for c in (_snap(c, words, min_len, max_len, bounds) for c in raw) if c]
-    snapped.sort(key=lambda c: c.score, reverse=True)
-    unique: list[Clip] = []
-    for c in snapped:
-        if all(_overlap(c, o) < 0.15 for o in unique) and all(_overlap(c, o) < 0.15 for o in exclude):
-            unique.append(c)
+    unique = _fresh(raw, words, min_len, max_len, exclude, bounds)
 
     if llm.backend != "none" and len(unique) > max_clips:
         log(f"[hook] globally re-ranking {len(unique)} candidates…")

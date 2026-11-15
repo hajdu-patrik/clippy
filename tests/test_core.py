@@ -122,6 +122,18 @@ def _fake_analysis(n=100, faces_fn=None, cuts=(0,)):
     return ClipAnalysis(25.0, n, 1920, 1080, faces, list(cuts), "test")
 
 
+def test_a_facecam_is_a_face_that_stays_put():
+    from clippy.director import guess_facecam
+
+    still = _fake_analysis(100, lambda i: [FaceObs(0.82, 0.1, 0.05, 0.09, 0.9, 0.12)])
+    x, y, w, h = guess_facecam(still)
+    assert x < 0.82 < x + w and y < 0.12 < y + h
+    roaming = _fake_analysis(100, lambda i: [FaceObs(0.1 + 0.007 * i, 0.3 + 0.002 * i, 0.05, 0.09, 0.9, 0.35)])
+    assert guess_facecam(roaming) is None
+    close_up = _fake_analysis(100, lambda i: [FaceObs(0.35, 0.2, 0.3, 0.5, 0.9, 0.35)])
+    assert guess_facecam(close_up) is None
+
+
 def test_plan_switches_to_active_speaker_with_hard_cut():
     def faces(i):
         left = FaceObs(0.15, 0.3, 0.1, 0.18, 0.9, 0.35, track=1, mouth=0.03 if i < 50 else 0.0)

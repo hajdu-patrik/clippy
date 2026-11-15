@@ -46,6 +46,8 @@ change, what changed rather than how; dates are ISO 8601.
   profile / channel / playlist link, no video in the post, no sound – each with what helps.
 
 ### Changed
+- A facecam must stay put: faces that move around (game characters, cutscenes) no longer pass as one, so
+  such videos get the whole frame instead of an empty crop on top.
 - Clips end on a complete thought: they start at a sentence start and end where the sentence is over and the
   next one does not carry it on (or at a clear pause without punctuation), may run a little past the length
   setting to finish, and an LLM payoff check can move the end by whole sentences. Before, a pick shorter than the
@@ -72,6 +74,13 @@ change, what changed rather than how; dates are ISO 8601.
 - Captions keep 120 px from the sides, clear of the platform buttons on the right.
 
 ### Performance
+- Rendering a clip from a 4K source is about 2.7x faster (45 s -> 16 s for a 28 s clip): the stream layout is
+  built by the decoder, so the full 4K frames never pass through Python, and other layouts decode only at the
+  resolution the output uses.
+- "More clips" reuses the clip picker's earlier answers for the same video, prompt and model (kept with the
+  video's cache and removed with it); only when those are used up are the windows asked again, told which
+  moments are taken. On a 26-minute video the picking for "3 more clips" went from 231 s to 51 s.
+- The sentence boundary model uses binary search: 36,000 words in 24 ms.
 - Jobs of different chats run in parallel (three workers); one chat's jobs keep their order, so versions never
   clash. A quick undo no longer waits behind another chat's long generation.
 - Up to three clips render side by side and are stored in order. Edits of several clips run side by side too.
