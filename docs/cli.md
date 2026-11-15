@@ -10,6 +10,7 @@ clippy down           :: stop it completely (running renders too) and free the G
 clippy status         :: is it running, what is it doing, how much VRAM the model holds
 clippy restart | open | logs
 clippy restart --lan  :: phones and tablets on the same Wi-Fi too (after pairing)
+clippy restart --force  :: now, even while jobs run (they start again after the restart)
 clippy pair           :: one-time pairing link + QR code   (--reset: forget every device)
 clippy clip <link>    :: make clips from the command line (clippy clip -h: every option)
 clippy install        :: set up the command and tab completion (PATH, PowerShell profile, Clink)
