@@ -13,6 +13,7 @@ import time
 import uuid
 from contextlib import contextmanager
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from pathlib import Path
 from urllib.parse import urlsplit
 
@@ -114,6 +115,12 @@ class Remote:
             return None
         return next((f.get("format_id") for f in self.info.get("requested_formats") or []
                      if f.get("vcodec") == "none" and f.get("acodec") not in (None, "none")), None)
+
+    @property
+    def streamed(self) -> bool:
+        """Served as HLS fragments (Kick, Twitch): those can be byte ranges themselves, which chunked requests break."""
+        formats = self.info.get("requested_formats") or [self.info]
+        return any(str(f.get("protocol") or "").startswith("m3u8") for f in formats)
 
     @property
     def duration(self) -> float | None:
@@ -267,6 +274,8 @@ def _download_once(remote: Remote, downloads: Path, name: str, opts: dict, parts
     try:
         opts = {**opts, "outtmpl": str(partial / f"{name}.%(ext)s"), "progress_hooks": [_progress_hook(parts)],
                 **({"playlist_items": str(remote.item)} if remote.item else {})}
+        if remote.streamed:
+            opts.pop("http_chunk_size", None)
         with _session(opts) as ydl:
             ydl.extract_info(remote.url, download=True)
         done = next((f for f in sorted(partial.iterdir()) if f.is_file() and f.name.startswith(f"{name}.")
@@ -309,6 +318,7 @@ class Upload:
     vid: str
     url: str
     title: str
+    when: float | None = None
 
 
 def channel_lists(url: str) -> list[str]:
@@ -331,14 +341,30 @@ def is_list_url(url: str) -> bool:
             or bool(re.search(r"/(videos|streams|playlist|shorts)/?$", parts.path)))
 
 
+def _listing_options(limit: int, cookies_from_browser: str | None = None) -> dict:
+    opts = {**_ydl_options(Path(tempfile.gettempdir()), 2160, cookies_from_browser), "extract_flat": True,
+            "playlistend": limit, "noplaylist": False}
+    opts.pop("playlist_items", None)
+    return opts
+
+
+def _started(info: dict) -> float | None:
+    """When a video started, from whichever date its listing or page gives (UTC seconds)."""
+    for key in ("timestamp", "release_timestamp"):
+        if info.get(key):
+            return float(info[key])
+    day = str(info.get("upload_date") or "")
+    if re.fullmatch(r"\d{8}", day):
+        return datetime.strptime(day, "%Y%m%d").replace(tzinfo=timezone.utc).timestamp()
+    return None
+
+
 def latest_uploads(url: str, limit: int = 10, cookies_from_browser: str | None = None) -> tuple[str, list[Upload]]:
     """(channel name, its newest finished videos, newest first). Live and upcoming streams are left out: they are
     picked up once they have ended."""
     name, found = "", {}
     for page in channel_lists(url):
-        opts = {**_ydl_options(Path(tempfile.gettempdir()), 2160, cookies_from_browser), "extract_flat": True,
-                "playlistend": limit, "noplaylist": False}
-        opts.pop("playlist_items", None)
+        opts = _listing_options(limit, cookies_from_browser)
         try:
             with _site_errors(page), _session(opts) as ydl:
                 info = ydl.extract_info(page, download=False)
@@ -350,7 +376,7 @@ def latest_uploads(url: str, limit: int = 10, cookies_from_browser: str | None =
         for entry in list(info.get("entries") or [])[:limit]:
             if not entry or entry.get("_type") == "playlist" or entry.get("live_status") in NOT_FINISHED:
                 continue
-            link = entry.get("url") or entry.get("webpage_url") or ""
+            link = (entry.get("url") or entry.get("webpage_url") or "").split("#__youtubedl_smuggle", 1)[0]
             if entry.get("id") and link.startswith("http"):
                 found.setdefault(str(entry["id"]), Upload(str(entry["id"]), link, str(entry.get("title") or "")))
     if not found and not name:
@@ -395,3 +421,27 @@ def fetch(source: str, downloads: Path, max_height: int = 2160, cookies_from_bro
         log(f"[download] already here: {cached.name}")
         return cached, remote.title
     return fetch_video(remote, downloads, max_height, cookies_from_browser), remote.title
+
+
+def past_streams(page: str, limit: int = 5) -> list[Upload]:
+    """The newest finished entries of one listing page (a YouTube streams tab, a Twitch channel's past broadcasts, a
+    Kick channel's videos), newest first, each with its start time when the listing gives it."""
+    with _site_errors(page), _session(_listing_options(limit)) as ydl:
+        info = ydl.extract_info(page, download=False)
+    found = []
+    for entry in list(info.get("entries") or [])[:limit]:
+        if (not entry or entry.get("_type") == "playlist" or entry.get("live_status") in NOT_FINISHED
+                or entry.get("is_live")):
+            continue
+        link = (entry.get("url") or entry.get("webpage_url") or "").split("#__youtubedl_smuggle", 1)[0]
+        if entry.get("id") and link.startswith("http"):
+            found.append(Upload(str(entry["id"]), link, str(entry.get("title") or ""), _started(entry)))
+    return found
+
+
+def stream_moment(url: str) -> tuple[float | None, bool]:
+    """(start time, finished) of one stream video: the page is read without choosing a format."""
+    opts = {**_listing_options(1), "extract_flat": False, "noplaylist": True, "ignore_no_formats_error": True}
+    with _site_errors(url), _session(opts) as ydl:
+        info = ydl.extract_info(url, download=False)
+    return _started(info), info.get("live_status") not in NOT_FINISHED and not info.get("is_live")

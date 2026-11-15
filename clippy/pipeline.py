@@ -173,7 +173,7 @@ class Project:
         task = self._video_task
         if task is not None:
             while not wait([task], timeout=3.0).done:
-                log(f"[render] waiting for the video download ({round(100 * self._downloaded)}%)…")
+                log(f"[download] waiting for the video ({round(100 * self._downloaded)}%)…")
             self._video, self._video_task = task.result(), None
         return self._video
 

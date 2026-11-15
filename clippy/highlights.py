@@ -86,7 +86,7 @@ CLIPS_SCHEMA = {
                     "reason": {"type": "string"},
                 },
                 "required": ["start", "end", "score", "hook", "hook_type", "alt_hook", "question", "title",
-                             "description", "topic", "hashtags", "risks", "reason"],
+                             "alt_title", "description", "topic", "hashtags", "risks", "reason"],
             },
         }
     },
@@ -421,7 +421,7 @@ TEXTS_SCHEMA = {
                                          "alt_title": {"type": "string"},
                                          "description": {"type": "string"}, "question": {"type": "string"},
                                          "topic": {"type": "string"}},
-        "required": ["id", "title", "description", "question", "topic"]}}},
+        "required": ["id", "title", "alt_title", "description", "question", "topic"]}}},
     "required": ["clips"],
 }
 
@@ -567,6 +567,8 @@ def parse_clip(c: dict) -> Clip | None:
         return None
     if clip.alt_hook.casefold() == clip.hook.casefold():
         clip.alt_hook = ""
+    if not clip.alt_title or clip.alt_title.casefold() == clip.title.casefold():
+        clip.alt_title = clip.alt_hook if clip.alt_hook.casefold() != clip.title.casefold() else ""
     return clip
 
 

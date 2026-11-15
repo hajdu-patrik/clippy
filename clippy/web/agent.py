@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import re
 
-from .. import i18n, playbook
+from .. import i18n, playbook, streamers
 from ..captions import COLORS
 from ..download import is_list_url
 from ..render import LAYOUTS
@@ -67,6 +67,10 @@ Actions:
 - {"type": "watch", "url": "<channel or playlist url>", "n": <clips per video, 0 = default>}
     keep watching a YouTube or Twitch channel or a playlist: every NEW video becomes a chat with clips automatically
     ("figyeld ezt a csatornát", "watch this channel"). Use it only when the user asks to watch / follow a channel.
+- {"type": "latest_stream", "streamer": "<name as the user wrote it>", "n": <clips, 0 = default>}
+    the newest FINISHED stream of a named streamer on YouTube, Twitch or Kick, no link needed ("klippeld N3on
+    legújabb streamjét", "clip the latest stream of Kai Cenat"); the app finds it and clips it as gameplay. Use it
+    only when the user names a streamer and asks for the latest / newest / last stream.
 - {"type": "none"}  (questions, small talk, unclear requests -> ask a short clarifying question in "reply")
 
 options (all optional, for generate / more):
@@ -111,6 +115,8 @@ User: "delete the 4th"
 {"reply": "Deleted clip #4.", "actions": [{"type": "delete", "clip": 4}]}
 User: "posztold ki a 2. klipet youtube-ra és tiktokra"
 {"reply": "Kiposztolom a 2. klipet YouTube-ra és TikTokra.", "actions": [{"type": "publish", "clips": [2], "platforms": ["youtube", "tiktok"]}]}
+User: "klippeld N3on legújabb streamjét, 4 klipet"
+{"reply": "Megkeresem N3on legutóbbi befejezett streamjét, és 4 klipet vágok belőle.", "actions": [{"type": "latest_stream", "streamer": "N3on", "n": 4}]}
 User: "milyen hosszúak legyenek a klipek tiktokra?"
 {"reply": "Az a legjobb, ami egy teljes gondolatot átad: tesztelésre 20-45 mp, egy erős sztori mehet 60-90 mp-ig is. Egy Shorts-vizsgálatban 11-20 mp-nél volt a legtöbb nézés, de ezek becslések, a saját megtartási grafikonod dönt. Szólj, és rövidebbre vágom a klipeket.", "actions": [{"type": "none"}]}"""
 
@@ -122,9 +128,9 @@ AGENT_SCHEMA = {
         "actions": {"type": "array", "items": {
             "type": "object",
             "properties": {
-                "type": {"type": "string", "enum": ["generate", "more", "edit", "delete", "texts", "publish", "watch", "none"]},
+                "type": {"type": "string", "enum": ["generate", "more", "edit", "delete", "texts", "publish", "watch", "latest_stream", "none"]},
                 "platforms": {"type": "array", "items": {"type": "string"}},
-                "url": {"type": "string"}, "n": {"type": "integer"}, "instructions": {"type": "string"},
+                "url": {"type": "string"}, "streamer": {"type": "string"}, "n": {"type": "integer"}, "instructions": {"type": "string"},
                 "clip": {"type": "integer"}, "clips": {}, "hook": {"type": "string"}, "title": {"type": "string"},
                 "start_shift": {"type": "number"}, "end_shift": {"type": "number"},
                 "options": {"type": "object"},
@@ -199,6 +205,10 @@ PLATFORM_WORDS = {"youtube": re.compile(r"\b(youtube\w*|yt|shorts)\b", re.I),
                   "tiktok": re.compile(r"\b(tik ?tok\w*)\b", re.I)}
 WATCH_WORDS = re.compile(r"\b(figyeld|figyeljed|figyelj|kövesd|kövessed|kovesd|watch|follow|monitor|keep an eye on)\b",
                          re.I)
+RECENT_WORDS = re.compile(r"\b(legujabb\w*|legutobbi\w*|legutolso\w*|utolso\w*|friss\w*|legfrissebb\w*|latest|newest|"
+                          r"last|recent\w*|most recent)\b")
+STREAM_WORDS = re.compile(r"\b(stream\w*|vod\w*|adas\w*|elo|live\w*|kozvetites\w*|broadcast\w*)\b")
+COUNT_RE = re.compile(r"\b(\d{1,2})\s*(?:clips?|db|darab|klip|rész)", re.I)
 NEAR = 30
 SENTENCE_END = re.compile(r"[.!?\n]")
 CHANNEL_WORDS = re.compile(r"\b(csatorn\w*|channel\w*|playlist\w*|lejátszási|profil\w*|streamer\w*|új videó\w*|"
@@ -246,7 +256,8 @@ class ActionValidator:
         if url not in self.urls:
             url = self.urls[0] if self.urls else ""
         if not url:
-            self.note("note.no_link")
+            if latest_action(self.message) is None:
+                self.note("note.no_link")
             return None
         return {"type": "generate", "url": url, "n": _coerce("n", raw.get("n") or opts.pop("n", 5)),
                 "instructions": _coerce("instructions", raw.get("instructions") or ""), "options": opts}
@@ -330,8 +341,18 @@ class ActionValidator:
         url = str(raw.get("url") or "").strip()
         return watch_action(self.message, url if url in lists else lists[0], raw.get("n"))
 
+    def _latest_stream(self, raw: dict, opts: dict) -> dict | None:
+        """The stream is looked up on the network: only a streamer named in the user's own message and a wish for the
+        newest stream count; the model's name for the streamer is ignored."""
+        if self.urls:
+            return None
+        action = latest_action(self.message, raw.get("n"))
+        if action is None and wants_latest(self.message):
+            self.note("error.streamer_unknown")
+        return action
+
     HANDLERS = {"generate": _generate, "more": _more, "edit": _edit, "delete": _delete, "texts": _texts,
-                "publish": _publish, "watch": _watch}
+                "publish": _publish, "watch": _watch, "latest_stream": _latest_stream}
 
 
 def wants_watch(message: str) -> bool:
@@ -352,6 +373,29 @@ def watch_action(message: str, url: str, n=None) -> dict:
     except (TypeError, ValueError):
         count = 0
     return {"type": "watch", "url": url, "n": count, "preset": preset}
+
+
+def wants_latest(message: str) -> bool:
+    """"The latest stream of ...": a word for the newest and a word for a stream, both from the user."""
+    text = streamers.fold(message)
+    return bool(RECENT_WORDS.search(text) and STREAM_WORDS.search(text))
+
+
+def latest_action(message: str, n=None) -> dict | None:
+    """Clips of a named streamer's newest finished stream: the streamer is found in the user's message, the count is
+    read from it or taken from `n`."""
+    if not wants_latest(message):
+        return None
+    streamer = streamers.resolve(message)
+    if streamer is None:
+        return None
+    count = COUNT_RE.search(message)
+    try:
+        wanted = int(count.group(1)) if count else int(n or 0)
+    except (TypeError, ValueError):
+        wanted = 0
+    return {"type": "latest_stream", "streamer": streamer.name, "handles": streamer.handles(),
+            "n": max(0, min(12, wanted))}
 
 
 def build_state(chat: dict, clips: list[dict], excerpt, lessons: str = "") -> str:
@@ -375,9 +419,11 @@ def fast_path(message: str, chat: dict, has_clips: bool = False) -> dict | None:
     """A link in the user's own message always means: work on this video (the chat's own video again only when it
     has no clips yet, e.g. after a failed download)."""
     url = URL_RE.search(message or "")
-    if not url or (url.group(0) == chat.get("source") and has_clips):
+    if not url:
+        return latest_action(message)
+    if url.group(0) == chat.get("source") and has_clips:
         return None
-    count = re.search(r"\b(\d{1,2})\s*(?:clips?|db|darab|klip|rész)", message, re.I)
+    count = COUNT_RE.search(message)
     if wants_watch(message) and is_list_url(url.group(0)):
         return watch_action(message, url.group(0), count.group(1) if count else None)
     return {"type": "generate", "url": url.group(0), "n": max(1, min(12, int(count.group(1)))) if count else 5,
@@ -417,10 +463,13 @@ def run_agent(llm, chat: dict, clips: list[dict], history: list[dict], message: 
     validator = ActionValidator({c["number"] for c in clips}, chat, message, lang, tuple(a["id"] for a in attachments))
     actions = validator.validate(raw_actions)
     if fast and not any(a["type"] == fast["type"] for a in actions):
-        actions = [a for a in actions if a["type"] not in ("generate", "watch")]
+        actions = [a for a in actions if a["type"] not in ("generate", "watch", "latest_stream")]
         actions.insert(0, fast)
-        reply = reply or (i18n.t(lang, "reply.watch") if fast["type"] == "watch"
-                          else i18n.t(lang, "reply.generate", n=fast["n"]))
+        if fast["type"] == "latest_stream":
+            reply = i18n.t(lang, "reply.latest_search", streamer=fast["streamer"])
+        else:
+            reply = reply or (i18n.t(lang, "reply.watch") if fast["type"] == "watch"
+                              else i18n.t(lang, "reply.generate", n=fast["n"]))
     rerouted = texts_first(message, actions)
     if rerouted != actions:
         reply = i18n.t(lang, "reply.texts")

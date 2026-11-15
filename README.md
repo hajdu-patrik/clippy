@@ -193,6 +193,14 @@ a day; each new video becomes its own chat that makes clips with the kind you ch
 & promo, quick shorts). Videos already on the channel are left alone; tick *Clip the newest video now too* for one
 right away. A YouTube channel is read from its uploads and its past streams; live streams wait until they have ended.
 
+**A streamer by name.** Say *"klippeld N3on legújabb streamjét"* or *"clip the latest stream of Kai Cenat"* in the
+chat, no link needed. Clippy knows about fifty of the biggest streamers (Kai Cenat, IShowSpeed, xQc, Adin Ross, N3on,
+Ibai, Jynxzi and more, in `clippy/streamers.py`), looks on their YouTube, Twitch and Kick channels for the newest stream
+that has ended (one that is on right now gives way to the one before it) and clips it with the gameplay & stream kind;
+the reply says which stream it picked. A number works too (*"5 klipet"*), and a name that is not in the list can be given
+as `twitch.tv/name`, `kick.com/name` or `@name`. Kick's stream list is read with yt-dlp, and from Kick's public JSON when
+yt-dlp cannot.
+
 Posts can wait for their time: choose *At a set time* in the Post dialog, and the card shows the planned post with a
 *cancel* link. A watched channel can also post its new clips by itself: give it the platforms and the daily times
 (*18:00, 21:00*) and each new clip takes the next free time, one clip per time across all channels. That is off until

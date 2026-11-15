@@ -19,7 +19,7 @@ from fastapi.staticfiles import StaticFiles
 from starlette.middleware.gzip import GZipMiddleware
 from pydantic import BaseModel, Field, StringConstraints
 
-from .. import i18n
+from .. import i18n, streamers
 from ..editing.assets import LIMITS
 from ..tools import ClippyError, log
 from ..llm import create_llm
@@ -410,6 +410,10 @@ def create_app(storage: Storage | None = None, db_path: Path | None = None, runn
     @app.post("/api/results/refresh")
     def refresh_results():
         return {"read": watcher.measure(), **results.insights(db)}
+
+    @app.get("/api/streamers")
+    def list_streamers():
+        return {"streamers": streamers.listing()}
 
     @app.get("/api/watches")
     def list_watches():

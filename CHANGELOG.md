@@ -6,6 +6,9 @@ change, what changed rather than how; dates are ISO 8601.
 ## [Unreleased]
 
 ### Added
+- Streamers by name: "klippeld N3on legújabb streamjét" or "clip the latest stream of Kai Cenat" finds the newest
+  finished stream of one of fifty well-known streamers (or of a `twitch.tv/name`, `kick.com/name` or `@name`) across
+  YouTube, Twitch and Kick, skips one that is live now, and clips it with the gameplay and stream kind.
 - Comfort: voice input in the chat (local Whisper on the CPU), browser notifications when a job is done, one-step
   installers (`install.ps1`, `install.sh`) and macOS / Linux support (bin/clippy, browser and Ollama start, system
   fonts, bash completion, CI on Windows, Ubuntu and macOS).

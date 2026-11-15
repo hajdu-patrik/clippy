@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Callable
 
 from ..concurrency import SOURCE
-from .. import i18n
+from .. import i18n, streamers
 from ..download import require_public_url
 from ..editing.assets import Asset, AssetService
 from ..editing.repository import TimelineRepository
@@ -18,6 +18,7 @@ from . import results, schedule
 from .clips import ClipLibrary, ClipPresenter
 from .hub import Hub
 from .jobs import PLACEHOLDER_TITLE, Runner
+from .watch import generate_payload, watch_settings
 
 NEW_TITLE = "New chat"
 
@@ -163,7 +164,10 @@ class ChatService:
             except ClippyError as exc:
                 notes.append(i18n.t(result["lang"], exc.key, **exc.params) if exc.key else str(exc))
         prefix = i18n.t(result["lang"], "note.prefix")
-        reply = result["reply"] + (f"\n\n_{prefix}: " + "; ".join(notes) + "_" if notes else "")
+        picked = [i18n.t(result["lang"], "reply.latest_found", **a["picked"]) for a in actions
+                  if a["type"] == "latest_stream"]
+        reply = ("\n\n".join([result["reply"], *picked])
+                 + (f"\n\n_{prefix}: " + "; ".join(notes) + "_" if notes else ""))
         assistant = self._say(chat_id, "assistant", reply, data={"actions": actions})
         for kind, action in jobs:
             self.runner.submit(chat_id, kind, action)
@@ -186,12 +190,22 @@ class ChatService:
             require_public_url(action["url"])
         if kind == "publish":
             return self._publish_jobs(action)
+        if kind == "latest_stream":
+            return [("generate", self._latest_stream_job(chat, action))]
         if kind == "watch":
-            from .watch import watch_settings
-
             self.watcher.add(action["url"], watch_settings(action["n"], action["preset"]))
             return []
         return [(kind, action)]
+
+    def _latest_stream_job(self, chat: dict, action: dict) -> dict:
+        """The streamer's newest finished stream, clipped with the gameplay preset; `action` keeps what was picked."""
+        found = streamers.latest_stream(streamers.Streamer(action["streamer"], (), **action["handles"]))
+        require_public_url(found.url)
+        action["picked"] = {"streamer": found.streamer, "platform": found.label, "title": found.title,
+                            "date": found.date, "url": found.url}
+        chat = self.db.update_chat(chat["id"], title=(found.title or found.streamer)[:80])
+        self.hub.publish(chat["id"], {"type": "chat", "chat": chat})
+        return generate_payload(found.url, watch_settings(action["n"], "gameplay"))
 
     def _publish_jobs(self, action: dict) -> list[tuple[str, dict]]:
         status = self.runner.accounts.status()
