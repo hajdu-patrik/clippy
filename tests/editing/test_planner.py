@@ -71,6 +71,9 @@ def test_service_asks_back_and_undoes_without_rendering(timeline, words, asset_i
         def clip_versions(self, chat_id, number):
             return rows
 
+        def current_clips(self, chat_id):
+            return rows[-1:]
+
     class Assets:
         def index(self, chat_id):
             return asset_index

@@ -16,7 +16,8 @@ BUMPERS = ("intro", "outro")
 
 @operation
 class RemoveLayer(Operation):
-    """Removes any layer by id (text, hook, cta, captions, image, music, color) or the intro / outro."""
+    """Removes any layer by id (text, hook, cta, captions, image, music, color, sticker, effect, sound, broll) or the
+    intro / outro."""
 
     kind: Literal["remove_layer"] = "remove_layer"
     layer: str

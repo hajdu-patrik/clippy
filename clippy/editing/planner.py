@@ -36,8 +36,15 @@ operations; the app validates and renders them. Return ONLY JSON: {"reply": "...
 - A misheard word in the captions ("nem X-et mond, hanem Y-t", "javítsd a feliratban") -> fix_caption with the
   words as they are written in the transcript below and what is really said; one operation per wrong word or phrase.
 - To remove anything use remove_layer with its id ("intro" / "outro" for the bumpers).
-- Music, logos, intros and LUTs must come from the attachments; never invent ids. If the user wants music or a picture
-  but nothing fitting is attached, use {"kind": "ask", ...} to ask them to attach it.
+- Music, logos, intros, B-roll videos and LUTs must come from the attachments; never invent ids. If the user wants
+  music, a picture or a video but nothing fitting is attached, use {"kind": "ask", ...} to ask them to attach it.
+  Built-in sound effects (pop, ding, boom, click, whoosh, riser, bleep), emoji stickers and effects need nothing.
+- "Gyorsítsd fel / lassítsd le / slow motion" -> set_speed (2 = twice as fast, 0.5 = half speed) with a span when
+  only a part is meant. "Fekvő / YouTube / négyzet / 16:9 / 1:1" -> set_format.
+- "Fűzd hozzá a 3. klipet / tedd utána" -> join_clip with that clip number (only the other clips listed in the
+  state). Several clips can be joined one after the other.
+- Moments ("when he says X", "at the punchline") are time refs: put a zoom, flash, shake or sound effect there.
+- "Csipogd ki / bleep" a word -> add_sound "bleep" at that word.
 - Texts you write on the video use the captions' language unless the user asks otherwise; keep them short.
 - Unclear or impossible request -> one {"kind": "ask", "question": "..."} operation and a reply that asks.
 - Change only what was asked: usually 1-4 operations, never repeat the same operation.
@@ -61,6 +68,15 @@ User: "vágd ki onnan, hogy 'na mindegy' addig, hogy 'szóval'"
 User: "a feliratban nem Pistának, hanem Petinek mondja, és a hook legyen: Peti titka"
 {"reply": "Javítottam a nevet a feliratban, és átírtam a hookot.", "operations": [
  {"kind": "fix_caption", "find": "Pistának", "replace": "Petinek"}, {"kind": "set_hook", "text": "Peti titka"}]}
+User: "amikor azt mondja, hogy pénz, legyen ráközelítés és egy dörrenés, a végét lassítsd le, és tegyél fel egy 🔥-t"
+{"reply": "Ráközelítettem és dörrenést tettem a „pénz” szóhoz, lelassítottam a végét, és felkerült a 🔥.",
+ "operations": [{"kind": "add_effect", "effect": "zoom", "span": {"start": {"type": "word", "word": "pénz"}}},
+ {"kind": "add_sound", "sound": "boom", "at": {"type": "word", "word": "pénz"}},
+ {"kind": "set_speed", "factor": 0.5, "span": {"start": {"type": "edge", "edge": "end", "offset": -2}}},
+ {"kind": "add_sticker", "emoji": "🔥", "position": "top-right", "motion": "bounce"}]}
+User: "make it 16:9 for YouTube and put clip 3 after it"
+{"reply": "Switched to 16:9 and joined clip 3 at the end.", "operations": [
+ {"kind": "set_format", "format": "16:9"}, {"kind": "join_clip", "clip": 3}]}
 User: "melegebb színek és egy kis kontraszt"
 {"reply": "Melegebbek lettek a színek, és kicsit erősebb a kontraszt.", "operations": [
  {"kind": "color", "temperature": 5200, "contrast": 1.12}]}"""
@@ -77,6 +93,7 @@ class EditRequest:
     title: str = ""
     alt_hook: str = ""
     question: str = ""
+    others: tuple[int, ...] = ()
 
     @property
     def language(self) -> str:
@@ -103,6 +120,9 @@ class PromptFormatter:
         parts = [f"CLIP #{req.number}, version {tl.version}, post title: {json.dumps(req.title, ensure_ascii=False)}",
                  *self._ideas(req), "Layers:", *layers,
                  f"Intro: {self._bumper(tl.intro, req)}. Outro: {self._bumper(tl.outro, req)}.",
+                 f"Format: {tl.format}. Speed: {self._speed(tl)}. Joined after it: "
+                 f"{', '.join(f'clip #{j.clip}' for j in tl.joins) or 'nothing'}. Other clips in this chat: "
+                 f"{', '.join(f'#{n}' for n in req.others) or 'none'}.",
                  f"Camera: layout {tl.camera.layout}, punch-ins {'on' if tl.camera.punch else 'off'}, "
                  f"dead-air cutting {'on' if tl.camera.tighten else 'off'}. Sound: {tl.audio.mode}.",
                  "Attachments (use these ids):", self._assets(req) or "- none",
@@ -129,9 +149,23 @@ class PromptFormatter:
             return f"{layer.id}: image {json.dumps(layer.name)} opacity {layer.transform.opacity}{span}"
         if layer.kind == "audio":
             return f"{layer.id}: music {json.dumps(layer.name)} {layer.gain_db:+g} dB{' ducked' if layer.duck else ''}{span}"
+        if layer.kind == "sticker":
+            return f"{layer.id}: sticker {layer.emoji} ({layer.motion}){span}"
+        if layer.kind == "effect":
+            return f"{layer.id}: effect {layer.effect}{span or ' whole clip'}"
+        if layer.kind == "sound":
+            return f"{layer.id}: sound effect {layer.sound or json.dumps(layer.name)} at {layer.at:.1f} s"
+        if layer.kind == "video":
+            return f"{layer.id}: B-roll {json.dumps(layer.name)} {'full frame' if layer.full else 'small'}{span}"
         a = layer.adjust
         return (f"{layer.id}: colour contrast {a.contrast}, saturation {a.saturation}, brightness {a.brightness}, "
                 f"temperature {a.temperature} K, vibrance {a.vibrance}{', LUT ' + layer.lut if layer.lut else ''}")
+
+    @staticmethod
+    def _speed(tl: Timeline) -> str:
+        parts = [f"×{r.factor:g}" + (f" {r.span.start:.1f}–{r.span.end:.1f} s" if r.span else " whole clip")
+                 for r in tl.speed]
+        return ", ".join(parts) or "normal"
 
     @staticmethod
     def _bumper(bumper, req: EditRequest) -> str:

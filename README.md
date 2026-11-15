@@ -104,13 +104,29 @@ drag and drop or paste – images, music, video and `.cube` LUTs (each file is c
 re-encoded, sizes are capped):
 
 > *"Put my logo in the top right corner of clip 2 and this song under it, quietly."*
-> *"A 3. klipről vedd le a hookot, a feliratok legyenek nagyobbak, sárga kiemeléssel."*
+> *"A 3. klipről vedd le a nyitó feliratot, a feliratok legyenek nagyobbak, sárga kiemeléssel."*
+> *"Amikor azt mondja, hogy pénz, legyen ráközelítés és egy dörrenés, a végét lassítsd le, és tegyél fel egy 🔥-t."*
+> *"Make it 16:9 for YouTube and put clip 3 after it with a slide."*
 
-Every clip has a **timeline**: the cut, the virtual camera, captions, hook and call-to-action texts, overlays, colour,
-music and intro / outro. The local LLM turns a request into a short list of validated edit operations (add, change or
-remove text, captions style and language, overlay, colour and LUT, music with ducking, speech volume, cut a range,
-trim, intro / outro with a crossfade, title), Clippy applies them as a dry run first and asks back when something is
-unclear. The result is a new version with a **change card** listing what changed and a one-click **undo**.
+You never edit by hand: you say what you want, Clippy does it. Every clip has a **timeline**: the cut, the virtual
+camera, the format, the speed, captions, opening and call-to-action texts, overlays, stickers, effects, sounds,
+colour, music, B-roll, joined clips and intro / outro. The local LLM turns a request into a short list of validated
+edit operations, Clippy applies them as a dry run first and asks back when something is unclear. The result is a new
+version with a **change card** listing what changed and a one-click **undo**.
+
+| What you can ask for | Examples |
+| --- | --- |
+| texts | add, rewrite, move or remove; opening text and CTA; appearing with a fade, pop, slide or typewriter effect |
+| captions | size, colour, highlight, height, language, hide, fix a misheard word |
+| cut | start earlier / end later, cut out a part, hide the jump with a flash, a dip to black or a zoom |
+| speed | slow motion or faster, for the whole clip or a part (the voice keeps its pitch) |
+| format | 9:16 (TikTok, Shorts, Reels), 1:1 and 4:5 (feed posts), 16:9 (YouTube: the whole source frame) |
+| effects | punch-in zoom, shake, flash, dip to black, black and white, blur, vignette, at a word or a second |
+| stickers | any emoji in colour, with a pop, bounce, float or fade |
+| sound | music with ducking, sound effects (pop, ding, boom, click, whoosh, riser, bleep) or your own file at a moment, speech volume |
+| pictures and video | logo or image overlay, B-roll from an attached video (full frame or small), colour, LUTs |
+| sequence | intro / outro with a transition, other clips of the chat joined after this one |
+| other | framing, dead-air cutting, sound processing, post title, undo |
 
 Rendering is split in two: the camera-framed **base** is rendered once per cut and cached, every later caption,
 colour, overlay or music edit only re-runs a fast finishing pass (about 7 s for a 1080p clip instead of a full

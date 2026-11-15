@@ -9,9 +9,11 @@ from pydantic import Field
 from ...tools import ClippyError
 from ..assets import AssetKind
 from ..changes import Change
-from ..timeline import LAYOUTS, TRANSITIONS, Bumper, TimeRange, Timeline, Transition
+from ..timeline import LAYOUTS, TRANSITIONS, Bumper, EffectLayer, TimeRange, Timeline, Transition
 from ..timeref import Span
 from . import MIN_CLIP_SECONDS, Applied, EditContext, Operation, operation
+
+CUT_EFFECT_SECONDS = 0.4
 
 
 def merged(ranges: list[TimeRange]) -> tuple[TimeRange, ...]:
@@ -26,10 +28,12 @@ def merged(ranges: list[TimeRange]) -> tuple[TimeRange, ...]:
 
 @operation
 class CutRange(Operation):
-    """Removes a part of the clip as the viewer sees it, e.g. "cut 12–15 s" or "cut from 'but' to 'anyway'"."""
+    """Removes a part of the clip as the viewer sees it, e.g. "cut 12–15 s" or "cut from 'but' to 'anyway'";
+    transition: what hides the jump (none, flash, fade_black, zoom)."""
 
     kind: Literal["cut_range"] = "cut_range"
     span: Span
+    transition: Literal["none", "flash", "fade_black", "zoom"] = "none"
     touches_base: ClassVar[bool] = True
 
     def apply(self, timeline: Timeline, ctx: EditContext) -> Applied:
@@ -40,7 +44,13 @@ class CutRange(Operation):
             raise ClippyError(key="edit.too_short", min=MIN_CLIP_SECONDS)
         source = TimeRange(start=ctx.clock.to_source(out.start), end=ctx.clock.to_source(out.end))
         cut = timeline.cut.evolve(removed=merged([*timeline.cut.removed, source]))
-        return timeline.evolve(cut=cut), [Change.removed("cut", start=round(out.start, 1), end=round(out.end, 1))]
+        timeline = timeline.evolve(cut=cut)
+        if self.transition != "none":
+            at = max(0.0, out.start - CUT_EFFECT_SECONDS / 2)
+            timeline = timeline.with_layer(EffectLayer(
+                id=ctx.new_id(timeline, "effect"), effect=self.transition,
+                span=TimeRange(start=round(at, 3), end=round(at + CUT_EFFECT_SECONDS, 3))))
+        return timeline, [Change.removed("cut", start=round(out.start, 1), end=round(out.end, 1))]
 
 
 @operation

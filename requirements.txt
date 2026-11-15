@@ -1,5 +1,6 @@
 yt-dlp[default,curl-cffi]>=2026.10.26
 faster-whisper>=1.2
+pillow>=11               # colour emoji stickers
 opencv-python>=4.10,<5   # 5.x removed the Haar face detector we use
 numpy>=1.26
 requests>=2.31

@@ -80,7 +80,7 @@ def _overlay(text: str) -> str:
 
 @dataclass(frozen=True)
 class TextEvent:
-    """Free text on the frame: centre position in pixels of the 1080×1920 frame, colours as #RRGGBB."""
+    """Free text on the frame: centre position in pixels of the frame, colours as #RRGGBB."""
 
     text: str
     start: float
@@ -94,6 +94,7 @@ class TextEvent:
     uppercase: bool = False
     font: str = "Arial Black"
     width: float = 0.85
+    animation: str = "fade"
 
 
 def ass_color(hex_color: str) -> str:
@@ -102,13 +103,36 @@ def ass_color(hex_color: str) -> str:
     return f"&H00{h[4:6]}{h[2:4]}{h[0:2]}&".upper()
 
 
-def _text_event(e: TextEvent) -> str:
-    chars = max(6, int(e.width * PLAY_W / (e.size * 0.62)))
+ENTRANCES = {
+    "none": "",
+    "fade": r"\fad(120,200)",
+    "pop": r"\fad(60,150)\fscx40\fscy40\t(0,140,\fscx112\fscy112)\t(140,240,\fscx100\fscy100)",
+    "slide": r"\fad(100,150)",
+    "typewriter": r"\fad(0,200)",
+}
+TYPEWRITER_SECONDS = 1.4
+
+
+def _text_events(e: TextEvent, play_w: int = PLAY_W) -> list[str]:
+    chars = max(6, int(e.width * play_w / (e.size * 0.62)))
     body = _wrap(_esc(clean_text(e.text.upper() if e.uppercase else e.text)), width=chars)
     font = CaptionStyle(font=e.font).font_name
-    tags = (rf"\an5\pos({e.x:.0f},{e.y:.0f})\fn{font}\fs{e.size}\1c{ass_color(e.color)}"
-            rf"\3c{ass_color(e.box_color if e.box else '#000000')}\fad(120,200)")
-    return f"Dialogue: 2,{_ts(e.start)},{_ts(e.end)},{'Box' if e.box else 'Plain'},,0,0,0,,{{{tags}}}{body}"
+    place = (rf"\move({e.x:.0f},{e.y + 160:.0f},{e.x:.0f},{e.y:.0f},0,300)" if e.animation == "slide"
+             else rf"\pos({e.x:.0f},{e.y:.0f})")
+    tags = (rf"\an5{place}\fn{font}\fs{e.size}\1c{ass_color(e.color)}"
+            rf"\3c{ass_color(e.box_color if e.box else '#000000')}{ENTRANCES.get(e.animation, '')}")
+    style = "Box" if e.box else "Plain"
+    if e.animation != "typewriter":
+        return [f"Dialogue: 2,{_ts(e.start)},{_ts(e.end)},{style},,0,0,0,,{{{tags}}}{body}"]
+    parts = re.split(r"( |\\N)", body)
+    count = (len(parts) + 1) // 2
+    step = min(TYPEWRITER_SECONDS, 0.5 * (e.end - e.start)) / max(1, count)
+    lines = []
+    for i in range(1, count + 1):
+        start = e.start + (i - 1) * step
+        end = e.start + i * step if i < count else e.end
+        lines.append(f"Dialogue: 2,{_ts(start)},{_ts(end)},{style},,0,0,0,,{{{tags}}}{''.join(parts[:2 * i - 1])}")
+    return lines
 
 
 def group_words(words: list[dict], max_words: int, max_chars: int, gap: float = 0.5) -> list[list[dict]]:
@@ -134,14 +158,15 @@ def group_words(words: list[dict], max_words: int, max_chars: int, gap: float = 
 
 
 def build_ass(words: list[dict], clip_start: float, clip_end: float, style: CaptionStyle,
-              hook: str = "", cta: str = "", texts: tuple[TextEvent, ...] = ()) -> str:
-    """words: absolute-time words; output times are relative to clip_start."""
+              hook: str = "", cta: str = "", texts: tuple[TextEvent, ...] = (),
+              frame: tuple[int, int] = (PLAY_W, PLAY_H)) -> str:
+    """words: absolute-time words; output times are relative to clip_start; `frame` is the video's size."""
     hl = COLORS.get(style.highlight, COLORS["yellow"])
     duration = clip_end - clip_start
     header = f"""[Script Info]
 ScriptType: v4.00+
-PlayResX: {PLAY_W}
-PlayResY: {PLAY_H}
+PlayResX: {frame[0]}
+PlayResY: {frame[1]}
 WrapStyle: 2
 ScaledBorderAndShadow: yes
 YCbCr Matrix: TV.709
@@ -195,7 +220,8 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
         cta_start = max(0.0, duration - style.cta_seconds)
         fs, txt = _overlay(cta)
         events.append(rf"Dialogue: 1,{_ts(cta_start)},{_ts(duration)},Cta,,0,0,0,,{{\fad(200,0){fs}}}{txt}")
-    events.extend(_text_event(e) for e in texts)
+    for e in texts:
+        events.extend(_text_events(e, frame[0]))
     return header + "\n".join(events) + "\n"
 
 

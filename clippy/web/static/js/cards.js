@@ -26,10 +26,11 @@ export function cardHtml(id) {
   const removed = info.dead_air_removed
     ? `<span>${esc(t("card.silence", { s: Number(info.dead_air_removed).toFixed(1) }))}</span>` : "";
   const old = c.current === false;
+  const fmt = ["16:9", "1:1", "4:5"].includes(info.format) ? info.format : "";
   const kind = d.hook_type ? `<span class="kind">${esc(t(`hooktype.${d.hook_type}`))}</span>` : "";
   const risky = (d.risks || []).length ? `<span class="risk">${esc(t("card.risky"))}</span>` : "";
   return `<article class="card ${old ? "old" : ""} ${c.deleted ? "deleted" : ""}" data-cid="${c.id}" data-num="${c.number}">
-    <div class="vid">
+    <div class="vid${fmt ? ` fmt-${fmt.replace(":", "x")}` : ""}">
       <video controls preload="metadata" playsinline ${c.jpg ? `poster="${esc(c.jpg)}"` : ""} src="${esc(c.mp4 || "")}"
         aria-label="${esc(t("card.aria", { n: c.number, v: c.version }))}"></video>
       <span class="badge ${old ? "" : "cur"}">#${c.number} · v${c.version}</span>
@@ -38,7 +39,7 @@ export function cardHtml(id) {
       <h3 class="hook">${esc(d.hook || d.title || "")}</h3>
       ${d.hook ? `<div class="title">${esc(d.title || "")}</div>` : ""}
       <div class="facts"><span>${fmtTs(d.start)}–${fmtTs(d.end)}</span><span>${duration.toFixed(1)} s</span>
-        ${d.score != null ? `<span>${esc(t("card.score", { s: Math.round(d.score) }))}</span>` : ""}${removed}${kind}${risky}</div>
+        ${d.score != null ? `<span>${esc(t("card.score", { s: Math.round(d.score) }))}</span>` : ""}${removed}${fmt ? `<span>${esc(fmt)}</span>` : ""}${kind}${risky}</div>
       ${(d.hashtags || []).length ? `<div class="tags">${esc(d.hashtags.join(" "))}</div>` : ""}
       ${whyHtml(d)}
       <div class="btns">

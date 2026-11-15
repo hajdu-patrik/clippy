@@ -23,14 +23,16 @@ MIN_CLIP_SECONDS = 3.0
 
 @dataclass
 class EditContext:
-    """What an operation may look at besides the timeline: the attachments, where words fall in the clip, and how
-    output time maps back to the source (for cuts)."""
+    """What an operation may look at besides the timeline: the attachments, where words fall in the clip, how
+    output time maps back to the source (for cuts), this clip's number and the chat's other clips (number: version)."""
 
     assets: AssetIndex
     resolver: TimeResolver
     clock: Clock
     source_duration: float
     taken: set[str] = field(default_factory=set)
+    number: int = 0
+    clips: dict[int, int] = field(default_factory=dict)
 
     def new_id(self, timeline: Timeline, prefix: str) -> str:
         used = {layer.id for layer in timeline.layers} | self.taken
@@ -45,9 +47,16 @@ class EditContext:
         """The change subject and its parameters for a layer, e.g. ("music", {"name": "summer.mp3"})."""
         if layer.kind == "text":
             return (layer.role if layer.role != "custom" else "text"), {"text": layer.text}
-        if layer.kind in ("image", "audio"):
+        if layer.kind == "sticker":
+            return "sticker", {"emoji": layer.emoji}
+        if layer.kind == "effect":
+            return f"effect_{layer.effect}", {}
+        if layer.kind == "sound" and layer.sound:
+            return f"sfx_{layer.sound}", {}
+        if layer.kind in ("image", "audio", "video", "sound"):
             asset = self.assets.find(layer.asset)
-            return ("overlay" if layer.kind == "image" else "music"), {"name": asset.name if asset else layer.asset}
+            subject = {"image": "overlay", "audio": "music", "video": "broll", "sound": "sfx"}[layer.kind]
+            return subject, {"name": asset.name if asset else layer.asset}
         return layer.kind, {}
 
 
@@ -120,7 +129,7 @@ def _field(name: str, info) -> str:
     default = "" if info.is_required() else f" = {info.default!r}" if info.default is not None else " (optional)"
     return f"{name}: {text}{span}{default}"
 
-MODULES = ("audio", "meta", "structure", "text", "visual")
+MODULES = ("audio", "meta", "motion", "structure", "text", "visual")
 
 
 def load_all() -> None:

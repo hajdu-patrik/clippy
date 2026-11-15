@@ -8,7 +8,7 @@ from pydantic import Field
 
 from ...tools import ClippyError
 from ..changes import Change
-from ..timeline import HEX_COLOR, HIGHLIGHTS, CaptionLayer, TextLayer, TextStyle, Timeline, WordFix
+from ..timeline import HEX_COLOR, HIGHLIGHTS, TEXT_ANIMATIONS, CaptionLayer, TextLayer, TextStyle, Timeline, WordFix
 from ..timeref import Span, fold
 from . import Applied, EditContext, Operation, operation
 from .placement import CAPTION_HEIGHTS, Position, place
@@ -18,16 +18,19 @@ HOOK_STYLE = TextStyle(size=82)
 
 
 class TextLook(Operation):
-    """Optional style fields shared by the text operations; unset fields keep the current look."""
+    """Optional style fields shared by the text operations; unset fields keep the current look. animation: how the
+    text appears (none, fade, pop, slide, typewriter)."""
 
     kind: str
     size: int | None = Field(None, ge=16, le=220)
     color: str | None = Field(None, pattern=HEX_COLOR)
     box: bool | None = None
     uppercase: bool | None = None
+    animation: Literal[TEXT_ANIMATIONS] | None = None
 
     def styled(self, style: TextStyle) -> TextStyle:
-        changes = {k: getattr(self, k) for k in ("size", "color", "box", "uppercase") if getattr(self, k) is not None}
+        changes = {k: getattr(self, k) for k in ("size", "color", "box", "uppercase", "animation")
+                   if getattr(self, k) is not None}
         return style.evolve(**changes)
 
 

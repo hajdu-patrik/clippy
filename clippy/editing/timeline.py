@@ -16,6 +16,11 @@ HIGHLIGHTS = ("yellow", "green", "cyan", "red", "white")
 LAYOUTS = ("auto", "face", "center", "blur", "stream")
 TRANSITIONS = ("fade", "fadeblack", "fadewhite", "wipeleft", "wiperight", "slideleft", "slideright", "slideup",
                "slidedown", "circleopen", "circleclose", "zoomin", "dissolve", "smoothleft", "smoothright")
+FORMATS = {"9:16": (1080, 1920), "1:1": (1080, 1080), "4:5": (1080, 1350), "16:9": (1920, 1080)}
+TEXT_ANIMATIONS = ("none", "fade", "pop", "slide", "typewriter")
+STICKER_MOTIONS = ("none", "fade", "pop", "bounce", "float")
+EFFECTS = ("zoom", "shake", "flash", "fade_black", "black_white", "blur", "vignette")
+SOUNDS = ("pop", "ding", "boom", "click", "whoosh", "riser", "bleep")
 
 
 class Frozen(BaseModel):
@@ -60,6 +65,7 @@ class TextStyle(Frozen):
     box: bool = True
     box_color: str = Field("#000000", pattern=HEX_COLOR)
     uppercase: bool = False
+    animation: Literal[TEXT_ANIMATIONS] = "fade"
 
 
 class ColorAdjust(Frozen):
@@ -127,7 +133,49 @@ class AudioLayer(BaseLayer):
     fade_out: float = Field(2.0, ge=0, le=10)
 
 
-Layer = Annotated[TextLayer | CaptionLayer | ImageLayer | ColorLayer | AudioLayer, Field(discriminator="kind")]
+class StickerLayer(BaseLayer):
+    """An emoji drawn in colour, placed like an image."""
+
+    kind: Literal["sticker"] = "sticker"
+    emoji: str = Field(min_length=1, max_length=16)
+    transform: Transform = Transform(width=0.22)
+    motion: Literal[STICKER_MOTIONS] = "pop"
+
+
+class EffectLayer(BaseLayer):
+    kind: Literal["effect"] = "effect"
+    effect: Literal[EFFECTS]
+    strength: float = Field(0.6, ge=0.05, le=1)
+
+
+class SoundLayer(BaseLayer):
+    """A one-shot sound effect starting at `at`: a built-in sound or an attached audio file."""
+
+    kind: Literal["sound"] = "sound"
+    sound: Literal[SOUNDS] | None = None
+    asset: str | None = None
+    at: float = Field(0.0, ge=0)
+    gain_db: float = Field(-6.0, ge=-40, le=6)
+
+    @model_validator(mode="after")
+    def _one_source(self) -> "SoundLayer":
+        if (self.sound is None) == (self.asset is None):
+            raise ValueError("give either a built-in sound or an attachment")
+        return self
+
+
+class VideoLayer(BaseLayer):
+    """B-roll: an attached video over a span of the clip, full frame or picture-in-picture; muted unless gain is set."""
+
+    kind: Literal["video"] = "video"
+    asset: str
+    full: bool = True
+    transform: Transform = Transform(x=0.5, y=0.3, width=0.6)
+    gain_db: float | None = Field(None, ge=-40, le=6)
+
+
+Layer = Annotated[TextLayer | CaptionLayer | ImageLayer | ColorLayer | AudioLayer | StickerLayer | EffectLayer
+                  | SoundLayer | VideoLayer, Field(discriminator="kind")]
 
 
 class Cut(Frozen):
@@ -156,6 +204,21 @@ class Bumper(Frozen):
     duration: float | None = Field(None, gt=0, le=30)
 
 
+class Join(Frozen):
+    """Another clip of the chat (a stored version) played after this one."""
+
+    clip: int = Field(ge=1)
+    version: int = Field(ge=1)
+    transition: Transition = Transition()
+
+
+class SpeedRange(Frozen):
+    """Playback speed of a part of the clip (output seconds before any speed change), or of all of it."""
+
+    span: TimeRange | None = None
+    factor: float = Field(ge=0.25, le=4)
+
+
 class AudioMaster(Frozen):
     mode: Literal["voice", "natural"] = "voice"
     speech_gain_db: float = Field(0.0, ge=-20, le=12)
@@ -170,6 +233,9 @@ class Timeline(Frozen):
     intro: Bumper | None = None
     outro: Bumper | None = None
     audio: AudioMaster = AudioMaster()
+    format: Literal[tuple(FORMATS)] = "9:16"
+    speed: tuple[SpeedRange, ...] = Field((), max_length=12)
+    joins: tuple[Join, ...] = Field((), max_length=8)
 
     @model_validator(mode="after")
     def _unique_ids(self) -> "Timeline":
@@ -183,6 +249,10 @@ class Timeline(Frozen):
 
     def layers_of(self, kind: str) -> tuple[Layer, ...]:
         return tuple(layer for layer in self.layers if layer.kind == kind)
+
+    @property
+    def size(self) -> tuple[int, int]:
+        return FORMATS[self.format]
 
     def text_with_role(self, role: str) -> TextLayer | None:
         return next((layer for layer in self.layers_of("text") if layer.role == role), None)

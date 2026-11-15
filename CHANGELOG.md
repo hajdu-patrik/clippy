@@ -6,6 +6,11 @@ change, what changed rather than how; dates are ISO 8601.
 ## [Unreleased]
 
 ### Added
+- Full editing from the chat: speed (slow motion or faster, whole clip or a part, pitch kept), aspect ratios (9:16,
+  1:1, 4:5, and 16:9 built from the whole source frame), effects at a word or a second (punch-in zoom, shake, flash,
+  dip to black, black and white, blur, vignette), colour emoji stickers with motion, built-in sound effects or your
+  own file at a moment, B-roll from an attached video, joining other clips of the chat with a transition, animated
+  texts (fade, pop, slide, typewriter) and a transition to hide a cut.
 - Chat-driven editor: every clip version has a timeline (cut, camera, captions, hook and CTA texts, overlays, colour,
   music, intro / outro), and the chat edits it with validated operations in Hungarian or English, asking back when
   a request is unclear.

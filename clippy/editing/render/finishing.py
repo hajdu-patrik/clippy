@@ -15,18 +15,23 @@ from ..timeline import Timeline
 from ..timeref import corrected
 from .base import BaseRender
 from .graph import Filter, FilterGraph, Pad
-from .layers import AudioStage, ColorStage, CompileContext, OverlayStage, SequenceStage, TextStage
+from .layers import (AudioStage, ColorStage, CompileContext, EffectStage, FormatStage, OverlayStage, SequenceStage,
+                     SpeedStage, TextStage)
 
 Translate = Callable[[list[dict], str], tuple[list[dict], str]]
 
 
 @dataclass(frozen=True)
 class RenderProfile:
+    """`scale`: the output size as a share of the timeline's frame (1080x1920 for 9:16)."""
+
     name: str
-    width: int
-    height: int
+    scale: float
     two_pass_loudness: bool
     audio_bitrate: str
+
+    def size(self, frame: tuple[int, int]) -> tuple[int, int]:
+        return tuple(max(2, round(side * self.scale / 2) * 2) for side in frame)
 
     def video_args(self, encoder: Encoder, fps: float) -> list[str]:
         if self.name == "final":
@@ -36,25 +41,28 @@ class RenderProfile:
         return ["-c:v", "libx264", "-preset", "veryfast", "-crf", "28"]
 
 
-PREVIEW = RenderProfile("preview", 540, 960, False, "128k")
-FINAL = RenderProfile("final", 1080, 1920, True, "256k")
+PREVIEW = RenderProfile("preview", 0.5, False, "128k")
+FINAL = RenderProfile("final", 1.0, True, "256k")
 
 
 class FinishingRenderer:
-    VIDEO_STAGES = (ColorStage(), OverlayStage(), TextStage())
+    VIDEO_STAGES = (FormatStage(), ColorStage(), OverlayStage(), EffectStage(), TextStage())
 
     def __init__(self, encoder: Encoder | None = None):
         self.encoder = encoder or Encoder.choose("auto")
 
     def render(self, timeline: Timeline, base: BaseRender, assets: AssetIndex, work: Path, fonts_dir: str,
-               out_file: Path, profile: RenderProfile = FINAL, translate: Translate | None = None) -> dict:
+               out_file: Path, profile: RenderProfile = FINAL, translate: Translate | None = None,
+               source: Path | None = None, joined: dict[int, Path] | None = None) -> dict:
+        """`source`: the original video (16:9 is built from it); `joined`: files of the clips joined after this one."""
         captions = next(iter(timeline.layers_of("captions")), None)
         words, hook = corrected(base.words, captions.fixes if captions else ()), None
         hook_layer = timeline.text_with_role("hook")
         if translate is not None:
             words, hook = translate(words, hook_layer.text if hook_layer else "")
-        measured = self._measure(timeline, base, assets, work) if profile.two_pass_loudness else None
-        ctx = CompileContext(FilterGraph(), timeline, base, assets, work, fonts_dir, words, hook or None)
+        extra = {"source": source, "joined": dict(joined or {})}
+        measured = self._measure(timeline, base, assets, work, extra) if profile.two_pass_loudness else None
+        ctx = CompileContext(FilterGraph(), timeline, base, assets, work, fonts_dir, words, hook or None, **extra)
         video, audio, duration = self._compile(ctx, profile, measured, with_video=True)
         g = ctx.graph
         g.output(video)
@@ -66,6 +74,7 @@ class FinishingRenderer:
         self._run(cmd, work)
         write_cover(out_file, duration)
         return {"duration_out": round(duration, 2), "profile": profile.name, "hook": hook or "",
+                "format": timeline.format,
                 "loudness_in": measured.get("input_i") if measured else None}
 
     def _compile(self, ctx: CompileContext, profile: RenderProfile, measured: dict | None,
@@ -77,22 +86,26 @@ class FinishingRenderer:
             video = base.video
             for stage in self.VIDEO_STAGES:
                 video = stage.apply(ctx, video)
-        audio = AudioStage().apply(ctx, base.audio)
+        video, speech = SpeedStage().apply(ctx, video, base.audio)
+        audio = AudioStage().apply(ctx, speech)
         joined = SequenceStage().apply(ctx, video, audio)
         audio = g.chain(joined.audio, Filter.of("loudnorm", **loudnorm_options(measured)),
                         Filter.of("aresample", 48000), prefix="a")
         if with_video:
-            video = g.chain(joined.video, Filter.of("scale", profile.width, profile.height, flags="lanczos"),
+            width, height = profile.size(ctx.size)
+            video = g.chain(joined.video, Filter.of("scale", width, height, flags="lanczos"),
                             Filter.of("format", "yuv420p"),
                             Filter.of("setparams", color_primaries="bt709", color_trc="bt709", colorspace="bt709",
                                       range="tv"), prefix="v")
         return video, audio, joined.duration
 
-    def _measure(self, timeline: Timeline, base: BaseRender, assets: AssetIndex, work: Path) -> dict | None:
-        ctx = CompileContext(FilterGraph(), timeline, base, assets, work)
+    def _measure(self, timeline: Timeline, base: BaseRender, assets: AssetIndex, work: Path,
+                 extra: dict) -> dict | None:
+        ctx = CompileContext(FilterGraph(), timeline, base, assets, work, **extra)
         g = ctx.graph
         base_in = g.input(base.video)
-        audio = AudioStage().apply(ctx, base_in.audio)
+        _, speech = SpeedStage().apply(ctx, None, base_in.audio)
+        audio = AudioStage().apply(ctx, speech)
         joined = SequenceStage().apply(ctx, None, audio)
         g.output(g.chain(joined.audio, Filter.of("loudnorm", **loudnorm_options(None), print_format="json")))
         cmd = [ffmpeg_path(), "-hide_banner", "-nostats", *g.input_args(), "-filter_complex", g.filter_complex(),

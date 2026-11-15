@@ -40,7 +40,7 @@ class TimelineRenderer:
             shutil.rmtree(work, ignore_errors=True)
 
     def render(self, timeline: Timeline, assets: AssetIndex, out_file: Path, profile: RenderProfile = FINAL,
-               caption_language: str | None = None) -> TimelineRender:
+               caption_language: str | None = None, joined: dict[int, Path] | None = None) -> TimelineRender:
         with report_span(0.0, 0.85):
             base, _ = self.base(timeline)
         work = self.project.storage.scratch(self.project.scratch_root)
@@ -50,7 +50,9 @@ class TimelineRenderer:
             translate = self.project.caption_translator(caption_language)
             draft = work / out_file.name
             with report_span(0.85, 1.0), RENDER.hold():
-                info = self.finisher.render(timeline, base, assets, work, fonts_dir, draft, profile, translate)
+                info = self.finisher.render(timeline, base, assets, work, fonts_dir, draft, profile, translate,
+                                            source=self.project.prepare().video if timeline.format == "16:9" else None,
+                                            joined=joined)
             out_file.parent.mkdir(parents=True, exist_ok=True)
             if draft.with_suffix(".jpg").is_file():
                 move_atomic(draft.with_suffix(".jpg"), out_file.with_suffix(".jpg"))

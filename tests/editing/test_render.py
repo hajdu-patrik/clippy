@@ -120,3 +120,71 @@ def test_cached_base_is_reused_without_rendering_again(setup, tmp_path):
     renderer = TimelineRenderer(Project(), store)
     cached, reused = renderer.base(timeline)
     assert reused and cached.duration == 1
+
+
+def edited(setup, ops, number=1, clips=None):
+    root, base, _, _, _ = setup
+    service = AssetService(Storage(root / "data", root / "library"))
+    timeline = timeline_from_clip({"start": 10, "end": 15, "hook": "Figyeld!"}, {})
+    ctx = EditContext(assets=service.index(1), resolver=TimeResolver(5.0, WORDS), clock=base.clock,
+                      source_duration=60.0, number=number, clips=clips or {})
+    parsed, errors = OperationCatalogue().parse(ops)
+    assert not errors
+    result = Editor().run(timeline, parsed, ctx)
+    assert result.ok, result.issues
+    return result.timeline, service.index(1)
+
+
+def render_timeline(setup, timeline, assets, name, profile=PREVIEW, **extra):
+    root, base, _, _, fonts = setup
+    work = root / f"work-{name}"
+    work.mkdir()
+    out = root / f"{name}.mp4"
+    info = FinishingRenderer(Encoder.choose("auto")).render(timeline, base, assets, work, fonts_dir_for(work, fonts),
+                                                            out, profile, **extra)
+    return out, info
+
+
+def test_speed_effects_stickers_sounds_broll_and_a_joined_clip_render(setup):
+    root = setup[0]
+    broll_file, joined = root / "broll.mp4", root / "clip2.mp4"
+    for path, colour, seconds in ((broll_file, "red", 3), (joined, "blue", 2)):
+        ffmpeg("-f", "lavfi", "-i", f"color=c={colour}:s=320x240:r=25:d={seconds}", "-f", "lavfi", "-i",
+               f"sine=frequency=330:duration={seconds}", "-c:v", "libx264", "-preset", "ultrafast", "-pix_fmt",
+               "yuv420p", "-c:a", "aac", str(path))
+    service = AssetService(Storage(root / "data", root / "library"))
+    broll = service.add(1, "broll.mp4", io.BytesIO(broll_file.read_bytes()))
+    at = lambda s: {"type": "at", "at": s}  # noqa: E731
+    ops = [{"kind": "add_effect", "effect": effect, "span": {"start": at(s)}}
+           for effect, s in (("zoom", 0.2), ("shake", 1.2), ("flash", 2.2), ("fade_black", 3.0))]
+    ops += [{"kind": "add_effect", "effect": e, "span": {"start": at(3.0), "end": at(4.0)}}
+            for e in ("black_white", "blur", "vignette")]
+    ops += [{"kind": "add_sound", "sound": s, "at": at(0.5 * i)} for i, s in
+            enumerate(("pop", "ding", "boom", "click", "whoosh", "riser", "bleep"))]
+    ops += [{"kind": "add_sticker", "emoji": "🔥", "motion": "bounce"},
+            {"kind": "add_text", "text": "Gépelt szöveg itt", "animation": "typewriter", "position": "center"},
+            {"kind": "add_broll", "asset": broll.id, "span": {"start": at(1.0), "length": 1.0}, "gain_db": -12},
+            {"kind": "set_speed", "factor": 2, "span": {"start": at(0), "end": at(2)}},
+            {"kind": "set_speed", "factor": 0.5, "span": {"start": at(4), "end": at(5)}},
+            {"kind": "join_clip", "clip": 2, "transition": "slideleft"}]
+    timeline, assets = edited(setup, ops, clips={2: 1})
+    out, info = render_timeline(setup, timeline, assets, "everything", joined={2: joined})
+    media = probe_media(out)
+    assert media["video"] == (540, 960) and media["audio"]
+    assert abs(info["duration_out"] - 6.5) < 0.01 and abs(media["duration"] - 6.5) < 0.2
+    b, g, r = frame_at(out, 6.3, root / "joined.png")[480, 270].astype(int)
+    assert b > 150 and r < 90
+
+
+@pytest.mark.parametrize("fmt, size", [("1:1", (540, 540)), ("4:5", (540, 676)), ("16:9", (960, 540))])
+def test_other_aspect_ratios(setup, fmt, size):
+    root = setup[0]
+    source = root / "source.mp4"
+    if not source.exists():
+        ffmpeg("-f", "lavfi", "-i", "color=c=green:s=1920x1080:r=25:d=20", "-c:v", "libx264", "-preset", "ultrafast",
+               "-pix_fmt", "yuv420p", str(source))
+    timeline, assets = edited(setup, [{"kind": "set_format", "format": fmt}])
+    out, _ = render_timeline(setup, timeline, assets, f"format-{fmt.replace(':', 'x')}", source=source)
+    assert probe_media(out)["video"] == size
+    b, g, r = frame_at(out, 2.5, root / f"{fmt.replace(':', 'x')}.png")[size[1] // 2, size[0] // 2].astype(int)
+    assert (g > 100 and r < 90) if fmt == "16:9" else abs(int(g) - int(r)) < 30

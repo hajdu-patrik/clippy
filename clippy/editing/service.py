@@ -5,6 +5,7 @@ Storing the version and telling the chat about it is the caller's job (the web j
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from pathlib import Path
 
 from ..highlights import Clip
 from ..pipeline import post_text
@@ -57,11 +58,13 @@ class EditService:
         words = corrected(base.words, captions.fixes if captions else ())
         index = self.assets.index(chat_id)
         source_duration = float((project.transcript or {}).get("duration") or timeline.cut.source.end + 60)
+        others = {c["number"]: c["version"] for c in self.db.current_clips(chat_id) if c["number"] != number}
         ctx = EditContext(assets=index, resolver=TimeResolver(base.duration, words), clock=base.clock,
-                          source_duration=source_duration)
+                          source_duration=source_duration, number=number, clips=others)
         info = row["clip"]
         req = EditRequest(request, timeline, tuple(index.assets.values()), tuple(attached), tuple(words), number,
-                          info.get("title", ""), info.get("alt_hook", ""), info.get("question", ""))
+                          info.get("title", ""), info.get("alt_hook", ""), info.get("question", ""),
+                          tuple(sorted(others)))
         plan = self.planner.plan(req, ctx)
         if plan.control("undo"):
             return self.undo(chat_id, number, plan.reply)
@@ -78,13 +81,23 @@ class EditService:
         clip = {**row["clip"], **({"title": title_op.title} if title_op else {})}
         out = self.storage.chat_clips(chat_id) / f"clip_{number:02d}_v{timeline.version}.mp4"
         captions = next(iter(timeline.layers_of("captions")), None)
-        rendered = renderer.render(timeline, index, out, FINAL, captions.language if captions else None)
+        rendered = renderer.render(timeline, index, out, FINAL, captions.language if captions else None,
+                                   self.joined(chat_id, timeline))
         hook = timeline.text_with_role("hook")
         clip["hook"] = rendered.info.get("hook") or (hook.text if hook else "")
         txt = out.with_suffix(".txt")
         atomic_write_text(txt, post_text(Clip.from_dict(clip), project.source, rendered.info))
         version = NewVersion(clip, rendered.info, str(out), str(out.with_suffix(".jpg")), str(txt), timeline.to_json())
         return EditOutcome(number, plan.reply, changes, version=version)
+
+    def joined(self, chat_id: int, timeline) -> dict[int, Path]:
+        """The stored files of the clip versions this timeline plays after itself."""
+        files = {}
+        for join in timeline.joins:
+            row = next((r for r in self.db.clip_versions(chat_id, join.clip) if r["version"] == join.version), None)
+            if row and row.get("mp4") and Path(row["mp4"]).is_file():
+                files[join.clip] = Path(row["mp4"])
+        return files
 
     def undo(self, chat_id: int, number: int, reply: str = "") -> EditOutcome:
         """The previous version comes back as a new version (history is never rewritten)."""

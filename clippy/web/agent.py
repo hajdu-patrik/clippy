@@ -46,8 +46,11 @@ Actions:
 - {"type": "more", "n": <1-12>, "instructions": "<what kind of moments>", "options": {...}}
     more clips from the CURRENT video (never duplicates existing ones).
 - {"type": "edit", "clips": [<clip numbers>] or "all"}
-    ANY change to existing clips: hook / CTA / texts, captions (look, colour, language, hide), colours, music, logos
-    or pictures, intro / outro, cutting parts out, shorter / longer, framing, sound, post title, undo. A separate
+    ANY change to existing clips: hook / CTA / texts (also animated), captions (look, colour, language, hide),
+    colours, music, logos or pictures, emoji stickers, effects (zoom, shake, flash, black and white, blur…), sound
+    effects, speed (slow motion, faster), aspect ratio (9:16, 1:1, 4:5, 16:9), B-roll from an attached video,
+    joining other clips of this chat, intro / outro, cutting parts out, shorter / longer, framing, sound, post
+    title, undo. A separate
     video editor reads the user's message and does the details: you only pick the clips (the one the user names,
     "all" when they say every / all clips, the highest number for "the last one").
 - {"type": "delete", "clip": <clip number>}
