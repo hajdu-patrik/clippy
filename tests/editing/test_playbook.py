@@ -67,8 +67,9 @@ def test_post_text_is_ready_to_paste_in_the_clip_language():
                 risks=["misquote"])
     text = post_text(clip, "https://youtu.be/x", {"duration_out": 28.4, "dead_air_removed": 1.2})
     caption, notes = text.split("\n---\n")
-    assert caption.strip() == ("Miért hagyta abba?\n\nTe abbahagytad volna?\n\nA teljes videó: https://youtu.be/x"
-                               "\n\n#zene")
+    assert caption.strip() == ("Miért hagyta abba?\n\nTe abbahagytad volna? Írd meg kommentben 👇\n\n"
+                               "🎥 Eredeti videó: https://youtu.be/x\n\n#zene")
+    assert "Cím (YouTube Shorts): Miért hagyta abba?" in notes
     assert "Kitűzött komment: A teljes videó: https://youtu.be/x" in notes
     assert "Nyitó felirat ötlet (kérdés): Erről senki nem beszél" in notes and "B nyitó felirat ötlet (A/B teszt): Tíz év hazugság" in notes
     assert "kiragadva félreérthető" in notes
@@ -77,13 +78,17 @@ def test_post_text_is_ready_to_paste_in_the_clip_language():
     assert "Pinned comment: Full video: u" in english and "B opening text" not in english
     whole = post_text(Clip(0, 15, 50, title="Why he quit"), "u", {"duration_out": 15, "dead_air_removed": 0})
     assert "Opening text" not in whole
-    teaser = Clip(0, 20, 50, title="He lost it all in 3 days", description="Nobody saw the last call coming.",
-                  hashtags=["#story"])
-    caption = post_text(teaser, "https://youtu.be/x", {"duration_out": 20, "dead_air_removed": 0},
-                        ["TikTok: https://www.tiktok.com/@me", "Instagram: https://www.instagram.com/me/"])
+    teaser = Clip(0, 20, 50, title="GTA 6 Is Watching You", topic="GTA 6", question="Which detail surprised you?",
+                  description="Your shirt, your car's gas level: GTA 6 is watching every move you make. 👀",
+                  hashtags=["#GTA6", "#GTAVI"])
+    links = ["YouTube: https://www.youtube.com/@me", "Instagram: https://www.instagram.com/me",
+             "TikTok: https://www.tiktok.com/@me", "Blog: https://me.example"]
+    caption = post_text(teaser, "https://youtu.be/x", {"duration_out": 20, "dead_air_removed": 0}, links)
     assert caption.split("\n---\n")[0].strip() == (
-        "He lost it all in 3 days\n\nNobody saw the last call coming.\n\nFull video: https://youtu.be/x\n\n"
-        "Follow me:\nTikTok: https://www.tiktok.com/@me\nInstagram: https://www.instagram.com/me/\n\n#story")
+        "Your shirt, your car's gas level: GTA 6 is watching every move you make. 👀\n\n"
+        "Which detail surprised you? Drop it in the comments 👇\n\n🎥 Original video: https://youtu.be/x\n\n"
+        "⭐ Subscribe for more GTA 6 clips: https://www.youtube.com/@me\n📸 Instagram: https://www.instagram.com/me\n"
+        "🎵 TikTok: https://www.tiktok.com/@me\n🔗 Blog: https://me.example\n\n#GTA6 #GTAVI")
 
 
 def test_captions_stay_clear_of_the_right_hand_buttons():

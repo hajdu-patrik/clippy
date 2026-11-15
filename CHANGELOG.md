@@ -52,6 +52,10 @@ change, what changed rather than how; dates are ISO 8601.
   profile / channel / playlist link, no video in the post, no sound, each with what helps.
 
 ### Changed
+- Post text in the style creators post: a teaser ending with an emoji, the comment question with "drop it in the
+  comments", the original video, a follow line per profile (YouTube, Instagram, TikTok) and hashtags; the title
+  for YouTube Shorts is listed under it. Copy text uses the same text as the .txt file, and changing the profile
+  links rewrites every clip's post text. Every clip of a video shares one follow topic ("GTA 6").
 - Copy text works on phones too: where the browser has no clipboard API (a phone on the Wi-Fi is not a secure
   page), the text is copied by selection, and if even that is blocked a window shows it selected to copy by hand.
 - No long dashes (em / en dash) in anything Clippy writes: the picker, the editor and the post texts are told

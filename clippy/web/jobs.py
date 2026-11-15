@@ -571,7 +571,8 @@ class TextsJob(JobHandler):
                               proj.title, language)
         links = Settings(ctx.runner.storage).profile_links()
         for row, clip in zip(rows, clips):
-            data = {**row["clip"], "title": clip.title, "description": clip.description}
+            data = {**row["clip"], "title": clip.title, "description": clip.description, "question": clip.question,
+                    "topic": clip.topic}
             stored = ctx.db.update_clip_texts(row["id"], data)
             if stored.get("txt"):
                 atomic_write_text(Path(stored["txt"]), post_text(clip, chat["source"], stored["info"] or {}, links))

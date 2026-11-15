@@ -111,10 +111,12 @@ gives the same kind of clips: the count, the lengths and the CTA come from the t
 | 📣 Video & promo | 4 × 15-30 s | follows the speaker, speech tuned, opening text and a CTA | the main benefit, a demo, a strong claim or number, a testimonial (hook → proof → CTA) |
 | ⚡ Quick shorts | 3 × 10-25 s | automatic, dead air out | jokes, punchlines, surprising lines and reactions |
 
-**Post text.** Every clip comes with a ready-to-paste post: a curiosity title, a short teaser description, a
-comment question, the link of the full video, your own profile links and hashtags (*Copy text* on the card, and the
-`.txt` file next to the video). Set your profile links once under *Settings* (the gear in the sidebar), one per
-line, e.g. `TikTok: https://www.tiktok.com/@you`; they stay on your computer in `data/web/settings.json`.
+**Post text.** Every clip comes with a ready-to-paste post (*Copy text* on the card, and the `.txt` file next to
+the video): a one-line teaser ending with an emoji, the comment question, the link of the original video, your own
+profiles (YouTube as a follow line, Instagram, TikTok) and hashtags; the curiosity title for YouTube Shorts is listed
+under it. Set your profile links once under *Settings* (the gear in the sidebar), one per line, e.g.
+`TikTok: https://www.tiktok.com/@you`; they stay on your computer in `data/web/settings.json`, and changing them
+rewrites every clip's post text.
 
 ## Editing in the chat
 

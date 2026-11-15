@@ -17,7 +17,7 @@ SITES = {"tiktok.com": "TikTok", "instagram.com": "Instagram", "youtube.com": "Y
          "threads.net": "Threads"}
 
 
-def _site(url: str) -> str:
+def site_of(url: str) -> str:
     host = (urlsplit(url).hostname or "").removeprefix("www.").removeprefix("m.")
     return next((name for domain, name in SITES.items() if host == domain or host.endswith("." + domain)), host)
 
@@ -32,7 +32,7 @@ def clean_links(text: str) -> list[str]:
         found = URL.search(line)
         if found is None or not urlsplit(found.group()).hostname:
             raise ClippyError(key="error.bad_link", line=line[:60])
-        out.append(line if line != found.group() else f"{_site(line)}: {line}")
+        out.append(line if line != found.group() else f"{site_of(line)}: {line}")
     if len(out) > MAX_LINKS:
         raise ClippyError(key="error.too_many_links", max=MAX_LINKS)
     return out

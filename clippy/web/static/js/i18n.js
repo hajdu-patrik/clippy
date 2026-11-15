@@ -247,15 +247,6 @@ export function t(key, params) {
   return fill(text, params);
 }
 
-export function textIn(language, key, params) {
-  return fill(server[language]?.[key] ?? server.en[key] ?? key, params);
-}
-
-export function languageOf(text) {
-  const s = String(text || "");
-  return /[őűŐŰ]/.test(s) || (s.match(/[áéíóöúüÁÉÍÓÖÚÜ]/g) || []).length >= 2 ? "hu" : "en";
-}
-
 export function tx(obj, fallback = "") {
   if (!obj?.key) return fallback;
   const text = server[lang][obj.key] ?? server.en[obj.key];

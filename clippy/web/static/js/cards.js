@@ -1,5 +1,5 @@
-import { languageOf, t, textIn } from "./i18n.js";
-import { currentChat, state } from "./state.js";
+import { t } from "./i18n.js";
+import { state } from "./state.js";
 import { $, copyText, esc, fmtTs, toast } from "./util.js";
 
 function whyHtml(d) {
@@ -15,13 +15,11 @@ function whyHtml(d) {
   return `<details><summary>${esc(t("card.why"))}</summary>${body}</details>`;
 }
 
-function postCaption(d) {
-  const source = currentChat()?.source;
-  const links = state.settings.profile_links || [];
-  const lang = languageOf(`${d.title} ${d.description || ""} ${d.question || ""}`);
-  return [d.title, d.description, d.question, source && textIn(lang, "post.full_video", { url: source }),
-    links.length && [`${textIn(lang, "post.follow")}:`, ...links].join("\n"), (d.hashtags || []).join(" ")]
-    .filter(Boolean).join("\n\n");
+function postCaption(c) {
+  const fromServer = (c.txt || "").split("\n---\n")[0].trim();
+  if (fromServer) return fromServer;
+  const d = c.clip || {};
+  return [d.description || d.title, d.question, (d.hashtags || []).join(" ")].filter(Boolean).join("\n\n");
 }
 
 export function cardHtml(id) {
@@ -75,8 +73,7 @@ async function onCardClick(event) {
   if (!act || !card) return;
   const clip = state.clips.get(Number(card.dataset.cid));
   if (act === "copy") {
-    const d = clip.clip || {};
-    const text = postCaption(d);
+    const text = postCaption(clip);
     if (await copyText(text)) {
       toast(t("card.copied"));
     } else {

@@ -35,7 +35,8 @@ Find the moments that would make the strongest STANDALONE clips.
 - "reason": one sentence (English is fine) why this works.
 
 Return ONLY JSON: {{"clips": [{{"start": <seconds>, "end": <seconds>, "score": <0-100>, "hook": "...",
-"hook_type": "...", "alt_hook": "...", "question": "...", "title": "...", "description": "...", "hashtags": ["#..."],
+"hook_type": "...", "alt_hook": "...", "question": "...", "title": "...", "description": "...", "topic": "...",
+"hashtags": ["#..."],
 "risks": [], "reason": "..."}}]}}"""
 
 RERANK_PROMPT = """You are the head editor of a viral clips channel. Your team proposed candidate clips from
@@ -63,13 +64,13 @@ CLIPS_SCHEMA = {
                     "score": {"type": "integer", "minimum": 0, "maximum": 100},
                     "hook": {"type": "string"}, "hook_type": {"type": "string", "enum": list(playbook.HOOK_KEYS)},
                     "alt_hook": {"type": "string"}, "question": {"type": "string"}, "title": {"type": "string"},
-                    "description": {"type": "string"},
+                    "description": {"type": "string"}, "topic": {"type": "string"},
                     "hashtags": {"type": "array", "items": {"type": "string"}},
                     "risks": {"type": "array", "items": {"type": "string", "enum": list(playbook.RISK_KEYS)}},
                     "reason": {"type": "string"},
                 },
                 "required": ["start", "end", "score", "hook", "hook_type", "alt_hook", "question", "title",
-                             "description", "hashtags", "risks", "reason"],
+                             "description", "topic", "hashtags", "risks", "reason"],
             },
         }
     },
@@ -106,6 +107,7 @@ class Clip:
     alt_hook: str = ""
     question: str = ""
     description: str = ""
+    topic: str = ""
     risks: list[str] = field(default_factory=list)
 
     @property
@@ -345,16 +347,19 @@ TEXTS_PROMPT = """You are a native {text_language} social media editor. Write th
 from the video "{title}". Each clip comes with what is said in it. For every clip:
 {title_rule}
 {description_rule}
-Write both in {text_language}, specific to that clip's own moment (never the video's title again).
+{question_rule}
+{topic_rule}
+Write them in {text_language}, specific to that clip's own moment (never the video's title again).
 {dash_rule}
-Return ONLY JSON: {{"clips": [{{"id": <id>, "title": "...", "description": "..."}}]}}"""
+Return ONLY JSON: {{"clips": [{{"id": <id>, "title": "...", "description": "...", "question": "...", "topic": "..."}}]}}"""
 
 TEXTS_SCHEMA = {
     "type": "object",
     "properties": {"clips": {"type": "array", "items": {
         "type": "object", "properties": {"id": {"type": "integer"}, "title": {"type": "string"},
-                                         "description": {"type": "string"}},
-        "required": ["id", "title", "description"]}}},
+                                         "description": {"type": "string"}, "question": {"type": "string"},
+                                         "topic": {"type": "string"}},
+        "required": ["id", "title", "description", "question", "topic"]}}},
     "required": ["clips"],
 }
 
@@ -365,7 +370,8 @@ def write_texts(llm: LLM, clips: list[Clip], words: list[dict], title: str, text
     lines = [f"id={i} | {c.duration:.0f}s\n{_clip_text(c, words)}" for i, c in enumerate(clips)]
     prompt = TEXTS_PROMPT.format(text_language=text_language, title=title.replace('"', "'"),
                                  title_rule=playbook.TITLE_RULE, description_rule=playbook.DESCRIPTION_RULE,
-                                 dash_rule=playbook.DASH_RULE)
+                                 dash_rule=playbook.DASH_RULE, question_rule=playbook.QUESTION_RULE,
+                                 topic_rule=playbook.TOPIC_RULE)
     reply = llm.chat_json(prompt, "\n\n".join(lines), think=think_enabled(), schema=TEXTS_SCHEMA)
     changed = 0
     for item in reply.get("clips", []) if isinstance(reply, dict) else []:
@@ -376,8 +382,21 @@ def write_texts(llm: LLM, clips: list[Clip], words: list[dict], title: str, text
             continue
         if new_title:
             c.title, c.description = new_title, new_description[:300]
+            c.question = post_clean(str(item.get("question") or c.question))[:160]
+            c.topic = post_clean(str(item.get("topic") or c.topic))[:40]
             changed += 1
+    one_topic(clips)
     return changed
+
+
+def one_topic(clips: list[Clip]) -> None:
+    """Every clip of a video follows for the same subject: the shortest one the model named (the video's subject
+    rather than one clip's detail, e.g. "GTA 6" over "GTA 6 character design")."""
+    topics = [c.topic for c in clips if c.topic]
+    if topics:
+        common = min(topics, key=lambda t: (len(t.split()), len(t)))
+        for c in clips:
+            c.topic = common
 
 
 def text_language_name(code: str | None, spoken: str | None) -> str:
@@ -428,7 +447,7 @@ def parse_clip(c: dict) -> Clip | None:
             hook_type=playbook.known_hook_type(c.get("hook_type")),
             alt_hook=playbook.tidy_hook(str(c.get("alt_hook", ""))),
             question=str(c.get("question", "")).strip(), risks=risks,
-            description=str(c.get("description", "")).strip()[:300],
+            description=str(c.get("description", "")).strip()[:300], topic=str(c.get("topic", "")).strip()[:40],
         )
     except (KeyError, TypeError, ValueError, AttributeError):
         return None
@@ -513,8 +532,9 @@ def find_highlights(transcript: dict, llm: LLM, max_clips: int = 5, min_len: flo
     if llm.backend != "none" and chosen:
         _check_endings(llm, chosen, words, bounds, min_len, max_len, language)
     for c in chosen:
-        c.hook, c.title, c.alt_hook, c.question, c.description = map(
-            post_clean, (c.hook, c.title, c.alt_hook, c.question, c.description))
+        c.hook, c.title, c.alt_hook, c.question, c.description, c.topic = map(
+            post_clean, (c.hook, c.title, c.alt_hook, c.question, c.description, c.topic))
+    one_topic(chosen)
     if llm.backend != "none":
         with report_span(0.9, 1.0):
             _polish_hooks(llm, chosen, text_language)

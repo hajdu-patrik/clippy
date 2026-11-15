@@ -19,7 +19,7 @@ from .captions import CaptionStyle
 from .concurrency import GPU, SOURCE, GuardedLLM
 from .download import Remote, cached_video, fetch, fetch_audio, fetch_video, is_url, probe
 from .highlights import Clip, PickCache, find_highlights
-from .settings import Settings
+from .settings import URL, Settings, site_of
 from .llm import create_llm
 from .render import RenderSettings, prepare_fonts, render_clip
 from .storage import Storage
@@ -91,20 +91,39 @@ class Options:
             punch=self.punch, audio_mode=self.audio, encoder=self.encoder, audio_src=audio_src)
 
 
+LINK_LINES = {"YouTube": "post.youtube", "Instagram": "post.instagram", "TikTok": "post.tiktok"}
+
+
+def link_lines(links, topic: str, tr) -> list[str]:
+    """The creator's own profiles, one line each: a follow line for YouTube, the platform's name for the others."""
+    out = []
+    for line in links:
+        found = URL.search(line)
+        if not found:
+            continue
+        url, site = found.group(), site_of(found.group())
+        if site == "YouTube":
+            out.append(tr("post.subscribe", topic=topic, url=url) if topic else tr("post.subscribe_plain", url=url))
+        else:
+            label = line[:found.start()].strip(" :") or site
+            out.append(tr(LINK_LINES.get(site, "post.link"), label=label, url=url))
+    return out
+
+
 def post_text(clip: Clip, source: str, info: dict, links: list[str] | tuple = ()) -> str:
-    """Ready to paste: the post caption (title, description, comment question, the full video, the creator's own
-    profile links, hashtags), the pinned comment, then the notes."""
-    lang = i18n.detect(f"{clip.title} {clip.hook}")
+    """Ready to paste: the post caption (the teaser, the comment question, the original video, the creator's own
+    profiles, hashtags), then the title, the pinned comment and the notes."""
+    lang = i18n.detect(f"{clip.title} {clip.description} {clip.hook}")
 
     def tr(key: str, **params) -> str:
         return i18n.t(lang, key, **params)
 
-    follow = "\n".join([f"{tr('post.follow')}:", *links]) if links else ""
-    caption = "\n\n".join(x for x in (clip.title, clip.description, clip.question,
-                                       tr("post.full_video", url=source) if source else "", follow,
-                                       " ".join(clip.hashtags)) if x)
+    question = f"{clip.question} {tr('post.comments')}" if clip.question else ""
+    blocks = (clip.description or clip.title, question, tr("post.original", url=source) if source else "",
+              "\n".join(link_lines(links, clip.topic, tr)), " ".join(clip.hashtags))
+    caption = "\n\n".join(x for x in blocks if x)
     kind = f" ({tr('hooktype.' + clip.hook_type)})" if clip.hook_type else ""
-    notes = [f"{tr('post.pinned')}: {tr('post.full_video', url=source)}"]
+    notes = [f"{tr('post.title')}: {clip.title}", f"{tr('post.pinned')}: {tr('post.full_video', url=source)}"]
     if clip.hook:
         notes.append(f"{tr('post.hook')}{kind}: {clip.hook}")
     if clip.alt_hook:

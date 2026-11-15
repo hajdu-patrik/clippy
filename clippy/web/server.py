@@ -25,7 +25,7 @@ from ..llm import create_llm
 from ..settings import Settings
 from ..storage import Storage
 from .chats import ChatService, NotFound
-from .clips import ClipLibrary, ClipPresenter
+from .clips import ClipLibrary, ClipPresenter, rewrite_post_texts
 from .db import DB
 from .hub import Hub
 from .jobs import Runner
@@ -137,6 +137,7 @@ def create_app(storage: Storage | None = None, db_path: Path | None = None, runn
             saved = settings.set_profile_links(body.profile_links)
         except ClippyError as exc:
             raise HTTPException(400, error_detail(exc)) from None
+        rewrite_post_texts(db, runner.library, saved["profile_links"])
         hub.publish(None, {"type": "settings", "settings": saved})
         return saved
 

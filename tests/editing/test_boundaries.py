@@ -140,6 +140,14 @@ def test_more_clips_reuse_the_window_answers_until_they_run_out(tmp_path):
     assert llm.windows == 2 * asked and "already clips" in llm.systems[-1]
 
 
+def test_all_clips_of_a_video_share_the_shortest_topic():
+    from clippy.highlights import one_topic
+
+    clips = [Clip(0, 1, 1, topic="GTA 6 character design"), Clip(0, 1, 1, topic="GTA 6"), Clip(0, 1, 1)]
+    one_topic(clips)
+    assert [c.topic for c in clips] == ["GTA 6"] * 3
+
+
 def test_texts_for_existing_clips_take_only_valid_answers():
     from clippy.highlights import write_texts
 

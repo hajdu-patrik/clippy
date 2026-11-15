@@ -35,6 +35,24 @@ class ClipPresenter:
         return out
 
 
+def rewrite_post_texts(db, library: "ClipLibrary", links: list[str]) -> int:
+    """Every current clip's post text again (after the profile links changed), with its library copy."""
+    from ..highlights import Clip
+    from ..pipeline import post_text
+    from ..tools import atomic_write_text
+
+    done = 0
+    for chat in db.list_chats():
+        for row in db.current_clips(chat["id"]):
+            if not row.get("txt") or not Path(row["txt"]).is_file():
+                continue
+            atomic_write_text(Path(row["txt"]), post_text(Clip.from_dict(row["clip"]), chat.get("source") or "",
+                                                          row.get("info") or {}, links))
+            library.publish(chat, row)
+            done += 1
+    return done
+
+
 class ClipLibrary:
     """The latest version of every web clip, copied to <library>/<video title>/chat<id>_clip_<nn>_<title>.*"""
 
