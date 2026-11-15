@@ -1,0 +1,15 @@
+{
+  "name": "Clippy – local AI clipper",
+  "short_name": "Clippy",
+  "description": "Long videos and podcasts in, vertical 9:16 clips with hooks and captions out. Local and free, Hungarian and English.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#18171a",
+  "theme_color": "#18171a",
+  "icons": [
+    {"src": "brand/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
+    {"src": "brand/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any"},
+    {"src": "brand/mark.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any"}
+  ]
+}

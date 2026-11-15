@@ -1,0 +1,8 @@
+# Optional "studio" extras: voice isolation (Demucs) + forced word alignment (torchaudio MMS_FA).
+# For an NVIDIA GPU (CUDA 12.8):
+#   .venv\Scripts\python -m pip install torch==2.8.0 torchaudio==2.8.0 --index-url https://download.pytorch.org/whl/cu128
+#   .venv\Scripts\python -m pip install -r requirements-ml.txt
+# Pinned to torch/torchaudio 2.8: torchaudio removed the forced_align / MMS_FA API after that.
+torch==2.8.0
+torchaudio==2.8.0
+demucs==4.0.1

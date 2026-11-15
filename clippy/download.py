@@ -1,0 +1,279 @@
+"""Source resolution: a local file is used as-is, a URL is downloaded once with yt-dlp."""
+
+from __future__ import annotations
+
+import glob
+import ipaddress
+import os
+import re
+import shutil
+import socket
+import tempfile
+import uuid
+from contextlib import contextmanager
+from dataclasses import dataclass
+from pathlib import Path
+from urllib.parse import urlsplit
+
+from .concurrency import SOURCE
+from .tools import ROOT, ClippyError, ffmpeg_path, log, move_atomic, report, slugify
+
+URL_RE = re.compile(r"^https?://", re.I)
+VIDEO_EXTS = (".mp4", ".mkv", ".webm")
+
+
+def is_url(source: str) -> bool:
+    return bool(URL_RE.match(source.strip()))
+
+
+def require_public_url(url: str) -> str:
+    """Reject anything but http(s) to a public address, so a chat message cannot reach local services (SSRF)."""
+    parts = urlsplit(url.strip())
+    if parts.scheme not in ("http", "https") or not parts.hostname:
+        raise ClippyError(key="error.only_http")
+    try:
+        infos = socket.getaddrinfo(parts.hostname, parts.port or (443 if parts.scheme == "https" else 80))
+    except socket.gaierror as exc:
+        raise ClippyError(key="error.unresolvable", host=parts.hostname) from exc
+    for info in infos:
+        ip = ipaddress.ip_address(info[4][0])
+        if not ip.is_global:
+            raise ClippyError(key="error.not_public", host=parts.hostname)
+    return url.strip()
+
+
+def _video_id(info: dict) -> str:
+    raw = str(info.get("id") or "")
+    return raw if re.fullmatch(r"[\w-]{1,64}", raw) else slugify(raw or str(info.get("title") or "video"), 64)
+
+
+def _ydl_options(target: Path, max_height: int, cookies_from_browser: str | None, vid: str = "%(id)s") -> dict:
+    opts = {
+        "format": f"bv*[height<={max_height}]+ba/b[height<={max_height}]/b",
+        "format_sort": ["hdr:sdr", f"res:{max_height}", "fps", "vcodec:vp9", "acodec:opus"],
+        "merge_output_format": "mkv",
+        "outtmpl": str(target / f"{vid}.%(ext)s"),
+        "ffmpeg_location": ffmpeg_path(),
+        "noplaylist": True,
+        "playlist_items": "1:10",
+        "quiet": True,
+        "noprogress": True,
+    }
+    runtimes = {name: {} for name in ("deno", "node") if shutil.which(name)}
+    if runtimes:
+        opts["js_runtimes"] = runtimes
+    if cookies_from_browser:
+        opts["cookiesfrombrowser"] = (cookies_from_browser,)
+    return opts
+
+
+def _progress_hook(parts: int):
+    finished: set[str] = set()
+
+    def hook(d: dict) -> None:
+        name = str(d.get("filename") or "")
+        if d.get("status") == "finished":
+            finished.add(name)
+            report(len(finished) / parts)
+        elif d.get("status") == "downloading":
+            total = d.get("total_bytes") or d.get("total_bytes_estimate") or 0
+            part = (d.get("downloaded_bytes") or 0) / total if total else 0.0
+            report((len(finished - {name}) + part) / parts)
+    return hook
+
+
+def _downloaded(folder: Path, vid: str) -> Path | None:
+    """Only the finished, merged file counts (`<id>.<ext>`), never a format fragment like `<id>.f137.mp4`."""
+    return next((folder / f"{vid}{ext}" for ext in VIDEO_EXTS if (folder / f"{vid}{ext}").is_file()), None)
+
+
+@dataclass(frozen=True)
+class Remote:
+    """A video page resolved by yt-dlp: its stable id (the cache key) and title."""
+
+    url: str
+    info: dict
+    vid: str
+    title: str
+    single: bool = True
+    item: int | None = None
+
+    @property
+    def sound_track(self) -> str | None:
+        """The format id of the video's own sound when the site serves it as a separate stream (YouTube, Twitch
+        VODs): it can be fetched first. A site's other audio-only formats may be something else entirely (TikTok's
+        "audio" is the song the video uses), so only the stream chosen for this very video counts."""
+        if not self.single:
+            return None
+        return next((f.get("format_id") for f in self.info.get("requested_formats") or []
+                     if f.get("vcodec") == "none" and f.get("acodec") not in (None, "none")), None)
+
+    @property
+    def duration(self) -> float | None:
+        return float(self.info["duration"]) if self.info.get("duration") else None
+
+
+ANSI = re.compile(r"\x1b\[[0-9;]*m")
+REASONS = (
+    ("error.download_login", ("login", "log in", "logged-in", "logged in", "sign in", "sign-in", "authentication",
+                              "cookies", "private video", "members-only", "age-restricted", "confirm your age")),
+    ("error.download_busy", ("429", "too many requests", "rate-limit", "rate limit")),
+    ("error.download_gone", ("unavailable", "not available", "not found", "does not exist", "removed", "deleted",
+                             "404", "copyright", "blocked")),
+    ("error.download_unsupported", ("unsupported url", "no video formats", "no video could be found",
+                                    "there's no video", "no video in")),
+)
+LIST_EXTRACTORS = ("tab", "playlist", "user", "channel", "profile", "search", "feed", "collection")
+LIST_PATH = re.compile(r"^/(@[^/]+/?$|channel/|c/|user/|playlist|feed/)")
+PROFILE_HOSTS = ("instagram.com", "twitch.tv", "kick.com", "x.com", "twitter.com", "facebook.com")
+
+
+def _looks_like_a_list(host: str, path: str) -> bool:
+    """A profile, channel or playlist link: `/@name`, `/channel/…`, or just `/name` on a site where that is a profile."""
+    if LIST_PATH.match(path):
+        return True
+    site = host.removeprefix("www.").removeprefix("m.")
+    return site in PROFILE_HOSTS and re.fullmatch(r"/[^/]+/?", path) is not None
+
+
+def explain(message: str, host: str, path: str = "") -> ClippyError:
+    """A yt-dlp failure as a readable error in the user's language: why it failed and what helps. `path`: the
+    link's path, so a profile or channel link that fails to resolve is still named as one."""
+    detail = ANSI.sub("", message)
+    detail = re.sub(r"^ERROR:\s*", "", detail).split("; please report", 1)[0].strip()
+    lower = detail.lower()
+    key = next((key for key, words in REASONS if any(w in lower for w in words)), "error.download_failed")
+    if key == "error.download_failed" and _looks_like_a_list(host, path):
+        key = "error.download_playlist"
+    return ClippyError(key=key, host=host, detail=detail[:200])
+
+
+def _single(info: dict, host: str) -> tuple[dict, bool, int | None]:
+    """A post with several items (an Instagram carousel) gives its first video; a profile, channel or playlist is
+    refused, a live stream too (it has no end yet)."""
+    if info.get("live_status") in ("is_live", "is_upcoming", "post_live") or info.get("is_live"):
+        raise ClippyError(key="error.download_live", host=host)
+    if info.get("_type") != "playlist" and not info.get("entries"):
+        return info, True, None
+    kind = str(info.get("extractor_key") or info.get("ie_key") or "").lower()
+    if any(word in kind for word in LIST_EXTRACTORS):
+        raise ClippyError(key="error.download_playlist", host=host)
+    item = next((i for i, e in enumerate(info.get("entries") or [], 1) if e and any(
+        f.get("vcodec") not in (None, "none") for f in e.get("formats") or [e])), None)
+    if item is None:
+        raise ClippyError(key="error.download_unsupported", host=host, detail="")
+    return _single(list(info["entries"])[item - 1], host)[0], False, item
+
+
+def cookies_file() -> Path | None:
+    """CLIPPY_COOKIES_FILE: a cookies.txt (Netscape format) exported from a signed-in browser; relative to the
+    project folder."""
+    raw = (os.environ.get("CLIPPY_COOKIES_FILE") or "").strip().strip('"')
+    if not raw:
+        return None
+    path = ROOT / Path(raw).expanduser()
+    if not path.is_file():
+        raise ClippyError(key="error.cookies_file_missing", path=path.name)
+    return path
+
+
+@contextmanager
+def _session(opts: dict):
+    """A YoutubeDL with its own copy of the cookies file: yt-dlp writes the cookies back when it closes, and parallel
+    jobs must neither race on the user's file nor change it."""
+    source = cookies_file()
+    if source is None:
+        with _yt_dlp().YoutubeDL(opts) as ydl:
+            yield ydl
+        return
+    with tempfile.TemporaryDirectory(prefix="clippy-cookies-") as private:
+        copy = Path(private) / "cookies.txt"
+        shutil.copyfile(source, copy)
+        with _yt_dlp().YoutubeDL({**opts, "cookiefile": str(copy)}) as ydl:
+            yield ydl
+
+
+def _yt_dlp():
+    try:
+        import yt_dlp
+    except ImportError as exc:
+        raise ClippyError('yt-dlp is missing: pip install "yt-dlp[default]"') from exc
+    return yt_dlp
+
+
+@contextmanager
+def _site_errors(url: str):
+    """yt-dlp failures become a readable error in the user's language instead of a traceback."""
+    yt_dlp = _yt_dlp()
+    try:
+        yield
+    except yt_dlp.utils.DownloadError as exc:
+        parts = urlsplit(url)
+        raise explain(str(exc), parts.hostname or url, parts.path) from None
+
+
+def probe(source: str, downloads: Path, max_height: int = 2160, cookies_from_browser: str | None = None) -> Remote:
+    downloads.mkdir(parents=True, exist_ok=True)
+    with _site_errors(source), _session(_ydl_options(downloads, max_height, cookies_from_browser)) as ydl:
+        info = ydl.extract_info(source, download=False)
+    info, single, item = _single(info, urlsplit(source).hostname or source)
+    vid = _video_id(info)
+    return Remote(source, info, vid, info.get("title") or vid, single, item)
+
+
+def cached_video(downloads: Path, vid: str) -> Path | None:
+    return _downloaded(downloads, vid)
+
+
+def _download(remote: Remote, downloads: Path, name: str, opts: dict, parts: int) -> Path:
+    """yt-dlp works in a private folder; only the finished file is renamed into the cache (all or nothing). The link
+    is resolved again in the same session: TikTok and others tie their media URLs to that session's cookies."""
+    partial = downloads / f".part-{remote.vid}-{uuid.uuid4().hex[:8]}"
+    partial.mkdir()
+    try:
+        opts = {**opts, "outtmpl": str(partial / f"{name}.%(ext)s"), "progress_hooks": [_progress_hook(parts)],
+                **({"playlist_items": str(remote.item)} if remote.item else {})}
+        with _site_errors(remote.url), _session(opts) as ydl:
+            ydl.extract_info(remote.url, download=True)
+        done = next((f for f in sorted(partial.iterdir()) if f.is_file() and f.name.startswith(f"{name}.")
+                     and f.suffix != ".part"), None)
+        if done is None:
+            raise ClippyError(key="error.download_missing")
+        return move_atomic(done, downloads / done.name)
+    finally:
+        shutil.rmtree(partial, ignore_errors=True)
+
+
+def fetch_video(remote: Remote, downloads: Path, max_height: int = 2160, cookies_from_browser: str | None = None) -> Path:
+    with SOURCE.hold(f"video:{remote.vid}"):
+        if (cached := _downloaded(downloads, remote.vid)) is not None:
+            return cached
+        log(f"[download] {remote.title} ({int(remote.info.get('duration') or 0) // 60} min)")
+        opts = _ydl_options(downloads, max_height, cookies_from_browser, remote.vid)
+        parts = len(remote.info.get("requested_formats") or [remote.info])
+        return _download(remote, downloads, remote.vid, opts, parts)
+
+
+def fetch_audio(remote: Remote, downloads: Path, cookies_from_browser: str | None = None) -> Path:
+    """The sound alone (a few MB): voice isolation and the transcript can start while the video still downloads."""
+    name = f"{remote.vid}.audio"
+    with SOURCE.hold(f"audio:{remote.vid}"):
+        if (cached := next(downloads.glob(f"{glob.escape(name)}.*"), None)) is not None:
+            return cached
+        log(f"[download] sound first: {remote.title}")
+        opts = {**_ydl_options(downloads, 2160, cookies_from_browser, name), "format": remote.sound_track}
+        return _download(remote, downloads, name, opts, 1)
+
+
+def fetch(source: str, downloads: Path, max_height: int = 2160, cookies_from_browser: str | None = None) -> tuple[Path, str]:
+    """(video file, title). Best SDR quality up to 4K: a 9:16 crop of 4K is downscaled and stays sharp."""
+    if not is_url(source):
+        path = Path(source).expanduser().resolve()
+        if not path.is_file():
+            raise ClippyError(f"No such file: {path}")
+        return path, path.stem
+    remote = probe(source, downloads, max_height, cookies_from_browser)
+    if (cached := _downloaded(downloads, remote.vid)) is not None:
+        log(f"[download] already here: {cached.name}")
+        return cached, remote.title
+    return fetch_video(remote, downloads, max_height, cookies_from_browser), remote.title

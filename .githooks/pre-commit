@@ -1,0 +1,11 @@
+#!/bin/sh
+# Clippy pre-commit hook (git config core.hooksPath .githooks): lint and tests. Skip once with --no-verify.
+cd "$(git rev-parse --show-toplevel)" || exit 1
+for py in .venv/Scripts/python.exe .venv/bin/python python3 python; do
+    if "$py" -c "import sys; sys.exit(sys.version_info < (3, 12))" >/dev/null 2>&1; then
+        "$py" -m pyflakes clippy tests || exit 1
+        exec "$py" -m pytest -q tests
+    fi
+done
+echo "clippy pre-commit: no Python 3.12+ found; commit with --no-verify to skip the checks" >&2
+exit 1

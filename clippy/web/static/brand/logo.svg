@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 248 64" role="img" aria-label="Clippy">
+  <defs>
+    <linearGradient id="tile" x1="6" y1="2" x2="58" y2="62" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#bf2c52"/>
+      <stop offset="1" stop-color="#6e1329"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="16" fill="url(#tile)"/>
+  <path fill="#fff" d="M50 14H29A15 15 0 0 0 14 29v6a15 15 0 0 0 15 15h21l-4.8-8H29a7 7 0 0 1-7-7v-6a7 7 0 0 1 7-7h16.2z"/>
+  <path fill="#fff" d="M31 26.2v11.6a1.4 1.4 0 0 0 2.1 1.2l9.6-5.8a1.4 1.4 0 0 0 0-2.4l-9.6-5.8a1.4 1.4 0 0 0-2.1 1.2z"/>
+  <text x="80" y="45" fill="#ecebee" font-family="Segoe UI Variable Display, Segoe UI, system-ui, sans-serif"
+        font-size="40" font-weight="700" letter-spacing="-0.8">Clippy</text>
+</svg>

@@ -1,0 +1,69 @@
+# Python
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Secrets and local settings
+.env
+.env.*
+!.env.example
+
+# Runtime data: cache, chats, database, logs, finished clips
+data/
+output/
+fonts/
+*.log
+*.db
+*.db-shm
+*.db-wal
+
+# Media and model files (downloaded on demand, never committed)
+*.mp4
+*.mkv
+*.webm
+*.mov
+*.m4a
+*.wav
+*.flac
+*.mp3
+*.jpg
+*.png
+*.onnx
+*.gguf
+*.pt
+*.bin
+*.part
+!clippy/web/static/brand/*.png
+!docs/assets/*.png
+
+# Generated per machine by `clippy install`
+scripts/
+
+# Personal notes and research
+reports/
+research_notes/
+
+# Editor, assistant and OS files
+.vscode/
+.idea/
+.claude/
+.impeccable/
+*.swp
+*.bak
+*.tmp
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Test artefacts
+tests/out*/
+tests/sample/

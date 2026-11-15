@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="dark light">
+  <meta name="theme-color" content="#18171a">
+  <title>Clippy</title>
+  <meta name="description" content="Clippy – a free, local AI clipper: long videos and podcasts in, vertical 9:16 clips with hooks, captions and a chat editor out. Hungarian and English.">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="application-name" content="Clippy">
+  <meta name="apple-mobile-web-app-title" content="Clippy">
+  <link rel="icon" href="/favicon.ico" sizes="16x16 32x32 48x48">
+  <link rel="icon" type="image/svg+xml" href="/static/brand/mark.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="/static/brand/favicon-32.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/static/brand/apple-touch-icon.png">
+  <link rel="manifest" href="/static/manifest.webmanifest">
+  <link rel="stylesheet" href="/static/style.css">
+  <link rel="modulepreload" href="/static/js/main.js">
+  <link rel="modulepreload" href="/static/js/api.js">
+  <link rel="modulepreload" href="/static/js/i18n.js">
+  <link rel="modulepreload" href="/static/js/util.js">
+  <link rel="modulepreload" href="/static/js/state.js">
+  <link rel="modulepreload" href="/static/js/chat.js">
+  <link rel="modulepreload" href="/static/js/messages.js">
+  <link rel="modulepreload" href="/static/js/cards.js">
+  <link rel="modulepreload" href="/static/js/progress.js">
+  <link rel="modulepreload" href="/static/js/sidebar.js">
+  <link rel="modulepreload" href="/static/js/composer.js">
+  <link rel="modulepreload" href="/static/js/drawer.js">
+  <link rel="modulepreload" href="/static/js/attachments.js">
+</head>
+<body>
+  <svg class="sprite" aria-hidden="true" focusable="false">
+    <defs>
+      <linearGradient id="markTile" x1="6" y1="2" x2="58" y2="62" gradientUnits="userSpaceOnUse">
+        <stop offset="0" stop-color="#bf2c52"/>
+        <stop offset="1" stop-color="#6e1329"/>
+      </linearGradient>
+    </defs>
+    <symbol id="mark" viewBox="0 0 64 64">
+      <rect width="64" height="64" rx="16" fill="url(#markTile)"/>
+      <path fill="#fff" d="M50 14H29A15 15 0 0 0 14 29v6a15 15 0 0 0 15 15h21l-4.8-8H29a7 7 0 0 1-7-7v-6a7 7 0 0 1 7-7h16.2z"/>
+      <path fill="#fff" d="M31 26.2v11.6a1.4 1.4 0 0 0 2.1 1.2l9.6-5.8a1.4 1.4 0 0 0 0-2.4l-9.6-5.8a1.4 1.4 0 0 0-2.1 1.2z"/>
+    </symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+    <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+    <symbol id="i-close" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+    <symbol id="i-send" viewBox="0 0 24 24"><path d="M12 19V5M6 11l6-6 6 6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-theme" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 4a8 8 0 0 1 0 16z" fill="currentColor"/></symbol>
+    <symbol id="i-down" viewBox="0 0 24 24"><path d="M12 5v14M6 13l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-edit" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16zM13.5 6.5l4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></symbol>
+    <symbol id="i-trash" viewBox="0 0 24 24"><path d="M5 7h14M10 7V5h4v2M7 7l1 12h8l1-12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-clip" viewBox="0 0 24 24"><path d="M20 11.5l-7.8 7.8a5 5 0 0 1-7.1-7.1l8.5-8.5a3.3 3.3 0 0 1 4.7 4.7l-8.5 8.5a1.7 1.7 0 0 1-2.4-2.4l7.8-7.8" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-image" viewBox="0 0 24 24"><rect x="3.5" y="4.5" width="17" height="15" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="9" cy="10" r="1.8" fill="currentColor"/><path d="M4 17l5-4.5 4 3.5 3-2.5 4 3.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></symbol>
+    <symbol id="i-music" viewBox="0 0 24 24"><path d="M9 18V6l11-2v12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><circle cx="6.5" cy="18" r="2.5" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="17.5" cy="16" r="2.5" fill="none" stroke="currentColor" stroke-width="1.8"/></symbol>
+    <symbol id="i-film" viewBox="0 0 24 24"><rect x="3.5" y="4.5" width="17" height="15" rx="2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M8 4.5v15M16 4.5v15M3.5 9.5H8M3.5 14.5H8M16 9.5h4.5M16 14.5h4.5" fill="none" stroke="currentColor" stroke-width="1.8"/></symbol>
+    <symbol id="i-palette" viewBox="0 0 24 24"><path d="M12 3.5a8.5 8.5 0 1 0 0 17c1.2 0 1.8-.9 1.4-2l-.4-1a1.5 1.5 0 0 1 1.4-2h2.1A4 4 0 0 0 20.5 11.5c0-4.4-3.8-8-8.5-8z" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="7.8" cy="11" r="1.2" fill="currentColor"/><circle cx="10.5" cy="7.5" r="1.2" fill="currentColor"/><circle cx="14.8" cy="7.8" r="1.2" fill="currentColor"/></symbol>
+    <symbol id="i-undo" viewBox="0 0 24 24"><path d="M9 7L4.5 11.5 9 16M5 11.5h9a5 5 0 0 1 0 10h-2" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 8v5M12 16.5v.5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></symbol>
+  </svg>
+
+  <div class="app" id="app">
+    <div class="scrim" id="scrim" hidden></div>
+    <aside class="sidebar" id="sidebar" aria-label="Chats">
+      <div class="side-top">
+        <a class="brand" href="#" aria-label="Clippy home" data-i18n-attr="aria-label:brand.home">
+          <svg class="brand-mark" aria-hidden="true"><use href="#mark"/></svg>
+          <span class="wordmark">Clippy</span>
+        </a>
+        <button class="icon-btn only-mobile" id="closeSide" aria-label="Close sidebar" data-i18n-attr="aria-label:side.close">
+          <svg aria-hidden="true"><use href="#i-close"/></svg>
+        </button>
+      </div>
+      <button class="new-chat" id="newChat">
+        <svg aria-hidden="true"><use href="#i-plus"/></svg><span data-i18n="side.newChat">New chat</span><kbd>Ctrl Shift O</kbd>
+      </button>
+      <div class="chat-list-label" data-i18n="side.chats">Chats</div>
+      <nav class="chat-list" id="chatList" aria-label="Chats" data-i18n-attr="aria-label:side.chats" role="list"></nav>
+      <div class="side-footer">
+        <div class="worker" id="worker" role="status" aria-live="polite">
+          <span class="dot" aria-hidden="true"></span>
+          <span class="worker-text"><span id="workerText">Idle</span><span class="worker-bar" aria-hidden="true"><i id="workerBar"></i></span></span>
+        </div>
+        <div class="lang-switch" id="langSwitch" role="radiogroup" aria-label="Language" data-i18n-attr="aria-label:side.lang">
+          <button type="button" role="radio" data-lang="hu" aria-checked="false" title="Magyar" lang="hu">HU</button>
+          <button type="button" role="radio" data-lang="en" aria-checked="false" title="English" lang="en">EN</button>
+        </div>
+        <button class="icon-btn" id="themeBtn" aria-label="Light / dark theme" title="Light / dark theme"
+          data-i18n-attr="aria-label:side.theme;title:side.theme">
+          <svg aria-hidden="true"><use href="#i-theme"/></svg>
+        </button>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <button class="icon-btn only-mobile" id="openSide" aria-label="Open sidebar" data-i18n-attr="aria-label:side.open" aria-controls="sidebar" aria-expanded="false">
+          <svg aria-hidden="true"><use href="#i-menu"/></svg>
+        </button>
+        <div class="topbar-title">
+          <div id="chatTitle">Clippy</div>
+          <div id="chatSub" class="sub"></div>
+        </div>
+        <button class="icon-btn only-mobile" id="newChatTop" aria-label="New chat" data-i18n-attr="aria-label:side.newChat">
+          <svg aria-hidden="true"><use href="#i-plus"/></svg>
+        </button>
+      </header>
+
+      <section class="thread" id="thread">
+        <div class="empty" id="empty">
+          <svg class="empty-logo" aria-hidden="true"><use href="#mark"/></svg>
+          <h1 data-i18n="empty.title">What should we clip today?</h1>
+          <p data-i18n="empty.text">Paste a video link and describe the clips you want.</p>
+          <div class="chips" id="chips">
+            <button class="chip" data-i18n="chip.1">5 clips with the strongest hooks</button>
+            <button class="chip" data-i18n="chip.2">3 funny clips, max 30 s</button>
+            <button class="chip" data-i18n="chip.3">Green highlights and a “Follow!” CTA</button>
+            <button class="chip" data-i18n="chip.4">Only the parts about GTA</button>
+          </div>
+        </div>
+        <div class="messages" id="messages" role="log" aria-live="polite" aria-relevant="additions"></div>
+      </section>
+
+      <button class="to-bottom" id="toBottom" aria-label="Scroll to the newest message" data-i18n-attr="aria-label:thread.toBottom" hidden>
+        <svg aria-hidden="true"><use href="#i-down"/></svg>
+      </button>
+
+      <footer class="composer-wrap">
+        <div class="attachments" id="attachments" role="list" aria-live="polite" hidden></div>
+        <form class="composer" id="composer">
+          <button type="button" class="icon-btn attach-btn" id="attach" aria-label="Attach files" title="Attach files"
+            data-i18n-attr="aria-label:composer.attach;title:composer.attach">
+            <svg aria-hidden="true"><use href="#i-clip"/></svg>
+          </button>
+          <input type="file" id="fileInput" multiple accept="image/*,audio/*,video/*,.cube" hidden>
+          <label class="sr-only" for="input" data-i18n="composer.label">Message</label>
+          <textarea id="input" rows="1" placeholder="Paste a video link (YouTube, TikTok, Twitch…), or describe what you want…" autocomplete="off" enterkeyhint="send"></textarea>
+          <button type="submit" class="send" id="send" aria-label="Send" data-i18n-attr="aria-label:composer.send">
+            <svg aria-hidden="true"><use href="#i-send"/></svg>
+          </button>
+        </form>
+        <div class="hint"><span class="only-desktop" data-i18n="composer.hintKeys">Enter to send · Shift+Enter for a new line · </span><span data-i18n="composer.hint">Finished clips go to your video library</span></div>
+      </footer>
+    </main>
+  </div>
+  <div class="drop-overlay" id="dropOverlay" hidden><div><svg aria-hidden="true"><use href="#i-clip"/></svg>
+    <span data-i18n="attach.drop">Drop files to attach</span></div></div>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <script type="module" src="/static/js/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,59 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "clippy-clipper"
+version = "1.0.0"
+description = "A free, local AI clipper: long videos and podcasts in, vertical 9:16 clips with hooks, captions and a chat to refine them out."
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE.md"]
+requires-python = ">=3.12"
+dependencies = [
+    "yt-dlp[default,curl-cffi]>=2026.10.26",
+    "faster-whisper>=1.2",
+    "opencv-python>=4.10,<5",
+    "numpy>=1.26",
+    "requests>=2.31",
+    "imageio-ffmpeg>=0.6",
+    "python-dotenv>=1.0",
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.30",
+    "segno>=1.6",
+]
+keywords = ["video-clipping", "shorts", "tiktok", "reels", "whisper", "ollama", "qwen3", "ffmpeg", "podcast"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Operating System :: Microsoft :: Windows",
+    "Environment :: Web Environment",
+    "Environment :: Console",
+    "Natural Language :: English",
+    "Natural Language :: Hungarian",
+    "Topic :: Multimedia :: Video :: Conversion",
+]
+
+[project.urls]
+Homepage = "https://github.com/hajdu-patrik/clippy"
+Repository = "https://github.com/hajdu-patrik/clippy"
+Issues = "https://github.com/hajdu-patrik/clippy/issues"
+Changelog = "https://github.com/hajdu-patrik/clippy/blob/main/CHANGELOG.md"
+
+[project.optional-dependencies]
+gpu = ["nvidia-cublas-cu12", "nvidia-cudnn-cu12==9.*"]
+ml = ["torch==2.8.0", "torchaudio==2.8.0", "demucs==4.0.1"]
+dev = ["pytest>=8", "pyflakes>=3", "pip-audit>=2.7"]
+
+[project.scripts]
+clippy = "clippy.control:main"
+
+[tool.setuptools.packages.find]
+include = ["clippy*"]
+
+[tool.setuptools.package-data]
+"*" = ["*.html", "*.css", "*.js", "*.svg"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

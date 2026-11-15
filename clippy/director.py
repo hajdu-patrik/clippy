@@ -1,0 +1,224 @@
+"""The virtual camera: per shot a layout mode, the active speaker, a smooth camera path and zoom."""
+
+from __future__ import annotations
+
+import math
+from dataclasses import dataclass
+
+import numpy as np
+
+from .analysis import ClipAnalysis
+
+
+@dataclass
+class FramePlan:
+    mode: str
+    cx: float = 0.5
+    cy: float = 0.5
+    zoom: float = 1.0
+
+
+def crop_w_norm(an: ClipAnalysis, zoom: float) -> float:
+    """Width of the 9:16 crop window as a fraction of source width."""
+    ch = an.height / zoom
+    return min(1.0, (ch * 9 / 16) / an.width)
+
+
+def max_zoom(an: ClipAnalysis) -> float:
+    return max(1.0, min(1.4, an.height / 873.0))
+
+
+def _shot_modes(an: ClipAnalysis, layout: str) -> list[tuple[int, int, str]]:
+    bounds = an.cuts + [an.n_frames]
+    shots = []
+    for s, e in zip(bounds[:-1], bounds[1:]):
+        if e <= s:
+            continue
+        if layout in ("blur", "fit"):
+            mode = "fit"
+        elif layout == "stream":
+            mode = "stream"
+        elif layout == "center":
+            mode = "center"
+        elif layout == "face":
+            mode = "crop"
+        else:
+            with_face = [i for i in range(s, e) if an.faces[i]]
+            mode = "fit"
+            if len(with_face) >= 0.5 * (e - s):
+                sizes = [max(f.h for f in an.faces[i]) for i in with_face]
+                if float(np.median(sizes)) >= 0.07:
+                    mode = "crop"
+        shots.append([s, e, mode])
+    for k, sh in enumerate(shots):
+        if sh[1] - sh[0] < 0.6 * an.fps and len(shots) > 1:
+            sh[2] = shots[k - 1][2] if k > 0 else shots[k + 1][2]
+    return [tuple(s) for s in shots]
+
+
+def _smooth_series(vals: list[float], k: int) -> np.ndarray:
+    arr = np.asarray(vals, dtype=float)
+    if len(arr) < 3 or k < 2:
+        return arr
+    pad = k // 2
+    padded = np.pad(arr, pad, mode="edge")
+    med = np.array([np.median(padded[i: i + k]) for i in range(len(arr))])
+    kernel = np.ones(k) / k
+    return np.convolve(np.pad(med, pad, mode="edge"), kernel, mode="valid")[: len(arr)]
+
+
+def _targets(an: ClipAnalysis, s: int, e: int, cw: float):
+    fps = an.fps
+    tracks: dict[int, dict[int, object]] = {}
+    for i in range(s, e):
+        for f in an.faces[i]:
+            tracks.setdefault(f.track, {})[i] = f
+    n = e - s
+    if not tracks:
+        return None, None, set()
+    win = max(1, int(0.6 * fps))
+    kernel = np.ones(win) / win
+    act = {}
+    for tid, d in tracks.items():
+        arr = np.zeros(n)
+        for i, f in d.items():
+            arr[i - s] = f.mouth
+        act[tid] = np.convolve(arr, kernel, mode="same")
+
+    current, hold_until, challenge = None, s, 0
+    last_seen: dict[int, int] = {}
+    switches: set[int] = set()
+    tx: list[float | None] = []
+    ty: list[float | None] = []
+    last_pos = None
+    for i in range(s, e):
+        present = [t for t in tracks if i in tracks[t]]
+        for t in present:
+            last_seen[t] = i
+        if present:
+            if current is None or i - last_seen.get(current, -10 ** 9) > 0.4 * fps:
+                new = max(present, key=lambda t: tracks[t][i].w * tracks[t][i].h)
+                if current is not None and new != current:
+                    switches.add(i - s)
+                current, hold_until, challenge = new, i + int(1.0 * fps), 0
+            else:
+                best = max(present, key=lambda t: act[t][i - s])
+                if best != current and i >= hold_until and act[best][i - s] > 1.35 * act[current][i - s] + 0.003:
+                    challenge += 1
+                else:
+                    challenge = 0
+                if challenge >= int(0.5 * fps):
+                    current, hold_until, challenge = best, i + int(1.5 * fps), 0
+                    switches.add(i - s)
+            faces_now = [tracks[t][i] for t in present]
+            big = [f for f in faces_now if f.h >= 0.5 * max(g.h for g in faces_now)]
+            if len(big) >= 2:
+                left, right = min(f.x for f in big), max(f.x + f.w for f in big)
+                if right - left < 0.8 * cw:
+                    last_pos = ((left + right) / 2, float(np.mean([f.eye_y for f in big])))
+                    tx.append(last_pos[0])
+                    ty.append(last_pos[1])
+                    continue
+            f = tracks[current].get(i)
+            if f is not None:
+                last_pos = (f.cx, f.eye_y)
+        tx.append(last_pos[0] if last_pos else None)
+        ty.append(last_pos[1] if last_pos else None)
+
+    first = next((k for k, v in enumerate(tx) if v is not None), None)
+    if first is None:
+        return None, None, switches
+    for k in range(first):
+        tx[k], ty[k] = tx[first], ty[first]
+    sm = max(3, int(0.2 * fps) | 1)
+    return _smooth_series(tx, sm), _smooth_series(ty, sm), switches
+
+
+def _camera(tx: np.ndarray, ty: np.ndarray, switches: set[int], fps: float, dz: float, cut_dist: float):
+    """Locked-off camera with dead zone + critically damped spring follow; hard cut on speaker switch."""
+    dt = 1.0 / fps
+    omega = 2 * math.pi * 0.75
+    cx = gx = float(tx[0])
+    cy = gy = float(ty[0])
+    vx = vy = 0.0
+    out = []
+    for k in range(len(tx)):
+        x, y = float(tx[k]), float(ty[k])
+        if k in switches and abs(x - cx) > cut_dist:
+            cx = gx = x
+            cy = gy = y
+            vx = vy = 0.0
+        else:
+            if abs(x - gx) > dz:
+                gx = x
+            if abs(y - gy) > dz * 0.8:
+                gy = y
+            ax = -omega * omega * (cx - gx) - 2 * omega * vx
+            vx += ax * dt
+            cx += vx * dt
+            ay = -omega * omega * (cy - gy) - 2 * omega * vy
+            vy += ay * dt
+            cy += vy * dt
+        out.append((cx, cy))
+    return out
+
+
+def plan_frames(an: ClipAnalysis, layout: str = "auto", join_frames=(), sentence_frames=(),
+                punch: bool = True) -> tuple[list[FramePlan], list[tuple[int, int, str]]]:
+    fps = an.fps
+    shots = _shot_modes(an, layout)
+    plans: list[FramePlan] = [FramePlan("fit")] * an.n_frames
+    zmax = max_zoom(an)
+    joins, sents = set(join_frames), set(sentence_frames)
+    for s, e, mode in shots:
+        if mode in ("fit", "stream"):
+            for i in range(s, e):
+                plans[i] = FramePlan(mode)
+            continue
+
+        face_h = [max(f.h for f in an.faces[i]) for i in range(s, e) if an.faces[i]]
+        base = 1.0
+        if mode == "crop" and face_h and float(np.median(face_h)) < 0.10:
+            base = min(zmax, 1.2)
+        punch_z = min(zmax, base * 1.10)
+        can_punch = punch and punch_z >= base * 1.04
+        cw = crop_w_norm(an, base)
+
+        if mode == "center":
+            tx = ty = None
+        else:
+            tx, ty, switches = _targets(an, s, e, cw)
+        if tx is None:
+            cams = [(0.5, None)] * (e - s)
+        else:
+            cams = _camera(tx, ty, switches, fps, dz=0.12 * cw, cut_dist=0.35 * cw)
+
+        z, last_change = base, s
+        for i in range(s, e):
+            if can_punch and i > s:
+                if i in joins and i - last_change >= int(0.5 * fps):
+                    z, last_change = (punch_z if z == base else base), i
+                elif i in sents and i - last_change >= int(4.0 * fps) and i - s >= int(1.0 * fps):
+                    z, last_change = (punch_z if z == base else base), i
+            cx, eye = cams[i - s]
+            cwz = crop_w_norm(an, z)
+            ch = 1.0 / z
+            cx = min(max(cx, cwz / 2), 1 - cwz / 2)
+            cy = 0.5 if (eye is None or ch >= 0.999) else min(max(eye + 0.12 * ch, ch / 2), 1 - ch / 2)
+            plans[i] = FramePlan("crop", cx, cy, z)
+    return plans, shots
+
+
+def guess_facecam(an: ClipAnalysis) -> tuple[float, float, float, float] | None:
+    """For stream layouts: a 16:9 box (normalised) around the usually small, static streamer face."""
+    flat = [f for fl in an.faces for f in fl]
+    if len(flat) < max(3, an.n_frames * 0.3):
+        return None
+    cx = float(np.median([f.cx for f in flat]))
+    cy = float(np.median([f.cy for f in flat]))
+    fw = float(np.median([f.w for f in flat]))
+    bw = min(1.0, fw * 3.4)
+    bh = min(1.0, bw * an.width / an.height * 9 / 16)
+    x = max(0.0, min(1.0 - bw, cx - bw / 2))
+    y = max(0.0, min(1.0 - bh, cy - bh * 0.45))
+    return x, y, bw, bh

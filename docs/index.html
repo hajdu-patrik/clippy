@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Clippy – free, local AI clipper for TikTok, Shorts and Reels</title>
+  <meta name="description" content="Clippy turns long YouTube videos, podcasts and streams into vertical 9:16 clips with hooks, animated captions and a chat editor – free, open source and running on your own PC. Hungarian and English.">
+  <meta name="keywords" content="AI clipper, video clipping, YouTube Shorts, TikTok clips, Instagram Reels, podcast clips, auto captions, Whisper, Ollama, Qwen3, open source, local, free, Hungarian">
+  <meta name="author" content="The Clippy contributors">
+  <meta name="robots" content="index, follow, max-image-preview:large">
+  <link rel="canonical" href="https://hajdu-patrik.github.io/clippy/">
+  <link rel="alternate" hreflang="en" href="https://hajdu-patrik.github.io/clippy/">
+  <link rel="alternate" hreflang="hu" href="https://hajdu-patrik.github.io/clippy/#magyarul">
+  <link rel="alternate" type="text/plain" title="llms.txt" href="https://hajdu-patrik.github.io/clippy/llms.txt">
+  <meta name="theme-color" content="#18171a">
+  <link rel="icon" href="assets/favicon.ico" sizes="16x16 32x32 48x48">
+  <link rel="icon" type="image/svg+xml" href="assets/mark.svg">
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Clippy">
+  <meta property="og:title" content="Clippy – free, local AI clipper for TikTok, Shorts and Reels">
+  <meta property="og:description" content="Long videos and podcasts in, vertical clips with hooks, captions and a chat editor out. Free, open source, runs on your own PC. Hungarian and English.">
+  <meta property="og:url" content="https://hajdu-patrik.github.io/clippy/">
+  <meta property="og:image" content="https://hajdu-patrik.github.io/clippy/assets/og.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Clippy logo and a 9:16 clip with an animated caption">
+  <meta property="og:locale" content="en_US">
+  <meta property="og:locale:alternate" content="hu_HU">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Clippy – free, local AI clipper">
+  <meta name="twitter:description" content="Long videos in, vertical clips with hooks and captions out – free and local.">
+  <meta name="twitter:image" content="https://hajdu-patrik.github.io/clippy/assets/og.png">
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "SoftwareApplication",
+        "@id": "https://hajdu-patrik.github.io/clippy/#app",
+        "name": "Clippy",
+        "alternateName": "Clippy AI clipper",
+        "description": "A free, open-source, local AI clipper: it turns long YouTube videos, podcasts and streams into vertical 9:16 clips with the strongest hooks, animated word-by-word captions, speaker-tracking framing and a chat editor.",
+        "applicationCategory": "MultimediaApplication",
+        "applicationSubCategory": "Video editing",
+        "operatingSystem": "Windows 10, Windows 11",
+        "softwareVersion": "1.0.0",
+        "license": "https://opensource.org/licenses/MIT",
+        "isAccessibleForFree": true,
+        "offers": {"@type": "Offer", "price": "0", "priceCurrency": "USD"},
+        "inLanguage": ["en", "hu"],
+        "url": "https://hajdu-patrik.github.io/clippy/",
+        "downloadUrl": "https://github.com/hajdu-patrik/clippy",
+        "codeRepository": "https://github.com/hajdu-patrik/clippy",
+        "image": "https://hajdu-patrik.github.io/clippy/assets/og.png",
+        "screenshot": "https://hajdu-patrik.github.io/clippy/assets/og.png",
+        "featureList": [
+          "Finds the moments with the strongest hooks with a local LLM (Qwen3-14B via Ollama)",
+          "Vertical 9:16 reframing with shot detection, face tracking and active-speaker camera",
+          "Animated word-by-word captions, hook text and call to action",
+          "Silence and filler-word removal on word boundaries",
+          "Chat editor: music, logos, texts, colours, LUTs, intro and outro, cuts, undo",
+          "Captions translated between Hungarian and English",
+          "Voice processing and two-pass -14 LUFS loudness",
+          "Runs locally on an NVIDIA GPU or the CPU; no upload, no subscription"
+        ],
+        "author": {"@type": "Organization", "name": "The Clippy contributors"}
+      },
+      {
+        "@type": "FAQPage",
+        "@id": "https://hajdu-patrik.github.io/clippy/#faq",
+        "mainEntity": [
+          {"@type": "Question", "name": "What is Clippy?",
+           "acceptedAnswer": {"@type": "Answer", "text": "Clippy is a free, open-source AI clipper that runs on your own Windows PC. You paste a YouTube link (or a video file) into a chat, and it returns vertical 9:16 clips for TikTok, YouTube Shorts and Instagram Reels with hooks, animated captions and a call to action."}},
+          {"@type": "Question", "name": "Is Clippy free?",
+           "acceptedAnswer": {"@type": "Answer", "text": "Yes. Clippy is MIT-licensed and uses only free, local models: faster-whisper for transcription, Qwen3-14B through Ollama for choosing and editing clips, and FFmpeg for rendering. There is no subscription and nothing is uploaded."}},
+          {"@type": "Question", "name": "Which languages does Clippy support?",
+           "acceptedAnswer": {"@type": "Answer", "text": "Hungarian and English. It detects which of the two is spoken, answers in the language you write in, and can translate captions and hooks from one to the other."}},
+          {"@type": "Question", "name": "What hardware does Clippy need?",
+           "acceptedAnswer": {"@type": "Answer", "text": "Windows 10 or 11 with Python 3.12. An NVIDIA GPU with 12–16 GB of VRAM is recommended for speed; it also runs on the CPU, more slowly."}},
+          {"@type": "Question", "name": "Can I edit the clips after they are made?",
+           "acceptedAnswer": {"@type": "Answer", "text": "Yes. Ask in the chat, for example 'put this song under it quietly, add my outro with a fade and remove the title'. Clippy plans the edit, renders a new version in seconds and every version can be undone."}}
+        ]
+      }
+    ]
+  }
+  </script>
+  <style>
+    :root { --bg: #18171a; --elev: #211f23; --text: #ecebee; --muted: #a9a5ae; --border: #322f35; --wine: #9e1d3e;
+      --wine-light: #eb8da6; --font: "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, Roboto, sans-serif; }
+    @media (prefers-color-scheme: light) {
+      :root { --bg: #f4f3f5; --elev: #ffffff; --text: #1d1b1f; --muted: #5f5a63; --border: #dad6db; --wine-light: #7d1631; }
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--text); font: 17px/1.6 var(--font); }
+    main { max-width: 920px; margin: 0 auto; padding: 0 20px 64px; }
+    header { display: flex; align-items: center; gap: 12px; padding: 28px 0 8px; }
+    header img { width: 44px; height: 44px; }
+    header strong { font-size: 22px; letter-spacing: -0.02em; }
+    header nav { margin-left: auto; display: flex; gap: 18px; font-size: 15px; }
+    a { color: var(--wine-light); }
+    h1 { font-size: clamp(32px, 6vw, 52px); line-height: 1.08; letter-spacing: -0.03em; margin: 48px 0 16px; text-wrap: balance; }
+    h2 { font-size: 26px; letter-spacing: -0.02em; margin: 56px 0 12px; }
+    .lead { font-size: 20px; color: var(--muted); max-width: 680px; }
+    .cta { display: inline-block; margin: 20px 12px 0 0; padding: 12px 20px; border-radius: 12px; background: var(--wine);
+      color: #fff; text-decoration: none; font-weight: 600; }
+    .cta.ghost { background: transparent; color: var(--text); border: 1px solid var(--border); }
+    ul.features { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; padding: 0; list-style: none; }
+    ul.features li { background: var(--elev); border: 1px solid var(--border); border-radius: 14px; padding: 16px; }
+    ul.features b { display: block; margin-bottom: 4px; }
+    pre { background: var(--elev); border: 1px solid var(--border); border-radius: 12px; padding: 16px; overflow-x: auto; font-size: 14px; }
+    details { border-bottom: 1px solid var(--border); padding: 12px 0; }
+    summary { cursor: pointer; font-weight: 600; }
+    footer { color: var(--muted); font-size: 14px; margin-top: 64px; }
+  </style>
+</head>
+<body>
+<main>
+  <header>
+    <img src="assets/mark.svg" alt="" width="44" height="44">
+    <strong>Clippy</strong>
+    <nav aria-label="Main"><a href="#features">Features</a><a href="#faq">FAQ</a><a href="#magyarul">Magyarul</a>
+      <a href="https://github.com/hajdu-patrik/clippy">GitHub</a></nav>
+  </header>
+
+  <h1>Long videos in. Vertical clips with hooks out. Free and local.</h1>
+  <p class="lead">Clippy is a free, open-source AI clipper for Windows. Paste a YouTube link into a chat and get
+    9:16 clips for TikTok, YouTube Shorts and Instagram Reels – with the strongest hooks, animated captions and a
+    call to action. Then edit them by just asking. Nothing is uploaded and there is no subscription.</p>
+  <a class="cta" href="https://github.com/hajdu-patrik/clippy">Get Clippy on GitHub</a>
+  <a class="cta ghost" href="https://github.com/hajdu-patrik/clippy#quick-start">Quick start</a>
+
+  <h2 id="features">What it does</h2>
+  <ul class="features">
+    <li><b>Finds the best moments</b>A local LLM (Qwen3-14B via Ollama) scores every moment for hook, payoff, emotion and quotability, then ranks them against each other.</li>
+    <li><b>Frames the speaker</b>Shot detection, face tracking and an active-speaker virtual camera turn 16:9 into 9:16 without shaky crops.</li>
+    <li><b>Captions that pop</b>Word-by-word animated captions on real word timings, a hook for the first 3 seconds and a call to action at the end.</li>
+    <li><b>Tight cuts</b>Silences and filler words come out on word boundaries; sound is mastered to −14 LUFS for phones.</li>
+    <li><b>A chat editor</b>"Put this song under it quietly, add my logo top right, warm the colours" – rendered in seconds, every version undoable.</li>
+    <li><b>Hungarian and English</b>Detects the spoken language, answers in yours, and translates captions between the two.</li>
+  </ul>
+
+  <h2>How to start</h2>
+  <pre><code>git clone https://github.com/hajdu-patrik/clippy.git
+cd clippy
+py -3.12 -m venv .venv
+.venv\Scripts\python -m pip install -r requirements.txt
+bin\clippy install
+clippy start</code></pre>
+  <p>Full instructions, the GPU setup and the local model are in the <a href="https://github.com/hajdu-patrik/clippy#readme">README</a>.</p>
+
+  <h2 id="faq">Frequently asked questions</h2>
+  <details open><summary>What is Clippy?</summary><p>A free, open-source AI clipper that runs on your own Windows PC. You paste a YouTube link (or a video file) into a chat, and it returns vertical clips for TikTok, Shorts and Reels with hooks, animated captions and a call to action.</p></details>
+  <details><summary>Is it really free?</summary><p>Yes. It is MIT-licensed and uses only free, local models: faster-whisper, Qwen3-14B through Ollama and FFmpeg. No subscription, no upload.</p></details>
+  <details><summary>Which languages does it support?</summary><p>Hungarian and English: speech, chat, interface and captions, including translated captions.</p></details>
+  <details><summary>What hardware do I need?</summary><p>Windows 10 or 11 and Python 3.12. An NVIDIA GPU with 12–16 GB VRAM is recommended; the CPU works too, more slowly.</p></details>
+  <details><summary>Can I edit clips afterwards?</summary><p>Yes – ask in the chat. Music, logos, texts, colours, LUTs, intro and outro, cutting parts out and undo are all supported.</p></details>
+
+  <h2 id="magyarul" lang="hu">Magyarul</h2>
+  <p lang="hu">A Clippy ingyenes, nyílt forráskódú, a saját gépeden futó AI klipvágó. Bemásolsz egy YouTube-linket,
+    és függőleges 9:16-os klipeket kapsz TikTokra, YouTube Shortsra és Instagram Reelsre – a legerősebb hookokkal,
+    szavanként animált feliratokkal és felhívással a végén. Utána a chatben kérheted a szerkesztést: zene alá,
+    logó, szöveg, színek, intro és outro, kivágás, visszavonás. Magyarul és angolul is ért, a feliratokat le is
+    fordítja. Nincs előfizetés, semmi nem kerül fel a felhőbe.</p>
+
+  <footer>MIT licensed · Clippy is not affiliated with Microsoft · <a href="llms.txt">llms.txt</a> ·
+    <a href="https://github.com/hajdu-patrik/clippy/blob/main/CHANGELOG.md">Changelog</a></footer>
+</main>
+</body>
+</html>

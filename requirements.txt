@@ -1,0 +1,11 @@
+yt-dlp[default,curl-cffi]>=2026.10.26
+faster-whisper>=1.2
+opencv-python>=4.10,<5   # 5.x removed the Haar face detector we use
+numpy>=1.26
+requests>=2.31
+imageio-ffmpeg>=0.6      # bundled ffmpeg with libass + NVENC, no system install needed
+python-dotenv>=1.0
+pytest>=8
+fastapi>=0.115
+uvicorn[standard]>=0.30
+segno>=1.6               # QR code for pairing a phone (clippy pair); optional
