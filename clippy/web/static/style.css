@@ -520,3 +520,7 @@ kbd { font: 11px var(--mono); color: var(--faint); border: 1px solid var(--borde
 .small-btn { min-height: 34px; padding: 0 14px; border-radius: 999px; font: inherit; font-size: 13px; font-weight: 700;
   cursor: pointer; background: transparent; color: var(--text); border: 1px solid var(--border); }
 .small-btn:disabled { opacity: .6; cursor: wait; }
+#postVariant { width: 100%; }
+.kit-files { margin: 4px 0 10px; }
+.file-btn { display: inline-flex; align-items: center; }
+.kit-files .account > .watch-btns { display: flex; }

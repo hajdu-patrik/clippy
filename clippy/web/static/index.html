@@ -27,6 +27,7 @@
   <link rel="modulepreload" href="/static/js/publish.js">
   <link rel="modulepreload" href="/static/js/watches.js">
   <link rel="modulepreload" href="/static/js/results.js">
+  <link rel="modulepreload" href="/static/js/kit.js">
   <link rel="modulepreload" href="/static/js/messages.js">
   <link rel="modulepreload" href="/static/js/cards.js">
   <link rel="modulepreload" href="/static/js/progress.js">
@@ -185,6 +186,36 @@
           </div>
         </div>
       </section>
+      <section class="kit" aria-labelledby="kitTitle">
+        <h3 id="kitTitle" data-i18n="kit.title">Style kit</h3>
+        <p class="hint" data-i18n="kit.hint">Every new clip gets this look by itself: caption style, your logo and an outro.</p>
+        <div class="post-options">
+          <div><label for="kitFont" data-i18n="kit.font">Caption font</label><select id="kitFont"></select></div>
+          <div><label for="kitHighlight" data-i18n="kit.highlight">Highlight colour</label><select id="kitHighlight"></select></div>
+          <div>
+            <label for="kitUpper" data-i18n="kit.upper">Capital letters</label>
+            <select id="kitUpper">
+              <option value="" data-i18n="kit.default">Default</option>
+              <option value="true" data-i18n="kit.upperOn">Captions in capitals</option>
+              <option value="false" data-i18n="kit.upperOff">Captions as spoken</option>
+            </select>
+          </div>
+          <div><label for="kitPosition" data-i18n="kit.position">Logo position</label><select id="kitPosition"></select></div>
+        </div>
+        <ul class="account-list kit-files">
+          <li class="account"><div><b data-i18n="kit.logo">Logo</b><span class="account-state" id="kit-logo-name"></span></div>
+            <div class="watch-btns">
+              <label class="small-btn file-btn"><span data-i18n="kit.choose">Choose file</span><input type="file" id="kit-logo-file" accept="image/*" hidden></label>
+              <button type="button" class="small-btn" id="kit-logo-remove" data-i18n="kit.remove" hidden>Remove</button>
+            </div></li>
+          <li class="account"><div><b data-i18n="kit.outro">Outro</b><span class="account-state" id="kit-outro-name"></span></div>
+            <div class="watch-btns">
+              <label class="small-btn file-btn"><span data-i18n="kit.choose">Choose file</span><input type="file" id="kit-outro-file" accept="video/*,image/*" hidden></label>
+              <button type="button" class="small-btn" id="kit-outro-remove" data-i18n="kit.remove" hidden>Remove</button>
+            </div></li>
+        </ul>
+        <button type="button" class="small-btn" id="kitSave" data-i18n="kit.save">Save style</button>
+      </section>
       <section class="results" aria-labelledby="resultsTitle">
         <h3 id="resultsTitle" data-i18n="results.title">What works</h3>
         <p class="hint" id="resultsSummary" data-i18n="results.hint">Clippy reads back how your posted clips do and picks more of what works.</p>
@@ -260,6 +291,10 @@
         <div id="postPlatforms"></div>
       </fieldset>
       <div class="post-options">
+        <div id="variantOption" hidden>
+          <label for="postVariant" data-i18n="publish.variant">Title</label>
+          <select id="postVariant"></select>
+        </div>
         <div id="ytOption">
           <label for="ytPrivacy" data-i18n="publish.ytPrivacy">YouTube visibility</label>
           <select id="ytPrivacy">

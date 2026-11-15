@@ -89,6 +89,10 @@ export async function openPostDialog(clip) {
   target = clip;
   $("#postTitle").textContent = t("publish.title", { n: clip.number });
   $("#postCaption").value = caption(clip);
+  const d = clip.clip || {};
+  $("#variantOption").hidden = !d.alt_title;
+  $("#postVariant").innerHTML = [["a", d.title], ["b", d.alt_title]].filter(([, x]) => x)
+    .map(([v, x]) => `<option value="${v}">${esc(t(v === "a" ? "publish.variantA" : "publish.variantB", { title: x }))}</option>`).join("");
   $("#postWhen").value = "now";
   $("#postAt").value = "";
   syncWhen();
@@ -116,6 +120,7 @@ async function send(event) {
   try {
     await api.publish(state.current, target.number, {
       platforms, youtube_privacy: $("#ytPrivacy").value, tiktok_mode: $("#ttMode").value, at,
+      variant: $("#postVariant").value || "a",
     });
     $("#postDialog").close();
     toast(later ? t("publish.planned", { date: whenText(at) }) : t("publish.started"));

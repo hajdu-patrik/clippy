@@ -36,6 +36,7 @@ from .media import MediaStore
 from .lan import Lan, is_loopback
 from .security import SecurityMiddleware
 from . import results
+from .kit import StyleKit
 from .watch import EVERY_MINUTES, Watcher, present_watch, watch_settings
 
 STATIC = Path(__file__).resolve().parent / "static"
@@ -84,6 +85,7 @@ class PublishRequest(BaseModel):
     platforms: list[Platform] = Field(min_length=1, max_length=3)
     youtube_privacy: Literal["public", "unlisted", "private"] = "public"
     tiktok_mode: Literal["draft", "private"] = "draft"
+    variant: Literal["a", "b"] = "a"
     at: float | None = Field(default=None, gt=0)
 
 
@@ -102,6 +104,14 @@ class NewWatch(BaseModel):
 
 class WatchPatch(BaseModel):
     enabled: bool
+
+
+class KitPatch(BaseModel):
+    font: str = Field(default="", max_length=40)
+    highlight: str = Field(default="", max_length=20)
+    uppercase: bool | None = None
+    position: str = Field(default="top-right", max_length=20)
+    width: float = Field(default=0.22, ge=0.05, le=0.5)
 
 
 class InstagramToken(BaseModel):
@@ -326,7 +336,8 @@ def create_app(storage: Storage | None = None, db_path: Path | None = None, runn
         missing = [p for p in body.platforms if not status[p]["connected"]]
         if missing:
             raise HTTPException(400, error_detail(ClippyError(key="error.account_missing", platform=LABELS[missing[0]])))
-        options = {"youtube": {"privacy": body.youtube_privacy}, "tiktok": {"mode": body.tiktok_mode}}
+        options = {"youtube": {"privacy": body.youtube_privacy}, "tiktok": {"mode": body.tiktok_mode},
+                   **({"variant": "b"} if body.variant == "b" else {})}
         try:
             return found(chats.publish, chat_id, number, list(dict.fromkeys(body.platforms)), options, body.at)
         except ClippyError as exc:
@@ -337,6 +348,39 @@ def create_app(storage: Storage | None = None, db_path: Path | None = None, runn
         if not chats.cancel_scheduled(item_id):
             raise HTTPException(404, "Not planned")
         return {"ok": True}
+
+    kit = StyleKit(storage)
+
+    @app.get("/api/kit")
+    def get_kit():
+        return kit.present()
+
+    @app.put("/api/kit")
+    def put_kit(body: KitPatch):
+        kit.save(body.font, body.highlight, body.uppercase, body.position, body.width)
+        return kit.present()
+
+    @app.put("/api/kit/{slot}")
+    async def put_kit_file(slot: Literal["logo", "outro"], request: Request,
+                           name: str = Query(min_length=1, max_length=200)):
+        with tempfile.SpooledTemporaryFile(max_size=SPOOL_BYTES) as spool:
+            size = 0
+            async for chunk in request.stream():
+                size += len(chunk)
+                if size > MAX_UPLOAD:
+                    raise HTTPException(413, "File too large")
+                spool.write(chunk)
+            spool.seek(0)
+            try:
+                await run_in_threadpool(kit.put, slot, name, spool)
+            except ClippyError as exc:
+                raise HTTPException(400, error_detail(exc)) from None
+        return kit.present()
+
+    @app.delete("/api/kit/{slot}")
+    def delete_kit_file(slot: Literal["logo", "outro"]):
+        kit.remove(slot)
+        return kit.present()
 
     @app.get("/api/results")
     def get_results():

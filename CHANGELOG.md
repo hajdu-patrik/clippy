@@ -6,6 +6,10 @@ change, what changed rather than how; dates are ISO 8601.
 ## [Unreleased]
 
 ### Added
+- Quality: a native proofreading pass and Hungarian quotation marks for Hungarian texts; speakers told apart by
+  voice for picking exchanges; covers with the title written on them plus a B cover and a B title for A/B tests
+  (choose A or B when posting); a saved style kit (caption font, colour, capitals, logo, outro) for every new clip;
+  streams use the facecam-on-top layout by default.
 - Learning from results: views, likes, comments, shares and the share watched are read back from YouTube (with
   YouTube Analytics) and Instagram onto each post; *What works* in Settings compares clips with the creator's usual
   by opening, length, kind of moment and posting time, and the clear patterns steer the picker and the chat.

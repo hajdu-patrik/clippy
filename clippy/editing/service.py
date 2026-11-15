@@ -7,12 +7,15 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from .. import covers
+from ..render import prepare_fonts
 from ..highlights import Clip
 from ..pipeline import post_text
 from ..settings import Settings
 from ..tools import atomic_write_text
 from .assets import AssetService
 from .changes import Change
+from .editor import Editor
 from .operations import EditContext
 from .planner import EditPlanner, EditRequest
 from .render.base import BaseStore
@@ -79,8 +82,31 @@ class EditService:
         changes = result.changes + ((Change.changed("title", title=title_op.title),) if title_op else ())
         if not changes:
             return EditOutcome(number, plan.reply)
-        timeline = result.timeline.evolve(version=row["version"] + 1)
         clip = {**row["clip"], **({"title": title_op.title} if title_op else {})}
+        version = self._render(project, chat_id, row, result.timeline, clip, renderer, index)
+        return EditOutcome(number, plan.reply, changes, version=version)
+
+    def apply(self, project, chat: dict, row: dict, ops: list, reply: str = "") -> EditOutcome:
+        """Fixed edits without the planner (the style kit's logo and outro): applied, rendered, a new version."""
+        chat_id, number = chat["id"], row["number"]
+        timeline = self.repo.of(row, chat.get("options") or {})
+        renderer = TimelineRenderer(project, BaseStore(self.storage.chat_base(chat_id)))
+        base, _ = renderer.base(timeline)
+        captions = next(iter(timeline.layers_of("captions")), None)
+        words = corrected(base.words, captions.fixes if captions else ())
+        index = self.assets.index(chat_id)
+        ctx = EditContext(assets=index, resolver=TimeResolver(base.duration, words), clock=base.clock,
+                          source_duration=float((project.transcript or {}).get("duration") or timeline.cut.source.end),
+                          number=number, clips={}, source_words=tuple(getattr(project, "words", None) or ()))
+        result = Editor().run(timeline, ops, ctx)
+        if not result.ok or not result.changes:
+            return EditOutcome(number, reply, errors=[i.for_model() for i in result.issues] or ["no change"])
+        version = self._render(project, chat_id, row, result.timeline, dict(row["clip"]), renderer, index)
+        return EditOutcome(number, reply, result.changes, version=version)
+
+    def _render(self, project, chat_id: int, row: dict, timeline, clip: dict, renderer, index) -> NewVersion:
+        number = row["number"]
+        timeline = timeline.evolve(version=row["version"] + 1)
         out = self.storage.chat_clips(chat_id) / f"clip_{number:02d}_v{timeline.version}.mp4"
         captions = next(iter(timeline.layers_of("captions")), None)
         rendered = renderer.render(timeline, index, out, FINAL, captions.language if captions else None,
@@ -90,8 +116,9 @@ class EditService:
         txt = out.with_suffix(".txt")
         atomic_write_text(txt, post_text(Clip.from_dict(clip), project.source, rendered.info,
                                          Settings(self.storage).profile_links()))
-        version = NewVersion(clip, rendered.info, str(out), str(out.with_suffix(".jpg")), str(txt), timeline.to_json())
-        return EditOutcome(number, plan.reply, changes, version=version)
+        covers.make(out.with_suffix(".jpg"), clip.get("title", ""), clip.get("alt_title", ""),
+                    prepare_fonts(self.storage.cache("fonts")))
+        return NewVersion(clip, rendered.info, str(out), str(out.with_suffix(".jpg")), str(txt), timeline.to_json())
 
     def joined(self, chat_id: int, timeline) -> dict[int, Path]:
         """The stored files of the clip versions this timeline plays after itself."""

@@ -41,8 +41,18 @@ def no_dashes(text: str) -> str:
     return re.sub(r",\s*([,.!?…:;])", r"\1", text)
 
 
-def post_clean(text: str) -> str:
-    return no_dashes(clean_text(text))
+_STRAIGHT_QUOTES = re.compile(r'"([^"\n]{1,200})"')
+_ENGLISH_QUOTES = re.compile(r"“([^”\n]{1,200})”")
+
+
+def hu_quotes(text: str) -> str:
+    """Hungarian quotation marks: „…” instead of "…" or “…”."""
+    return _ENGLISH_QUOTES.sub(r"„\1”", _STRAIGHT_QUOTES.sub(r"„\1”", text or ""))
+
+
+def post_clean(text: str, language: str = "") -> str:
+    text = no_dashes(clean_text(text))
+    return hu_quotes(text) if language in ("hu", "Hungarian") else text
 
 
 def merge_suffixes(words: list[dict]) -> list[dict]:

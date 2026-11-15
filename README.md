@@ -162,6 +162,17 @@ tokens stay in `data/web/accounts.json` on this computer. TikTok sends the clip 
 until it reviews your app); YouTube may keep uploads of a new API project private until its audit. Setup, step by
 step: **[docs/publishing.md](docs/publishing.md)**.
 
+## Style kit, covers and A/B titles
+
+*Settings, Style kit* saves your look once: caption font, highlight colour and capitals, a logo (with its corner)
+and an outro. Every new clip gets the caption look at once, and the logo and outro as its next version (with a
+change card and undo). Every clip also gets a cover with its title written on it (*Cover* on the card) and a second
+cover with a B title (*Cover B*); the Post dialog lets you post the A or the B title to YouTube. Hungarian titles,
+teasers and questions get a native editor's proofreading pass and Hungarian quotation marks.
+
+Streams (Twitch and Kick VODs, YouTube streams that were live) use the stream layout by default: the facecam on top,
+the game below, or the blurred full frame when there is no facecam.
+
 ## Watching channels and planned posts
 
 Give Clippy a YouTube channel, a Twitch channel or a playlist under *Settings, Watched channels*, or say it in the
@@ -249,7 +260,8 @@ Conventions: [CLAUDE.md](CLAUDE.md). Release history: [CHANGELOG.md](CHANGELOG.m
 
 * Windows-first: the `clippy` command, tab completion and NVENC encoding target Windows 10/11; the pipeline itself is
   plain Python and ffmpeg.
-* The active speaker comes from mouth motion only; there is no voice-based diarisation.
+* The camera follows the active speaker by mouth motion; the voices are told apart only for picking (who says
+  what), by a light voice print that labels speakers only when their voices clearly differ.
 * Hungarian and English only: other languages are transcribed as one of the two.
 * Post and monetise only your own footage, footage you have permission for, or content from an official clipping
   campaign. Downloading may be restricted by a platform's terms of service.

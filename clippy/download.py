@@ -120,6 +120,12 @@ class Remote:
         return float(self.info["duration"]) if self.info.get("duration") else None
 
     @property
+    def is_stream(self) -> bool:
+        """A recorded live stream: a Twitch or Kick VOD, or a YouTube video that was live."""
+        kind = str(self.info.get("extractor_key") or self.info.get("extractor") or "").lower()
+        return self.info.get("live_status") == "was_live" or kind.startswith(("twitch", "kick"))
+
+    @property
     def has_chat(self) -> bool:
         """A stream replay whose chat the site keeps (YouTube lives); Twitch VOD chat is not served to downloaders."""
         return (self.single and self.info.get("live_status") not in ("is_live", "is_upcoming")

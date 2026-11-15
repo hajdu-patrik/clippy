@@ -13,7 +13,7 @@ from dataclasses import asdict, dataclass, field, fields, replace
 from pathlib import Path
 from urllib.parse import urlsplit
 
-from . import align, i18n, separation, signals
+from . import align, covers, i18n, separation, signals, speakers
 from .analysis import ClipAnalysis, analyze
 from .captions import CaptionStyle
 from .concurrency import GPU, SOURCE, GuardedLLM
@@ -125,7 +125,10 @@ def post_text(clip: Clip, source: str, info: dict, links: list[str] | tuple = ()
               "\n".join(link_lines(links, clip.topic, tr)), " ".join(clip.hashtags))
     caption = "\n\n".join(x for x in blocks if x)
     kind = f" ({tr('hooktype.' + clip.hook_type)})" if clip.hook_type else ""
-    notes = [f"{tr('post.title')}: {clip.title}", f"{tr('post.pinned')}: {tr('post.full_video', url=source)}"]
+    notes = [f"{tr('post.title')}: {clip.title}"]
+    if clip.alt_title:
+        notes.append(f"{tr('post.alt_title')}: {clip.alt_title}")
+    notes.append(f"{tr('post.pinned')}: {tr('post.full_video', url=source)}")
     if clip.hook:
         notes.append(f"{tr('post.hook')}{kind}: {clip.hook}")
     if clip.alt_hook:
@@ -155,6 +158,7 @@ class Project:
         self._chat_task: Future | None = None
         self._side: ThreadPoolExecutor | None = None
         self.source_duration: float | None = None
+        self.is_stream = False
         self.title = ""
         self.transcript: dict | None = None
         self.words: list[dict] = []
@@ -195,6 +199,7 @@ class Project:
         else:
             remote = probe(self.source, downloads, cookies_from_browser=o.cookies_from_browser)
             self.title, self.source_duration = remote.title, remote.duration
+            self.is_stream = remote.is_stream
             if remote.has_chat:
                 self._side = self._side or ThreadPoolExecutor(max_workers=1, thread_name_prefix="clippy-chat")
                 self._chat_task = self._side.submit(fetch_chat, remote, downloads, o.cookies_from_browser)
@@ -283,7 +288,7 @@ class Project:
                                 title=self.title, exclude=list(exclude), text_language=o.captions,
                                 instructions=o.instructions if instructions is None else instructions,
                                 cache=PickCache(self.storage.cache("picks"), self.video_stem) if self.video_stem else None,
-                                signals=reactions, lessons=lessons)
+                                signals=reactions, lessons=lessons, speakers=self.speaker_turns)
         if not clips:
             raise ClippyError(key="error.no_suitable_clip")
         if short:
@@ -313,6 +318,19 @@ class Project:
         except Exception as exc:
             log(f"[hook] reactions skipped ({type(exc).__name__}: {str(exc)[:120]})")
             return None
+
+    def speaker_turns(self, sentences: list[dict]) -> list[str]:
+        """Who speaks each sentence, from the clean voice when it was separated; nothing when it cannot tell."""
+        voice = Path(self.stems["vocals"]) if self.stems and self.stems.get("vocals") else self.sound
+        if not self.video_stem or voice is None or not Path(voice).is_file():
+            return []
+        try:
+            path = self.storage.cache("signals") / f"{self.video_stem}.speakers.{len(sentences)}.json"
+            turns = speakers.cached(path, lambda: speakers.speaker_turns(Path(voice), sentences))
+            return turns if len(turns) == len(sentences) else []
+        except Exception as exc:
+            log(f"[hook] voices skipped ({type(exc).__name__}: {str(exc)[:120]})")
+            return []
 
     def _chat_ready(self) -> Path | None:
         task = self._chat_task
@@ -388,6 +406,8 @@ class Project:
             atomic_write_text(out_file.with_suffix(".txt"),
                               post_text(clip, self.source, info, Settings(self.storage).profile_links()))
             move_atomic(draft.with_suffix(".jpg"), out_file.with_suffix(".jpg"))
+            covers.make(out_file.with_suffix(".jpg"), clip.title, clip.alt_title,
+                        prepare_fonts(self.storage.cache("fonts")))
             move_atomic(draft, out_file)
             if keep_base and settings.base_out.is_file():
                 info["base"].update(video=str(move_atomic(settings.base_out, dest / f".{name}.base.mkv")),

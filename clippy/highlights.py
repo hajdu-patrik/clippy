@@ -36,7 +36,8 @@ Find the moments that would make the strongest STANDALONE clips.
 - "reason": one sentence (English is fine) why this works.
 
 Return ONLY JSON: {{"clips": [{{"start": <seconds>, "end": <seconds>, "score": <0-100>, "hook": "...",
-"hook_type": "...", "alt_hook": "...", "question": "...", "title": "...", "description": "...", "topic": "...",
+"hook_type": "...", "alt_hook": "...", "question": "...", "title": "...", "alt_title": "...", "description": "...",
+"topic": "...",
 "hashtags": ["#..."],
 "risks": [], "reason": "..."}}]}}"""
 
@@ -45,6 +46,9 @@ Lines ending in ⟪…⟫ are where the sound, the picture or the audience react
 cheering; laughter; action = a sudden change on screen; chat xN = N times this stream's usual chat activity. In
 gameplay and streams these are often the best moments, even when little is said: start a few seconds before the
 reaction so the viewer sees what caused it, and end after it lands."""
+SPEAKERS_RULE = """
+Each line starts with its speaker (A, B…), told apart by their voices: a strong moment is often an exchange
+between two of them (a question and its answer, a joke and the laugh, a disagreement)."""
 PEAK_REASON = "reaction peak"
 LESSONS_RULE = ("\n\nHow this creator's posted clips did so far, against their usual views (a soft preference: a "
                 "clearly better moment still wins):\n")
@@ -75,6 +79,7 @@ CLIPS_SCHEMA = {
                     "score": {"type": "integer", "minimum": 0, "maximum": 100},
                     "hook": {"type": "string"}, "hook_type": {"type": "string", "enum": list(playbook.HOOK_KEYS)},
                     "alt_hook": {"type": "string"}, "question": {"type": "string"}, "title": {"type": "string"},
+                    "alt_title": {"type": "string"},
                     "description": {"type": "string"}, "topic": {"type": "string"},
                     "hashtags": {"type": "array", "items": {"type": "string"}},
                     "risks": {"type": "array", "items": {"type": "string", "enum": list(playbook.RISK_KEYS)}},
@@ -112,6 +117,7 @@ class Clip:
     score: float
     hook: str = ""
     title: str = ""
+    alt_title: str = ""
     hashtags: list[str] = field(default_factory=list)
     reason: str = ""
     hook_type: str = ""
@@ -168,7 +174,8 @@ def _windows(items: list[dict], window_sec: float, overlap_sec: float) -> list[l
 def _format_window(win: list[dict], signals: Signals | None = None) -> str:
     def line(s: dict) -> str:
         tags = signals.tags(s["start"], s["end"]) if signals else ""
-        return f"[{s['start']:.2f}-{s['end']:.2f}] {s['text']}" + (f"  ⟪{tags}⟫" if tags else "")
+        who = f"{s['speaker']}: " if s.get("speaker") else ""
+        return f"[{s['start']:.2f}-{s['end']:.2f}] {who}{s['text']}" + (f"  ⟪{tags}⟫" if tags else "")
     return "\n".join(line(s) for s in win)
 
 
@@ -395,19 +402,23 @@ def _check_endings(llm: LLM, clips: list[Clip], words: list[dict], bounds: Bound
 TEXTS_PROMPT = """You are a native {text_language} social media editor. Write the post texts of short clips cut
 from the video "{title}". Each clip comes with what is said in it. For every clip:
 {title_rule}
+{alt_title_rule}
 {description_rule}
 {question_rule}
 {topic_rule}
 Write them in {text_language}, specific to that clip's own moment (never the video's title again).
+{language_rule}
 A clip with little or no speech comes with its REACTIONS (a loud moment, laughter, action on screen, a chat burst and
 what the chat wrote): write from those and the video title what happens in it.
 {dash_rule}
-Return ONLY JSON: {{"clips": [{{"id": <id>, "title": "...", "description": "...", "question": "...", "topic": "..."}}]}}"""
+Return ONLY JSON: {{"clips": [{{"id": <id>, "title": "...", "alt_title": "...", "description": "...", "question": "...",
+"topic": "..."}}]}}"""
 
 TEXTS_SCHEMA = {
     "type": "object",
     "properties": {"clips": {"type": "array", "items": {
         "type": "object", "properties": {"id": {"type": "integer"}, "title": {"type": "string"},
+                                         "alt_title": {"type": "string"},
                                          "description": {"type": "string"}, "question": {"type": "string"},
                                          "topic": {"type": "string"}},
         "required": ["id", "title", "description", "question", "topic"]}}},
@@ -427,7 +438,8 @@ def write_texts(llm: LLM, clips: list[Clip], words: list[dict], title: str, text
     prompt = TEXTS_PROMPT.format(text_language=text_language, title=title.replace('"', "'"),
                                  title_rule=playbook.TITLE_RULE, description_rule=playbook.DESCRIPTION_RULE,
                                  dash_rule=playbook.DASH_RULE, question_rule=playbook.QUESTION_RULE,
-                                 topic_rule=playbook.TOPIC_RULE)
+                                 topic_rule=playbook.TOPIC_RULE, alt_title_rule=playbook.ALT_TITLE_RULE,
+                                 language_rule=playbook.HUNGARIAN_RULE if text_language == "Hungarian" else "")
     reply = llm.chat_json(prompt, "\n\n".join(lines), think=think_enabled(), schema=TEXTS_SCHEMA)
     changed = 0
     for item in reply.get("clips", []) if isinstance(reply, dict) else []:
@@ -440,8 +452,11 @@ def write_texts(llm: LLM, clips: list[Clip], words: list[dict], title: str, text
             c.title, c.description = new_title, new_description[:300]
             c.question = post_clean(str(item.get("question") or c.question))[:160]
             c.topic = post_clean(str(item.get("topic") or c.topic))[:40]
+            c.alt_title = post_clean(str(item.get("alt_title") or c.alt_title))[:100]
             changed += 1
     one_topic(clips)
+    if text_language == "Hungarian" and changed:
+        proofread(llm, clips, text_language)
     return changed
 
 
@@ -457,6 +472,48 @@ def one_topic(clips: list[Clip]) -> None:
 
 def text_language_name(code: str | None, spoken: str | None) -> str:
     return LANG_NAMES.get(code or "", LANG_NAMES.get(spoken or "", spoken or "English"))
+
+
+PROOFREAD_PROMPT = """You are a native Hungarian copy editor for a Hungarian creator's short videos. Proofread every
+text: fix spelling, accents (ő, ű), grammar, agreement and punctuation, and rewrite anything that sounds translated
+from English into natural spoken Hungarian. Keep the meaning, the names, the emoji and the length (never longer).
+Titles in sentence case. Hungarian quotation marks („…”). No em or en dashes.
+Return ONLY JSON: {"texts": [{"id": <id>, "text": "..."}]} with every id, unchanged texts included."""
+PROOFREAD_SCHEMA = {
+    "type": "object",
+    "properties": {"texts": {"type": "array", "items": {
+        "type": "object", "properties": {"id": {"type": "integer"}, "text": {"type": "string"}},
+        "required": ["id", "text"]}}},
+    "required": ["texts"],
+}
+PROOFREAD_FIELDS = ("title", "alt_title", "description", "question", "hook", "alt_hook")
+
+
+def proofread(llm: LLM, clips: list[Clip], language: str) -> int:
+    """One pass of a native editor over every Hungarian text of the clips; returns how many texts changed."""
+    texts = [(c, f) for c in clips for f in PROOFREAD_FIELDS if getattr(c, f)]
+    if not texts:
+        return 0
+    user = "\n".join(f"id={i} ({field}): {getattr(c, field)}" for i, (c, field) in enumerate(texts))
+    try:
+        reply = llm.chat_json(PROOFREAD_PROMPT, user, think=False, schema=PROOFREAD_SCHEMA)
+    except Exception as exc:
+        log(f"[hook] proofreading skipped: {exc}")
+        return 0
+    changed = 0
+    for item in reply.get("texts", []) if isinstance(reply, dict) else []:
+        try:
+            c, field = texts[int(item["id"])]
+            new = post_clean(str(item["text"]), language)
+        except (KeyError, ValueError, IndexError, TypeError):
+            continue
+        old = getattr(c, field)
+        if new and new != old and len(new) <= int(1.3 * len(old)) + 10:
+            setattr(c, field, new)
+            changed += 1
+    if changed:
+        log(f"[hook] Hungarian proofreading: {changed} text(s) improved")
+    return changed
 
 
 POLISH_PROMPT = """You are a copy editor for viral short-form video hooks in {language}.
@@ -499,6 +556,7 @@ def parse_clip(c: dict) -> Clip | None:
             start=float(c["start"]), end=float(c["end"]),
             score=playbook.adjusted_score(float(c.get("score", 50)), risks),
             hook=playbook.tidy_hook(str(c.get("hook", ""))), title=str(c.get("title", "")).strip(),
+            alt_title=str(c.get("alt_title", "")).strip()[:100],
             hashtags=[str(h) for h in c.get("hashtags", [])][:5], reason=str(c.get("reason", "")).strip(),
             hook_type=playbook.known_hook_type(c.get("hook_type")),
             alt_hook=playbook.tidy_hook(str(c.get("alt_hook", ""))),
@@ -548,7 +606,7 @@ def find_highlights(transcript: dict, llm: LLM, max_clips: int = 5, min_len: flo
                     max_len: float = 60, window_sec: float = 480, overlap_sec: float = 60,
                     title: str = "", exclude: list[Clip] | tuple = (), instructions: str = "",
                     text_language: str | None = None, cache: PickCache | None = None,
-                    signals: Signals | None = None, lessons: str = "") -> list[Clip]:
+                    signals: Signals | None = None, lessons: str = "", speakers=None) -> list[Clip]:
     """`exclude`: clips that already exist (new picks must not overlap them).
     `instructions`: free-text wishes from the user ("the funniest parts", "only the parts about music"…).
     `cache`: earlier window answers for this video; when they no longer hold enough new moments, the windows are
@@ -559,6 +617,9 @@ def find_highlights(transcript: dict, llm: LLM, max_clips: int = 5, min_len: flo
     if not words and signals is None:
         raise ClippyError(key="error.empty_transcript")
     sents = sentences(words)
+    turns = speakers(sents) if speakers else []
+    if len(set(t for t in turns if t)) >= 2:
+        sents = [{**s, "speaker": t} for s, t in zip(sents, turns)]
     language = LANG_NAMES.get(transcript.get("language") or "", transcript.get("language") or "the transcript's")
     text_language = LANG_NAMES.get(text_language or "", language)
 
@@ -570,6 +631,8 @@ def find_highlights(transcript: dict, llm: LLM, max_clips: int = 5, min_len: flo
         system = SYSTEM_PROMPT.format(rubric=playbook.selection_rules(int(min_len), int(max_len)),
                                       writing=playbook.writing_rules(text_language), per_window=per_window,
                                       title=title.replace('"', "'"), language=language, text_language=text_language)
+        if any(s.get("speaker") for s in sents):
+            system += "\n" + SPEAKERS_RULE
         if signals is not None:
             system += "\n" + SIGNALS_RULE
         if lessons:
@@ -610,11 +673,14 @@ def find_highlights(transcript: dict, llm: LLM, max_clips: int = 5, min_len: flo
     for c in untitled:
         c.title = c.title or title[:70]
     for c in chosen:
-        c.hook, c.title, c.alt_hook, c.question, c.description, c.topic = map(
-            post_clean, (c.hook, c.title, c.alt_hook, c.question, c.description, c.topic))
+        c.hook, c.title, c.alt_title, c.alt_hook, c.question, c.description, c.topic = (
+            post_clean(x, text_language) for x in (c.hook, c.title, c.alt_title, c.alt_hook, c.question, c.description,
+                                                   c.topic))
     one_topic(chosen)
     if llm.backend != "none":
         with report_span(0.9, 1.0):
             _polish_hooks(llm, chosen, text_language)
+            if text_language == "Hungarian" and chosen:
+                proofread(llm, chosen, text_language)
     log(f"[hook] {len(raw)} candidates -> {len(chosen)} clips selected")
     return chosen

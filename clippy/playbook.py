@@ -125,6 +125,12 @@ QUESTION_RULE = f"""- "question": one short question (max {QUESTION_MAX_WORDS} w
   tettél volna a helyében?"); not a quiz about the speaker; never "like and follow"."""
 
 
+HUNGARIAN_RULE = """- Hungarian: write the way a Hungarian creator talks to their followers, never translated from English: natural
+  Hungarian word order, no English calques ("ez egy …", "a … az, hogy"), titles in sentence case (only the first word
+  and names capitalised), Hungarian quotation marks („…”), correct accents (ő, ű, á, é), informal "te" to the viewer,
+  and English words only where Hungarians use them too (gameplay, stream, clutch)."""
+ALT_TITLE_RULE = """- "alt_title": a second title for an A/B test, same rules, a different angle than "title"."""
+
 DASH_RULE = ("- Never use em dashes (—) or en dashes (–) in any text you write: they read as AI writing. Use a "
              "comma, a colon or a full stop instead.")
 
@@ -143,9 +149,11 @@ def writing_rules(text_language: str) -> str:
 - "alt_hook": a second opening text for an A/B test, same rules, a different angle than "hook".
 {QUESTION_RULE}
 {TITLE_RULE}
+{ALT_TITLE_RULE}
 {DESCRIPTION_RULE}
 {TOPIC_RULE}
 {DASH_RULE}
+{HUNGARIAN_RULE if text_language == "Hungarian" else ""}
 - "hashtags": 3-5 specific ones (topic, guest, niche); no generic #fyp / #viral.
 - "risks": the risks that apply, from:
 {risk_guide()}

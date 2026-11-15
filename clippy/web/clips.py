@@ -5,6 +5,7 @@ from __future__ import annotations
 import shutil
 from pathlib import Path
 
+from ..covers import b_cover
 from ..storage import Storage
 from ..tools import atomic_path, slugify
 from . import schedule
@@ -36,6 +37,8 @@ class ClipPresenter:
             "clip": row["clip"], "overrides": row["overrides"], "info": row["info"],
             "mp4": self.media.url_for(row["chat_id"], row.get("mp4")),
             "jpg": self.media.url_for(row["chat_id"], row.get("jpg")),
+            "jpg_b": self.media.url_for(row["chat_id"], str(b_cover(Path(row["jpg"])))) if row.get("jpg") and
+            b_cover(Path(row["jpg"])).is_file() else None,
             "txt": txt.read_text(encoding="utf-8") if txt and txt.is_file() else "",
             "posts": [present_post(p) for p in self.db.latest_posts(row["chat_id"], row["number"])] if self.db else [],
             "scheduled": [schedule.present(s) for s in self.db.planned(row["chat_id"], row["number"])] if self.db else [],
@@ -85,6 +88,10 @@ class ClipLibrary:
             if src and src.is_file():
                 with atomic_path(folder / f"{stem}{src.suffix}") as tmp:
                     shutil.copy2(src, tmp)
+        second = b_cover(Path(row["jpg"])) if row.get("jpg") else None
+        if second is not None and second.is_file():
+            with atomic_path(folder / f"{stem}.b.jpg") as tmp:
+                shutil.copy2(second, tmp)
         return folder / f"{stem}.mp4"
 
     def unpublish(self, chat: dict, number: int) -> None:

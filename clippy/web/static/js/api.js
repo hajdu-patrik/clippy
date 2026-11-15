@@ -59,6 +59,17 @@ export const api = {
   publish: (id, number, body) =>
     request(`/api/chats/${id}/clips/${number}/publish`, { method: "POST", body: JSON.stringify(body) }),
   cancelScheduled: (id) => request(`/api/scheduled/${id}`, { method: "DELETE" }),
+  kit: () => request("/api/kit"),
+  saveKit: (body) => request("/api/kit", { method: "PUT", body: JSON.stringify(body) }),
+  removeKitFile: (slot) => request(`/api/kit/${slot}`, { method: "DELETE" }),
+  kitFile: async (slot, file) => {
+    const res = await fetch(`/api/kit/${slot}?name=${encodeURIComponent(file.name)}`, {
+      method: "PUT", body: file, headers: { "X-Clippy-Request": "1", "Content-Type": "application/octet-stream" } });
+    let body = null;
+    try { body = await res.json(); } catch { body = null; }
+    if (!res.ok) throw failure(res.status, res.statusText, body);
+    return body;
+  },
   results: () => request("/api/results"),
   refreshResults: () => request("/api/results/refresh", { method: "POST" }),
   watches: () => request("/api/watches"),

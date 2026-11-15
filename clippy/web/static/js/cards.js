@@ -8,6 +8,7 @@ function whyHtml(d) {
     d.reason && ["", d.reason],
     d.hook && [t("card.hookIdea"), d.hook],
     d.alt_hook && [t("card.altHook"), d.alt_hook],
+    d.alt_title && [t("card.altTitle"), d.alt_title],
     d.question && [t("card.question"), d.question],
     (d.risks || []).length && [t("card.risks"), d.risks.map((r) => t(`risk.${r}`)).join("; ")],
   ].filter(Boolean);
@@ -50,6 +51,8 @@ export function cardHtml(id) {
       ${postsHtml(c)}
       <div class="btns">
         <a href="${esc(c.mp4 || "#")}" download>${esc(t("card.download"))}</a>
+        ${c.jpg ? `<a href="${esc(c.jpg)}" download>${esc(t("card.cover"))}</a>` : ""}
+        ${c.jpg_b ? `<a href="${esc(c.jpg_b)}" download>${esc(t("card.coverB"))}</a>` : ""}
         <button type="button" data-act="copy">${esc(t("card.copy"))}</button>
         <button type="button" data-act="edit">${esc(t("card.edit"))}</button>
         ${old || c.deleted ? "" : `<button type="button" class="post-btn" data-act="post">${esc(t("card.post"))}</button>`}

@@ -124,6 +124,7 @@ CATALOG: dict[str, dict[str, str]] = {
         "post.tiktok": "🎵 TikTok: {url}",
         "post.link": "🔗 {label}: {url}",
         "post.title": "Title (YouTube Shorts)",
+        "post.alt_title": "B title (A/B test)",
         "error.bad_link": "This line has no link: “{line}”. Write one link per line (e.g. TikTok: https://…).",
         "error.too_many_links": "At most {max} profile links.",
         "post.hook": "Opening text idea",
@@ -262,6 +263,9 @@ CATALOG: dict[str, dict[str, str]] = {
         "error.autopost_incomplete": "Automatic posting needs both: at least one platform and the daily times.",
         "error.watch_empty": "No videos found on this page. Give a channel, its videos tab or a playlist.",
         "error.watch_unreachable": "The channel could not be checked; trying again later.",
+        "kit.applied": "Style kit: logo and outro added.",
+        "note.kit_failed": "The style kit could not go on clip #{clip}: {error}",
+        "error.kit_kind": "This file does not fit the {slot} slot: the logo is an image, the outro a video or an image.",
     },
     "hu": {
         "job.generate": "Videó feldolgozása, {n} klip",
@@ -367,6 +371,7 @@ CATALOG: dict[str, dict[str, str]] = {
         "post.tiktok": "🎵 TikTok: {url}",
         "post.link": "🔗 {label}: {url}",
         "post.title": "Cím (YouTube Shorts)",
+        "post.alt_title": "B cím (A/B teszt)",
         "error.bad_link": "Ebben a sorban nincs link: „{line}”. Soronként egy linket írj (pl. TikTok: https://…).",
         "error.too_many_links": "Legfeljebb {max} profil linket adhatsz meg.",
         "post.hook": "Nyitó felirat ötlet",
@@ -554,6 +559,9 @@ CATALOG: dict[str, dict[str, str]] = {
         "error.autopost_incomplete": "Az automatikus posztoláshoz mindkettő kell: legalább egy platform és a napi időpontok.",
         "error.watch_empty": "Ezen az oldalon nincs videó. Csatornát, annak videók lapját vagy lejátszási listát adj meg.",
         "error.watch_unreachable": "A csatornát most nem sikerült megnézni; később újra próbálom.",
+        "kit.applied": "Stíluscsomag: logó és outró hozzáadva.",
+        "note.kit_failed": "A stíluscsomag nem került rá a(z) {clip}. klipre: {error}",
+        "error.kit_kind": "Ez a fájl nem jó ide ({slot}): a logó kép, az outró videó vagy kép.",
     },
 }
 

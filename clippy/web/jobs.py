@@ -15,7 +15,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable
 
-from .. import recovery
+from .. import covers, recovery
+from ..render import prepare_fonts
 from ..concurrency import RENDER, GuardedLLM
 from ..editing.assets import AssetService
 from ..editing.planner import EditPlanner
@@ -33,6 +34,7 @@ from ..tools import ClippyError, SharedProgress, atomic_write_text, log, log_sin
 from .agent import RENDER_KEYS
 from .clips import ClipLibrary, ClipPresenter, slim_info
 from .hub import Hub
+from .kit import StyleKit
 from . import results, schedule
 
 PLACEHOLDER_TITLE = "Processing video…"
@@ -403,6 +405,27 @@ class JobHandler(ABC):
     def run(self, ctx: JobContext) -> dict: ...
 
     @staticmethod
+    def apply_kit(ctx: JobContext, proj: Project, first: int) -> int:
+        """The style kit's logo and outro on the clips this job made (once, a retry skips what has it)."""
+        ops = StyleKit(ctx.runner.storage).operations(ctx.job.chat_id)
+        done = ctx.job.payload.setdefault("kit", [])
+        rows = [c for c in ctx.current_clips() if c["number"] >= first and c["number"] not in done]
+        if not ops or not rows:
+            return 0
+        applied = 0
+        for i, row in enumerate(rows, 1):
+            log(f"[render] style kit {i}/{len(rows)}  #{row['number']}")
+            try:
+                outcome = ctx.runner.edit_service(proj).apply(proj, ctx.chat, row, ops, t("en", "kit.applied"))
+            except ClippyError as exc:
+                ctx.note("note.kit_failed", clip=row["number"], error=short_error(exc))
+                continue
+            applied += EditJob.report(ctx, row, outcome)
+            done.append(row["number"])
+            ctx.remember()
+        return applied
+
+    @staticmethod
     def render_new(ctx: JobContext, proj: Project, clips: list[Clip], overrides: dict) -> int:
         """Clips render side by side (as many as there are render slots) but are stored in order, one by one, each
         all or nothing; the numbers are reserved up front, which is safe because a chat runs one job at a time."""
@@ -468,10 +491,15 @@ class GenerateJob(JobHandler):
     def run(self, ctx: JobContext) -> dict:
         p, chat = ctx.job.payload, ctx.chat
         same_video = chat.get("source") == p["url"]
-        chat_opts = {**(chat.get("options") or {}), **p.get("options", {})}
+        chat_opts = {**StyleKit(ctx.runner.storage).render_options(), **(chat.get("options") or {}),
+                     **p.get("options", {})}
         ctx.db.update_chat(chat["id"], source=p["url"], options=chat_opts)
         proj = ctx.project(p["url"], ctx.options())
         proj.prepare()
+        if getattr(proj, "is_stream", False) and chat_opts.get("layout", "auto") == "auto":
+            log("stream: facecam on top, game below")
+            chat_opts["layout"] = "stream"
+            ctx.db.update_chat(chat["id"], options=chat_opts)
         updates = {"video_title": proj.title, "video_id": proj.video_stem}
         if chat["title"] in ("New chat", "", PLACEHOLDER_TITLE) or chat["title"].startswith("http"):
             updates["title"] = proj.title[:80]
@@ -481,6 +509,7 @@ class GenerateJob(JobHandler):
                             lessons=results.lessons(results.insights(ctx.db)))
         first = ctx.db.next_number(chat["id"])
         n = self.render_new(ctx, proj, clips, render_options(chat_opts))
+        self.apply_kit(ctx, proj, first)
         if p.get("autopost") and not p.get("planned"):
             numbers = [c["number"] for c in ctx.current_clips() if c["number"] >= first]
             planned = schedule.plan_in_slots(ctx.db, chat["id"], numbers, p["autopost"])
@@ -507,7 +536,9 @@ class MoreJob(JobHandler):
         existing = [Clip.from_dict(c["clip"]) for c in ctx.current_clips()]
         clips = proj.select(n=p.get("n", 3), exclude=existing, instructions=p.get("instructions") or "", opts=opts,
                             lessons=results.lessons(results.insights(ctx.db)))
+        first = ctx.db.next_number(chat["id"])
         n = self.render_new(ctx, proj, clips, render_options({**(chat.get("options") or {}), **p.get("options", {})}))
+        self.apply_kit(ctx, proj, first)
         return tx("done.more", n=n)
 
 
@@ -602,8 +633,11 @@ class TextsJob(JobHandler):
         links = Settings(ctx.runner.storage).profile_links()
         for row, clip in zip(rows, clips):
             data = {**row["clip"], "title": clip.title, "description": clip.description, "question": clip.question,
-                    "topic": clip.topic}
+                    "topic": clip.topic, "alt_title": clip.alt_title}
             stored = ctx.db.update_clip_texts(row["id"], data)
+            if stored.get("jpg"):
+                covers.make(Path(stored["jpg"]), clip.title, clip.alt_title,
+                            prepare_fonts(ctx.runner.storage.cache("fonts")))
             if stored.get("txt"):
                 atomic_write_text(Path(stored["txt"]), post_text(clip, chat["source"], stored["info"] or {}, links))
             ctx.runner.library.publish(chat, stored)
@@ -628,12 +662,14 @@ class UndoJob(JobHandler):
         return tx("done.undo", clip=number) if EditJob.report(ctx, row, outcome) else tx("done.nothing")
 
 
-def post_of(row: dict) -> PostText:
-    """What goes up with the video: the clip's title and the caption part of its post text (not the notes)."""
+def post_of(row: dict, variant: str = "a") -> PostText:
+    """What goes up with the video: the clip's title (the B title for variant "b") and the caption part of its post
+    text (not the notes)."""
     clip = Clip.from_dict(row["clip"])
     txt = Path(row["txt"]) if row.get("txt") else None
     caption = txt.read_text(encoding="utf-8").split("\n\n---\n", 1)[0].strip() if txt and txt.is_file() else ""
-    return PostText(clip.title, caption or clip.description or clip.title, tuple(clip.hashtags))
+    title = clip.alt_title if variant == "b" and clip.alt_title else clip.title
+    return PostText(title, caption or clip.description or clip.title, tuple(clip.hashtags))
 
 
 def problem_of(exc: Exception) -> dict:
@@ -660,7 +696,7 @@ class PublishJob(JobHandler):
         if not platforms:
             raise ClippyError(key="error.no_platform")
         upload = Upload(Path(row["mp4"]), float((row.get("info") or {}).get("duration_out") or 0.0))
-        post, accounts = post_of(row), ctx.runner.accounts
+        post, accounts = post_of(row, (p.get("options") or {}).get("variant", "a")), ctx.runner.accounts
         done, failed = p.setdefault("done", {}), p.setdefault("failed", {})
         network = []
         for i, name in enumerate(platforms):
