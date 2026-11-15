@@ -22,6 +22,18 @@ function prefill(text, append = false) {
   autoGrow();
 }
 
+const PROMPT_START = /^\s*(🎙|🎮|📣|⚡)/u;
+const LINK = /https?:\/\/\S+/g;
+
+function usePrompt(template) {
+  const input = $("#input");
+  const current = input.value.trim();
+  const keep = PROMPT_START.test(current) ? (current.match(LINK) || []).join(" ") : current;
+  prefill(template + keep);
+  input.setSelectionRange(input.value.length, input.value.length);
+  input.scrollTop = input.scrollHeight;
+}
+
 async function ensureChat() {
   if (state.current) return state.current;
   const chat = await api.createChat();
@@ -92,7 +104,7 @@ export function bindComposer() {
   });
   $("#chips").addEventListener("click", (e) => {
     const chip = e.target.closest(".chip");
-    if (chip) prefill(chip.textContent.trim(), true);
+    if (chip) usePrompt(t(`prompt.${chip.dataset.prompt}`));
   });
   document.addEventListener("clippy:compose", (e) => prefill(e.detail));
 }

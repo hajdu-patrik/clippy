@@ -154,8 +154,8 @@ class ClipRenderer:
             return x / W, y / H, w / W, h / H
         cam = guess_facecam(an)
         if not cam:
-            raise ClippyError("No facecam found for the stream layout. Pass --facecam x,y,w,h (source pixels)")
-        return cam
+            log("[render] no facecam found: the stream layout falls back to the blurred full frame")
+        return cam or None
 
     def _decode_size(self) -> tuple[int, int]:
         dh = min(self.meta["height"], 2160)

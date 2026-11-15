@@ -98,6 +98,19 @@ as spoken. Captions and hooks follow the video – or ask for the other language
 `--captions hu`) and they are translated line by line and kept in sync with the speech. The chat understands and
 answers in both, and every label of the web app and the CLI exists in both (`HU` / `EN` switch, `clippy lang`).
 
+## Ready-made prompts
+
+The start screen has four buttons. Each one puts a tested prompt into the message box; add the video link after
+"Videó:" / "Video:" (and anything else after "Egyéb kérés:" / "Extra wishes:") and send it. The same button always
+gives the same kind of clips: the count, the lengths and the CTA come from the text, everything else from the preset.
+
+| Button | Clips | Framing and sound | Picks |
+| --- | --- | --- | --- |
+| 🎙️ Podcast | 6 × 30–60 s | follows the speaker, speech tuned, dead air out | standalone opinions, surprising facts, stories with a payoff, banter, confessions |
+| 🎮 Gameplay & stream | 5 × 20–45 s | facecam on top, game below (blurred full frame without a facecam), natural sound, quiet parts kept | clutch plays, wins, fails, twists, loud reactions, jokes with chat |
+| 📣 Video & promo | 4 × 15–30 s | follows the speaker, speech tuned, opening text and a CTA | the main benefit, a demo, a strong claim or number, a testimonial (hook → proof → CTA) |
+| ⚡ Quick shorts | 3 × 10–25 s | automatic, dead air out | jokes, punchlines, surprising lines and reactions |
+
 ## Editing in the chat
 
 Ask for a change in your own words, in Hungarian or English, and attach what it needs with the paperclip button,

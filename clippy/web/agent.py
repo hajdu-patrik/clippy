@@ -8,6 +8,7 @@ from .. import i18n, playbook
 from ..captions import COLORS
 from ..render import LAYOUTS
 from ..tools import fmt_ts
+from . import presets
 
 URL_RE = re.compile(r"https?://[^\s<>\"']+", re.I)
 
@@ -313,6 +314,7 @@ def run_agent(llm, chat: dict, clips: list[dict], history: list[dict], message: 
     if fast and not any(a["type"] == "generate" for a in actions):
         actions.insert(0, fast)
         reply = reply or i18n.t(lang, "reply.generate", n=fast["n"])
+    actions = presets.apply(message, actions)
     if not reply:
         reply = i18n.t(lang, "reply.ok" if actions else "reply.unclear")
     return {"reply": reply, "actions": actions, "notes": validator.notes, "lang": lang}
