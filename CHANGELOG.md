@@ -52,6 +52,8 @@ change, what changed rather than how; dates are ISO 8601.
   profile / channel / playlist link, no video in the post, no sound, each with what helps.
 
 ### Changed
+- Copy text works on phones too: where the browser has no clipboard API (a phone on the Wi-Fi is not a secure
+  page), the text is copied by selection, and if even that is blocked a window shows it selected to copy by hand.
 - No long dashes (em / en dash) in anything Clippy writes: the picker, the editor and the post texts are told
   not to use them and a filter replaces any that slip through; the interface and the docs use none either.
 - Nicer layout without a facecam: the stream layout follows the action like the automatic one, and a wide shot

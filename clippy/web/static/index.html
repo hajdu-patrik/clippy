@@ -152,6 +152,14 @@
       </footer>
     </main>
   </div>
+  <dialog class="settings-dialog" id="copyDialog" aria-labelledby="copyTitle">
+    <h2 id="copyTitle" data-i18n="copy.title">Post text</h2>
+    <p class="hint" data-i18n="copy.hint">Copying is blocked here; select the text and copy it yourself.</p>
+    <textarea id="copyText" rows="10" readonly aria-labelledby="copyTitle"></textarea>
+    <div class="dialog-btns">
+      <button type="button" class="primary" id="copyClose" data-i18n="copy.close">Close</button>
+    </div>
+  </dialog>
   <dialog class="settings-dialog" id="settingsDialog" aria-labelledby="settingsTitle">
     <form method="dialog" id="settingsForm">
       <h2 id="settingsTitle" data-i18n="settings.title">Settings</h2>

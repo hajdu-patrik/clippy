@@ -353,6 +353,7 @@ kbd { font: 11px var(--mono); color: var(--faint); border: 1px solid var(--borde
 
 .settings-dialog { width: min(520px, calc(100vw - 32px)); border: 1px solid var(--border); border-radius: var(--radius);
   background: var(--card); color: var(--text); padding: 20px; box-shadow: var(--shadow); }
+.copy-buffer { position: fixed; top: 0; left: -9999px; width: 1px; height: 1px; opacity: 0; }
 .settings-dialog::backdrop { background: rgba(0, 0, 0, .5); }
 .settings-dialog h2 { margin: 0 0 14px; font: 700 20px/1.2 var(--font-display); letter-spacing: -.015em; }
 .settings-dialog label { display: block; font-weight: 700; font-size: 14px; }

@@ -34,6 +34,32 @@ export function toast(message) {
   toastTimer = setTimeout(() => el.classList.remove("show"), 2200);
 }
 
+export async function copyText(text) {
+  if (navigator.clipboard && window.isSecureContext) {
+    try {
+      await navigator.clipboard.writeText(text);
+      return true;
+    } catch {
+      return copyBySelection(text);
+    }
+  }
+  return copyBySelection(text);
+}
+
+function copyBySelection(text) {
+  const area = document.createElement("textarea");
+  area.value = text;
+  area.readOnly = true;
+  area.className = "copy-buffer";
+  document.body.append(area);
+  area.select();
+  area.setSelectionRange(0, text.length);
+  let ok = false;
+  try { ok = document.execCommand("copy"); } catch { ok = false; }
+  area.remove();
+  return ok;
+}
+
 export const store = {
   get(key) { try { return localStorage.getItem(key); } catch { return null; } },
   set(key, value) { try { localStorage.setItem(key, value); } catch { return undefined; } },

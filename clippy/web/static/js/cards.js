@@ -1,6 +1,6 @@
 import { languageOf, t, textIn } from "./i18n.js";
 import { currentChat, state } from "./state.js";
-import { esc, fmtTs, toast } from "./util.js";
+import { $, copyText, esc, fmtTs, toast } from "./util.js";
 
 function whyHtml(d) {
   const rows = [
@@ -57,6 +57,18 @@ export function cardHtml(id) {
   </article>`;
 }
 
+function showCopyDialog(text) {
+  const area = $("#copyText");
+  area.value = text;
+  $("#copyDialog").showModal();
+  area.focus();
+  area.select();
+}
+
+export function bindCopyDialog() {
+  $("#copyClose").addEventListener("click", () => $("#copyDialog").close());
+}
+
 async function onCardClick(event) {
   const act = event.target.closest("button")?.dataset.act;
   const card = event.target.closest(".card");
@@ -64,11 +76,11 @@ async function onCardClick(event) {
   const clip = state.clips.get(Number(card.dataset.cid));
   if (act === "copy") {
     const d = clip.clip || {};
-    try {
-      await navigator.clipboard.writeText(postCaption(d));
+    const text = postCaption(d);
+    if (await copyText(text)) {
       toast(t("card.copied"));
-    } catch {
-      toast(t("card.copyFailed"));
+    } else {
+      showCopyDialog(text);
     }
   } else if (act === "edit") {
     document.dispatchEvent(new CustomEvent("clippy:compose", { detail: t("card.editPrefix", { n: clip.number }) }));

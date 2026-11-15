@@ -5,6 +5,7 @@ import { bindDrawer, closeDrawer } from "./drawer.js";
 import { applyStatic, getLang, loadCatalog, setLang } from "./i18n.js";
 import { startLive } from "./live.js";
 import { bindSettings, loadSettings } from "./settings.js";
+import { bindCopyDialog } from "./cards.js";
 import { bindScroll } from "./messages.js";
 import { loadChats, setWorker } from "./sidebar.js";
 import { $, store } from "./util.js";
@@ -87,6 +88,7 @@ function bindChrome() {
   bindDrawer();
   bindScroll();
   bindSettings();
+  bindCopyDialog();
 }
 
 applyTheme(store.get(THEME_KEY) || (matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark"));
