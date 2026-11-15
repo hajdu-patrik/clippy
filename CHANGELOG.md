@@ -46,6 +46,8 @@ change, what changed rather than how; dates are ISO 8601.
   profile / channel / playlist link, no video in the post, no sound – each with what helps.
 
 ### Changed
+- Deleting a chat also deletes its clips from the video library (an emptied folder goes too); clips made
+  with the command line or by other chats stay.
 - A new clip is only the moment, framed vertically, with captions: the opening text and punch-in zooms are off by
   default (`--hook`, `--punch` or a chat request turn them on); the suggested opening texts stay on the card as ideas.
 - The hook is the clip's own first seconds (a funny, bold or surprising moment the clip starts on); the text

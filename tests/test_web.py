@@ -161,7 +161,20 @@ def test_full_flow_publishes_to_the_library_and_delete_purges_files(env):
     assert chat_dir.is_dir() and (storage.cache("downloads") / "vid123.mkv").exists()
     client.delete(f"/api/chats/{cid}")
     assert not chat_dir.exists() and not (storage.cache("downloads") / "vid123.mkv").exists()
-    assert list(library.glob("*.mp4")), "finished clips stay in the library"
+    assert not library.exists(), "the chat's library copies go with it"
+
+
+def test_deleting_a_chat_keeps_other_files_in_its_library_folder(tmp_path):
+    storage = Storage(tmp_path / "data", tmp_path / "library")
+    folder = storage.library_dir("Same video")
+    for name in ("chat1_clip_01_a.mp4", "chat1_clip_01_a.txt", "chat2_clip_01_b.mp4", "clip_01_cli.mp4"):
+        (folder / name).write_bytes(b"x")
+    other = storage.library_dir("Old title")
+    (other / "chat1_clip_02_c.mp4").write_bytes(b"x")
+    removed = ClipLibrary(storage).remove_chat(1)
+    assert sorted(p.name for p in removed) == ["chat1_clip_01_a.mp4", "chat1_clip_01_a.txt", "chat1_clip_02_c.mp4"]
+    assert sorted(p.name for p in folder.iterdir()) == ["chat2_clip_01_b.mp4", "clip_01_cli.mp4"]
+    assert not other.exists()
 
 
 def test_job_error_becomes_a_chat_message(env):

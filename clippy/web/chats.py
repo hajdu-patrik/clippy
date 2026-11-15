@@ -49,12 +49,13 @@ class ChatService:
         return chat
 
     def delete(self, chat_id: int) -> None:
-        """The chat, its versions and scratch files go; the source cache goes too unless another chat uses it.
-        Finished copies in the video library stay."""
+        """The chat, its versions, scratch files and its copies in the video library go; the source cache goes too
+        unless another chat uses it."""
         chat = self.get(chat_id)
         self.db.delete_chat(chat_id)
         self.hub.publish(chat_id, {"type": "chat_deleted"})
         self.runner.forget(chat_id)
+        self.library.remove_chat(chat_id)
         if not self.runner.is_running(chat_id):
             self.storage.purge_chat(chat_id)
         stem = chat.get("video_id")

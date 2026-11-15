@@ -65,3 +65,17 @@ class ClipLibrary:
     def _remove(self, folder: Path, chat_id: int, number: int) -> None:
         for old in folder.glob(self._prefix(chat_id, number) + "*"):
             old.unlink(missing_ok=True)
+
+    def remove_chat(self, chat_id: int) -> list[Path]:
+        """Every library file a chat made, in any folder (its video title may have changed since); a folder left
+        empty goes too. Files the command line made, or other chats, stay."""
+        if not self.storage.library.is_dir():
+            return []
+        removed = []
+        for old in self.storage.library.glob(f"*/chat{int(chat_id)}_clip_*"):
+            old.unlink(missing_ok=True)
+            removed.append(old)
+        for folder in {p.parent for p in removed}:
+            if folder.is_dir() and not any(folder.iterdir()):
+                folder.rmdir()
+        return removed

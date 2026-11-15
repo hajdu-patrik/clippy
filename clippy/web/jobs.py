@@ -640,6 +640,7 @@ class Runner:
             self._release(job)
             if self.db.get_chat(job.chat_id) is None:
                 self.storage.purge_chat(job.chat_id)
+                self.library.remove_chat(job.chat_id)
             self._broadcast_status()
 
     def _loop(self) -> None:
