@@ -94,6 +94,8 @@ User: "az elején megjelenő cím ne legyen rajtuk"
 {"reply": "Leveszem a nyitó feliratot a klipekről.", "actions": [{"type": "edit", "clips": "all"}]}
 User: "angol a videó, de magyar felirat legyen rajta"
 {"reply": "Lefordítom a feliratokat és a hookokat magyarra.", "actions": [{"type": "edit", "clips": "all"}]}
+User: "írj új címet és leírást az összes klipnek"
+{"reply": "Megírom az összes klip új címét és leírását.", "actions": [{"type": "texts", "clips": "all"}]}
 User: "https://youtu.be/xyz 3 clips with English subtitles"
 {"reply": "Downloading the video and picking 3 clips with English captions.", "actions": [{"type": "generate", "url": "https://youtu.be/xyz", "n": 3, "instructions": "", "options": {"captions": "en"}}]}
 User: "3 more about the music"
@@ -175,6 +177,10 @@ def clean_options(raw) -> tuple[dict, list[str]]:
     return out, warnings
 
 
+TEXTS_INTENT = re.compile(r"\b(leírás\w*|leiras\w*|description\w*|caption text|posztszöveg\w*|post text)", re.I)
+VIDEO_CHANGE = re.compile(r"\b(felirat\w*|subtitle\w*|captions?\b|vág\w*|cut|zene|music|szín\w*|colou?r|hang\w*|"
+                          r"sound|logó|logo|matric\w*|sticker|effekt\w*|effect|gyors\w*|lassí\w*|speed|nyitó|hook|"
+                          r"cta|intró|outró|intro|outro|formátum|képarány|format)", re.I)
 DELETE_INTENT = re.compile(r"\b(delete|remove|drop|töröl\w*|kitöröl\w*|torol\w*|szedd ki|vedd ki)", re.I)
 
 
@@ -300,6 +306,15 @@ def fast_path(message: str, chat: dict, has_clips: bool = False) -> dict | None:
             "instructions": URL_RE.sub("", message).strip()[:400], "options": {}}
 
 
+def texts_first(message: str, actions: list[dict]) -> list[dict]:
+    """"Write titles and descriptions" changes post texts, not the video: a small model sometimes sends it to the
+    video editor, which would render new versions and still write no description. Without any word about the video
+    itself, such an edit becomes a texts action for the same clips."""
+    if not TEXTS_INTENT.search(message or "") or VIDEO_CHANGE.search(message or ""):
+        return actions
+    return [{"type": "texts", "clips": a["clips"]} if a.get("type") == "edit" else a for a in actions]
+
+
 def run_agent(llm, chat: dict, clips: list[dict], history: list[dict], message: str, excerpt=None,
               attachments: tuple[dict, ...] = ()) -> dict:
     """-> {"reply", "actions", "notes"}; never raises for LLM problems."""
@@ -326,7 +341,10 @@ def run_agent(llm, chat: dict, clips: list[dict], history: list[dict], message: 
     if fast and not any(a["type"] == "generate" for a in actions):
         actions.insert(0, fast)
         reply = reply or i18n.t(lang, "reply.generate", n=fast["n"])
-    actions = presets.apply(message, actions)
+    rerouted = texts_first(message, actions)
+    if rerouted != actions:
+        reply = i18n.t(lang, "reply.texts")
+    actions = presets.apply(message, rerouted)
     if not reply:
         reply = i18n.t(lang, "reply.ok" if actions else "reply.unclear")
     return {"reply": reply, "actions": actions, "notes": validator.notes, "lang": lang}

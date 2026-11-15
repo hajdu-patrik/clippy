@@ -514,3 +514,12 @@ def test_old_clips_get_new_titles_and_descriptions(env, monkeypatch):
     assert txt.startswith("Nobody expected #0\n\nTeaser 0.") and "TikTok: https://www.tiktok.com/@me" in txt
     library = list((storage.library / "Test video").glob(f"chat{cid}_clip_01_*.txt"))
     assert len(library) == 1 and "Teaser 0." in library[0].read_text(encoding="utf-8")
+
+
+def test_titles_and_descriptions_never_go_to_the_video_editor():
+    edit = [{"type": "edit", "clips": [1, 2], "request": "x"}]
+    assert agent.texts_first("Írj új figyelemfelkeltő címet és leírást az összes klipnek.", edit) == [
+        {"type": "texts", "clips": [1, 2]}]
+    assert agent.texts_first("generate titles and descriptions for every clip", edit)[0]["type"] == "texts"
+    assert agent.texts_first("legyen zöld a felirat és írj leírást", edit) == edit
+    assert agent.texts_first("tedd halkabbra a zenét", edit) == edit
