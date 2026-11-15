@@ -10,6 +10,7 @@ from pathlib import Path
 from . import playbook
 from .boundaries import END_OVERFLOW, Boundaries, end_time, start_time
 from .llm import LLM, think_enabled
+from .signals import Signals
 from .text import ends_sentence, post_clean
 from .tools import ClippyError, fmt_ts, log, report, report_span, write_json
 
@@ -38,6 +39,14 @@ Return ONLY JSON: {{"clips": [{{"start": <seconds>, "end": <seconds>, "score": <
 "hook_type": "...", "alt_hook": "...", "question": "...", "title": "...", "description": "...", "topic": "...",
 "hashtags": ["#..."],
 "risks": [], "reason": "..."}}]}}"""
+
+SIGNALS_RULE = """
+Lines ending in ⟪…⟫ are where the sound, the picture or the audience reacted: loud = a scream, an explosion or
+cheering; laughter; action = a sudden change on screen; chat xN = N times this stream's usual chat activity. In
+gameplay and streams these are often the best moments, even when little is said: start a few seconds before the
+reaction so the viewer sees what caused it, and end after it lands."""
+PEAK_REASON = "reaction peak"
+PEAK_LEAD = 0.6
 
 RERANK_PROMPT = """You are the head editor of a viral clips channel. Your team proposed candidate clips from
 the video "{title}" (spoken language: {language}). Compare them AGAINST EACH OTHER and pick the best {n}
@@ -154,8 +163,33 @@ def _windows(items: list[dict], window_sec: float, overlap_sec: float) -> list[l
     return out
 
 
-def _format_window(win: list[dict]) -> str:
-    return "\n".join(f"[{s['start']:.2f}-{s['end']:.2f}] {s['text']}" for s in win)
+def _format_window(win: list[dict], signals: Signals | None = None) -> str:
+    def line(s: dict) -> str:
+        tags = signals.tags(s["start"], s["end"]) if signals else ""
+        return f"[{s['start']:.2f}-{s['end']:.2f}] {s['text']}" + (f"  ⟪{tags}⟫" if tags else "")
+    return "\n".join(line(s) for s in win)
+
+
+def _speaks(c: Clip, words: list[dict]) -> bool:
+    return any(c.start - 0.05 <= w["start"] <= c.end for w in words)
+
+
+def _peak_clips(signals: Signals, covered: list[Clip], min_len: float, max_len: float, duration: float,
+                limit: int) -> list[Clip]:
+    """Candidates around the strongest reactions that no transcript window proposed: the build-up first, then the
+    reaction and a little after it."""
+    length = max(min_len, min(max_len, 0.5 * (min_len + max_len)))
+    out = []
+    for peak in signals.peaks(limit):
+        if any(c.start <= peak.time <= c.end for c in covered + out):
+            continue
+        start = max(0.0, peak.time - PEAK_LEAD * length)
+        end = min(duration or peak.time + length, start + length)
+        start = max(0.0, min(start, end - length))
+        if end - start >= min_len * 0.6:
+            out.append(Clip(start, end, round(45 + 45 * peak.strength, 1),
+                            reason=f"{PEAK_REASON}: {signals.describe(start, end) or ', '.join(peak.kinds)}"))
+    return out
 
 
 def _snap(clip: Clip, words: list[dict], min_len: float, max_len: float,
@@ -183,7 +217,7 @@ def _overlap(a: Clip, b: Clip) -> float:
     return inter / max(1e-6, min(a.duration, b.duration))
 
 
-def _heuristic(sents: list[dict], min_len: float, max_len: float) -> list[Clip]:
+def _heuristic(sents: list[dict], min_len: float, max_len: float, signals: Signals | None = None) -> list[Clip]:
     """No-LLM fallback: favour lively stretches (exclamations, questions, fast speech)."""
     target = (min_len + max_len) / 2
     cands = []
@@ -197,6 +231,8 @@ def _heuristic(sents: list[dict], min_len: float, max_len: float) -> list[Clip]:
             continue
         words = len(text.split())
         score = 40 + 6 * text.count("!") + 4 * text.count("?") + 8 * (words / span - 2.0)
+        if signals:
+            score += 8 * len(signals.kinds(s["start"], sents[j]["end"]))
         cands.append(Clip(s["start"], sents[j]["end"], round(min(95, max(5, score)), 1),
                           hook=" ".join(s["text"].split()[:7]), title=s["text"][:70],
                           reason="heuristic: lively speech"))
@@ -209,10 +245,15 @@ def _clip_text(c: Clip, words: list[dict], limit: int = 700) -> str:
 
 
 def _rerank(llm: LLM, cands: list[Clip], words: list[dict], n: int, title: str, language: str,
-            text_language: str) -> list[Clip]:
+            text_language: str, signals: Signals | None = None) -> list[Clip]:
+    def reactions(c: Clip) -> str:
+        found = signals.describe(c.start, c.end) if signals else ""
+        return f" | reactions: {found}" if found else ""
+
     lines = [
         f"id={i} | {c.duration:.0f}s | first score {c.score:.0f} | hook: {c.hook}"
-        f"{' | risks: ' + ', '.join(c.risks) if c.risks else ''}\n{_clip_text(c, words)}"
+        f"{' | risks: ' + ', '.join(c.risks) if c.risks else ''}{reactions(c)}\n"
+        f"{_clip_text(c, words) or '(no speech)'}"
         for i, c in enumerate(cands)
     ]
     try:
@@ -268,13 +309,14 @@ def _words_text(words: list[dict]) -> str:
     return " ".join(w["word"] for w in words)
 
 
-def _ask_windows(llm: LLM, system: str, wins: list[list[dict]], cache: PickCache | None) -> tuple[list[Clip], bool]:
+def _ask_windows(llm: LLM, system: str, wins: list[list[dict]], cache: PickCache | None,
+                 signals: Signals | None = None) -> tuple[list[Clip], bool]:
     """Every window's candidates, and whether all of them came from the cache."""
     raw, all_cached = [], True
     for n, win in enumerate(wins, 1):
         report(0.8 * (n - 1) / len(wins))
         log(f"[hook] window {n}/{len(wins)}  ({fmt_ts(win[0]['start'])}-{fmt_ts(win[-1]['end'])})  {llm.describe()}")
-        text = "TRANSCRIPT:\n" + _format_window(win)
+        text = "TRANSCRIPT:\n" + _format_window(win, signals)
         if cache is None:
             reply, hit = llm.chat_json(system, text, think=think_enabled(), schema=CLIPS_SCHEMA), False
         else:
@@ -291,7 +333,8 @@ def _fresh(raw: list[Clip], words: list[dict], min_len: float, max_len: float, e
            bounds: Boundaries | None = None) -> list[Clip]:
     """Candidates snapped to whole thoughts, best first, overlapping neither each other nor existing clips."""
     bounds = bounds or Boundaries(words)
-    snapped = [c for c in (_snap(Clip(**asdict(c)), words, min_len, max_len, bounds) for c in raw) if c]
+    snapped = [c for c in (_snap(Clip(**asdict(c)), words, min_len, max_len, bounds)
+                           or (Clip(**asdict(c)) if c.reason.startswith(PEAK_REASON) else None) for c in raw) if c]
     snapped.sort(key=lambda c: c.score, reverse=True)
     unique: list[Clip] = []
     for c in snapped:
@@ -338,6 +381,10 @@ def _check_endings(llm: LLM, clips: list[Clip], words: list[dict], bounds: Bound
             target = earlier[-1] if earlier else None
         if target is None:
             continue
+        moved = Clip(clip.start, end_time(words, target), clip.score)
+        if verdict == "extend" and any(o is not clip and _overlap(moved, o) >= 0.15 for o in clips):
+            log(f"[hook] end kept: extending would run into another clip ({clip.end:.1f} s)")
+            continue
         before = clip.end
         _place(clip, words, i0, target)
         log(f"[hook] end fixed: {verdict} ({before:.1f} s -> {clip.end:.1f} s)")
@@ -350,6 +397,8 @@ from the video "{title}". Each clip comes with what is said in it. For every cli
 {question_rule}
 {topic_rule}
 Write them in {text_language}, specific to that clip's own moment (never the video's title again).
+A clip with little or no speech comes with its REACTIONS (a loud moment, laughter, action on screen, a chat burst and
+what the chat wrote): write from those and the video title what happens in it.
 {dash_rule}
 Return ONLY JSON: {{"clips": [{{"id": <id>, "title": "...", "description": "...", "question": "...", "topic": "..."}}]}}"""
 
@@ -364,10 +413,15 @@ TEXTS_SCHEMA = {
 }
 
 
-def write_texts(llm: LLM, clips: list[Clip], words: list[dict], title: str, text_language: str) -> int:
-    """New title and description for clips that already exist (made before these texts, or to try other ones).
-    Returns how many clips got new texts."""
-    lines = [f"id={i} | {c.duration:.0f}s\n{_clip_text(c, words)}" for i, c in enumerate(clips)]
+def write_texts(llm: LLM, clips: list[Clip], words: list[dict], title: str, text_language: str,
+                signals: Signals | None = None) -> int:
+    """New title and description for clips that already exist (made before these texts, or to try other ones), or
+    for moments picked by their reactions. Returns how many clips got new texts."""
+    def about(c: Clip) -> str:
+        found = signals.describe(c.start, c.end) if signals else ""
+        return (_clip_text(c, words) or "(no speech)") + (f"\nREACTIONS: {found}" if found else "")
+
+    lines = [f"id={i} | {c.duration:.0f}s\n{about(c)}" for i, c in enumerate(clips)]
     prompt = TEXTS_PROMPT.format(text_language=text_language, title=title.replace('"', "'"),
                                  title_rule=playbook.TITLE_RULE, description_rule=playbook.DESCRIPTION_RULE,
                                  dash_rule=playbook.DASH_RULE, question_rule=playbook.QUESTION_RULE,
@@ -491,13 +545,16 @@ def _avoiding(exclude) -> str:
 def find_highlights(transcript: dict, llm: LLM, max_clips: int = 5, min_len: float = 20,
                     max_len: float = 60, window_sec: float = 480, overlap_sec: float = 60,
                     title: str = "", exclude: list[Clip] | tuple = (), instructions: str = "",
-                    text_language: str | None = None, cache: PickCache | None = None) -> list[Clip]:
+                    text_language: str | None = None, cache: PickCache | None = None,
+                    signals: Signals | None = None) -> list[Clip]:
     """`exclude`: clips that already exist (new picks must not overlap them).
     `instructions`: free-text wishes from the user ("the funniest parts", "only the parts about music"…).
     `cache`: earlier window answers for this video; when they no longer hold enough new moments, the windows are
-    asked again, told which moments are taken."""
+    asked again, told which moments are taken.
+    `signals`: the video's reactions (sound, picture, chat); they mark lines for the picker and add candidates."""
     words = [w for s in transcript["segments"] for w in s["words"]]
-    if not words:
+    signals = signals if signals is not None and signals.peaks(1) else None
+    if not words and signals is None:
         raise ClippyError(key="error.empty_transcript")
     sents = sentences(words)
     language = LANG_NAMES.get(transcript.get("language") or "", transcript.get("language") or "the transcript's")
@@ -506,19 +563,27 @@ def find_highlights(transcript: dict, llm: LLM, max_clips: int = 5, min_len: flo
     per_window = max(2, min(5, max_clips))
     raw: list[Clip] = []
     if llm.backend == "none":
-        raw = _heuristic(sents, min_len, max_len)
+        raw = _heuristic(sents, min_len, max_len, signals)
     else:
         system = SYSTEM_PROMPT.format(rubric=playbook.selection_rules(int(min_len), int(max_len)),
                                       writing=playbook.writing_rules(text_language), per_window=per_window,
                                       title=title.replace('"', "'"), language=language, text_language=text_language)
+        if signals is not None:
+            system += "\n" + SIGNALS_RULE
         if instructions.strip():
             system += ("\n\nThe channel owner's specific wishes for THIS selection (follow them, they override "
                        f"the generic preferences above):\n{instructions.strip()}")
         wins = _windows(sents, window_sec, overlap_sec)
-        raw, cached = _ask_windows(llm, system, wins, cache)
+        raw, cached = _ask_windows(llm, system, wins, cache, signals)
         if exclude and cached and len(_fresh(raw, words, min_len, max_len, exclude)) < max_clips:
             log("[hook] the earlier picks are used up: asking for new moments")
-            raw += _ask_windows(llm, system + _avoiding(exclude), wins, cache)[0]
+            raw += _ask_windows(llm, system + _avoiding(exclude), wins, cache, signals)[0]
+    if signals is not None:
+        duration = float(transcript.get("duration") or signals.length * signals.hop)
+        peaks = _peak_clips(signals, raw, min_len, max_len, duration, 3 * max_clips)
+        if peaks:
+            log(f"[hook] {len(peaks)} more candidates from reactions (sound, picture, chat)")
+        raw += peaks
 
     bounds = Boundaries(words)
     unique = _fresh(raw, words, min_len, max_len, exclude, bounds)
@@ -526,11 +591,20 @@ def find_highlights(transcript: dict, llm: LLM, max_clips: int = 5, min_len: flo
     if llm.backend != "none" and len(unique) > max_clips:
         log(f"[hook] globally re-ranking {len(unique)} candidates…")
         with report_span(0.8, 0.9):
-            unique = _rerank(llm, unique, words, max_clips, title, language, text_language)
+            unique = _rerank(llm, unique, words, max_clips, title, language, text_language, signals)
 
     chosen = unique[:max_clips]
-    if llm.backend != "none" and chosen:
-        _check_endings(llm, chosen, words, bounds, min_len, max_len, language)
+    spoken = [c for c in chosen if _speaks(c, words)]
+    if llm.backend != "none" and spoken:
+        _check_endings(llm, spoken, words, bounds, min_len, max_len, language)
+    untitled = [c for c in chosen if not c.description]
+    if llm.backend != "none" and untitled:
+        try:
+            write_texts(llm, untitled, words, title, text_language, signals)
+        except ClippyError as exc:
+            log(f"[hook] texts of the reaction clips skipped: {exc}")
+    for c in untitled:
+        c.title = c.title or title[:70]
     for c in chosen:
         c.hook, c.title, c.alt_hook, c.question, c.description, c.topic = map(
             post_clean, (c.hook, c.title, c.alt_hook, c.question, c.description, c.topic))

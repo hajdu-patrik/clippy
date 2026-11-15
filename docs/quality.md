@@ -35,6 +35,32 @@ Risks (needs context, misquote, claims about a real person, spoiler, background 
 text never repeats the first spoken line; it adds curiosity instead, and the clip must deliver what it promises
 (ethical clickbait). Each clip also gets a B hook of another type and a comment question.
 
+## Reactions: peaks without words
+
+In gameplay and streams the best moment is often not something said: a clutch kill, a scream, the chat going wild.
+Before picking, Clippy reads the whole video for reactions (`clippy/signals.py`):
+
+| Signal | How it is read | Cost |
+| --- | --- | --- |
+| **Loud** | the sound's level every 0.5 s against its own surroundings (median and median deviation over 90 s), so a stream that gets louder over hours does not count as one long peak; silence never does | a few seconds per hour |
+| **Laughter** | laughing words in the transcript (haha, lol, xd, *(laughs)*, nevet) | free |
+| **Action** | how much the picture changes between keyframes (only keyframes are decoded, tiny and grey); skipped for videos with a keyframe in nearly every frame, where it would be slow | seconds for a Twitch VOD |
+| **Chat** | a YouTube stream replay's chat (downloaded with the video): messages per 5 s against the stream's usual rate, and what the chat wrote; messages from before the stream are left out | seconds |
+
+The picture is read when the video is already here, or when little is said (less than a third of the time), since
+then it is worth waiting for the download. Twitch keeps its VOD chat from downloaders, so Twitch VODs are read by
+their sound and picture. The result is cached per video in `data/cache/signals`.
+
+How the picker uses them:
+- Transcript lines get a mark like `⟪loud, chat x6⟫`, and the picker is told to start a few seconds before such a
+  reaction and end after it lands.
+- The strongest reactions that no transcript window proposed become candidates of their own: the build-up first
+  (60 %), then the reaction. They compete with the spoken moments in the global re-rank, which sees the reactions and
+  the chat's words of every candidate.
+- A clip with little or no speech gets its title, description and question written from its reactions and the
+  video's title, and its ending is not moved by sentences.
+- A long video without any speech no longer stops: its moments come from the reactions alone.
+
 ## Where a clip starts and ends
 
 A clip starts where a sentence starts and ends where a thought is complete (`clippy/boundaries.py`):

@@ -6,6 +6,10 @@ change, what changed rather than how; dates are ISO 8601.
 ## [Unreleased]
 
 ### Added
+- Gameplay and stream peaks without words: loud moments, laughter, sudden action on screen and the chat of YouTube
+  stream replays mark the transcript for the picker and add moments of their own, with titles written from the
+  reactions and what the chat wrote. A long video without speech is now clipped by its reactions instead of
+  stopping (docs/quality.md).
 - Posting to YouTube, Instagram and TikTok from the app: a Post button on every clip (platforms, YouTube visibility,
   TikTok drafts or private) and from the chat in your own words. Accounts are connected once in Settings with your
   own developer apps (docs/publishing.md); the clip card links each post or says what went wrong, one platform

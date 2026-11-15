@@ -13,18 +13,18 @@ from dataclasses import asdict, dataclass, field, fields, replace
 from pathlib import Path
 from urllib.parse import urlsplit
 
-from . import align, i18n, separation
+from . import align, i18n, separation, signals
 from .analysis import ClipAnalysis, analyze
 from .captions import CaptionStyle
 from .concurrency import GPU, SOURCE, GuardedLLM
-from .download import Remote, cached_video, fetch, fetch_audio, fetch_video, is_url, probe
+from .download import Remote, cached_video, fetch, fetch_audio, fetch_chat, fetch_video, is_url, probe
 from .highlights import Clip, PickCache, find_highlights
 from .settings import URL, Settings, site_of
 from .llm import create_llm
 from .render import RenderSettings, prepare_fonts, render_clip
 from .storage import Storage
 from .tools import (ClippyError, ThreadContext, atomic_write_text, fmt_ts, log, move_atomic, probe_media,
-                    read_json, write_json)
+                    read_json, report_span, write_json)
 from .translate import CaptionTranslator
 from .transcribe import all_words, transcribe
 
@@ -37,6 +37,8 @@ def require_sound(media: Path, source: str) -> None:
 
 SHORT_SOURCE_MARGIN = 10.0
 SHORT_SOURCE_FACTOR = 1.5
+CHAT_WAIT = 180.0
+SPARSE_SPEECH = 0.35
 
 
 @dataclass
@@ -149,6 +151,9 @@ class Project:
         self._downloader: ThreadPoolExecutor | None = None
         self._downloaded = 0.0
         self._stem: str | None = None
+        self.sound: Path | None = None
+        self._chat_task: Future | None = None
+        self._side: ThreadPoolExecutor | None = None
         self.source_duration: float | None = None
         self.title = ""
         self.transcript: dict | None = None
@@ -190,6 +195,9 @@ class Project:
         else:
             remote = probe(self.source, downloads, cookies_from_browser=o.cookies_from_browser)
             self.title, self.source_duration = remote.title, remote.duration
+            if remote.has_chat:
+                self._side = self._side or ThreadPoolExecutor(max_workers=1, thread_name_prefix="clippy-chat")
+                self._chat_task = self._side.submit(fetch_chat, remote, downloads, o.cookies_from_browser)
             key = cached_video(downloads, remote.vid)
             if key is not None:
                 log(f"[download] already here: {key.name}")
@@ -206,6 +214,7 @@ class Project:
                 else:
                     key = self.video
         self._stem = key.stem
+        self.sound = sound or key
         require_sound(sound or key, self.source)
         with SOURCE.hold(key.stem):
             stems = None
@@ -253,29 +262,70 @@ class Project:
         if self.source_duration and (not duration or duration > self.source_duration + 1.0):
             duration = self.source_duration
         min_len, max_len, n = o.min_len, o.max_len, n or o.n
-        if not self.words:
-            if exclude or not duration or duration > SHORT_SOURCE_FACTOR * max_len:
+        if not self.words and duration and duration <= SHORT_SOURCE_FACTOR * max_len:
+            if exclude:
                 raise ClippyError(key="error.empty_transcript")
             log("[hook] no speech: the whole video becomes one clip")
             return [Clip(0.0, min(duration, max_len), 50.0, title=self.title[:70], reason="no speech in the video")]
+        if not self.words:
+            log("[hook] no speech: the moments come from the reactions (sound, picture, chat)")
         short = bool(duration) and duration < min_len + SHORT_SOURCE_MARGIN
         if short and exclude:
             raise ClippyError(key="error.no_suitable_clip")
         if short:
             min_len, max_len, n = min(min_len, max(3.0, 0.6 * duration)), min(max_len, duration), 1
             log(f"[hook] short video ({duration:.0f} s): one clip of all of it")
+        with report_span(0.0, 0.05):
+            reactions = None if short else self.reactions(duration)
         llm = GuardedLLM(create_llm(o.llm, o.model))
         self.llm_desc = llm.describe()
         clips = find_highlights(self.transcript, llm, max_clips=n, min_len=min_len, max_len=max_len,
                                 title=self.title, exclude=list(exclude), text_language=o.captions,
                                 instructions=o.instructions if instructions is None else instructions,
-                                cache=PickCache(self.storage.cache("picks"), self.video_stem) if self.video_stem else None)
+                                cache=PickCache(self.storage.cache("picks"), self.video_stem) if self.video_stem else None,
+                                signals=reactions)
         if not clips:
             raise ClippyError(key="error.no_suitable_clip")
         if short:
             clips[0].start, clips[0].end = 0.0, min(duration, o.max_len)
             clips[0].hook = clips[0].alt_hook = ""
         return clips[:1] if short else clips
+
+    def reactions(self, duration: float) -> signals.Signals | None:
+        """The video's reactions: its sound always, the stream chat when the site keeps it, the picture when the video
+        is here already or when little is said (gameplay, a stream without commentary), so it is worth waiting for."""
+        stem = self.video_stem
+        if not stem:
+            return None
+        try:
+            chat = self._chat_ready()
+            speech = sum(w["end"] - w["start"] for w in self.words)
+            sparse = bool(duration) and speech < SPARSE_SPEECH * duration
+            task = self._video_task
+            if task is not None and (task.done() or sparse):
+                while not wait([task], timeout=5.0).done:
+                    log(f"[hook] waiting for the video to read the action on screen ({round(100 * self._downloaded)}%)")
+            video = self.video if self._video_task is None or self._video_task.done() else None
+            name = f"{stem}.{'v' if video else ''}{'c' if chat else ''}.json"
+            sound = self.sound if self.sound and self.sound.is_file() else video
+            return signals.cached(self.storage.cache("signals") / name,
+                                  lambda: signals.build(sound, self.words, video, chat))
+        except Exception as exc:
+            log(f"[hook] reactions skipped ({type(exc).__name__}: {str(exc)[:120]})")
+            return None
+
+    def _chat_ready(self) -> Path | None:
+        task = self._chat_task
+        if task is None:
+            return None
+        if not wait([task], timeout=CHAT_WAIT).done:
+            log("[hook] the chat replay is still downloading: picking without it")
+            return None
+        try:
+            return task.result()
+        except Exception as exc:
+            log(f"[hook] chat replay skipped ({type(exc).__name__})")
+            return None
 
     def audio_source(self, duck: float) -> Path | None:
         if duck <= 0:

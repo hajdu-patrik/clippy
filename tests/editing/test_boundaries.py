@@ -158,3 +158,14 @@ def test_texts_for_existing_clips_take_only_valid_answers():
     assert write_texts(llm, clips, words, "GTA", "Hungarian") == 1
     assert (clips[0].title, clips[1].title, clips[1].description) == (
         "old", "Senki nem számított erre", "A vihar mindent átír.")
+
+
+def test_an_ending_never_grows_into_another_picked_clip():
+    words = speech(GTA)
+    bounds = Boundaries(words)
+    first = _snap(Clip(0.0, 6.0, 50), words, 2, 30, bounds)
+    neighbour = Clip(first.end + 0.5, first.end + 20.0, 50)
+    before = first.end
+    _check_endings(Reply({"clips": [{"id": 0, "verdict": "extend", "sentences": 2}]}), [first, neighbour], words,
+                   bounds, 2, 30, "English")
+    assert first.end == before

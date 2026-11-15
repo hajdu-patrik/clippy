@@ -92,9 +92,9 @@ def test_a_short_video_without_speech_is_kept_whole(monkeypatch, tmp_path):
     with pytest.raises(ClippyError) as more:
         proj.select(exclude=[clip])
     assert more.value.key == "error.empty_transcript"
-    proj, _ = project_with(monkeypatch, tmp_path, 1800.0, [])
-    with pytest.raises(ClippyError):
-        proj.select()
+    proj, seen = project_with(monkeypatch, tmp_path, 1800.0, [])
+    proj.select()
+    assert seen["n"] == 5, "a long video without speech is picked by its reactions"
 
 
 def test_the_same_link_again_retries_when_the_chat_has_no_clips_yet():

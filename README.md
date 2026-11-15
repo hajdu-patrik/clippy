@@ -77,7 +77,7 @@ Tab completion works in PowerShell and in cmd through [Clink](https://chrisant99
 
 ```
 link ─► yt-dlp (≤4K SDR + Opus) ─► Demucs voice isolation ─► Whisper large-v3 (hotwords, hu/en) ─► MMS_FA word alignment
-     ─► Qwen3 hook scoring + global re-rank ─► tight edit (dead air / fillers out, on the audio envelope and frame grid)
+     ─► reactions (loud moments, laughter, action, stream chat) ─► Qwen3 hook scoring + global re-rank ─► tight edit (dead air / fillers out, on the audio envelope and frame grid)
      ─► shot detection + YuNet faces + active speaker ─► virtual camera (spring follow, punch-ins)
      ─► sub-pixel Lanczos 9:16 + ASS captions ─► BT.709 NVENC p7 + voice EQ, compressor, two-pass −14 LUFS
 ```
@@ -107,7 +107,7 @@ gives the same kind of clips: the count, the lengths and the CTA come from the t
 | Button | Clips | Framing and sound | Picks |
 | --- | --- | --- | --- |
 | 🎙️ Podcast | 6 × 30-60 s | follows the speaker, speech tuned, dead air out | standalone opinions, surprising facts, stories with a payoff, banter, confessions |
-| 🎮 Gameplay & stream | 5 × 20-45 s | facecam on top, game below (blurred full frame without a facecam), natural sound, quiet parts kept | clutch plays, wins, fails, twists, loud reactions, jokes with chat |
+| 🎮 Gameplay & stream | 5 × 20-45 s | facecam on top, game below (blurred full frame without a facecam), natural sound, quiet parts kept | clutch plays, wins, fails, twists, loud reactions, jokes with chat; peaks found by sound, picture and the stream chat, even without speech |
 | 📣 Video & promo | 4 × 15-30 s | follows the speaker, speech tuned, opening text and a CTA | the main benefit, a demo, a strong claim or number, a testimonial (hook → proof → CTA) |
 | ⚡ Quick shorts | 3 × 10-25 s | automatic, dead air out | jokes, punchlines, surprising lines and reactions |
 

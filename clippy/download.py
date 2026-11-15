@@ -119,6 +119,12 @@ class Remote:
     def duration(self) -> float | None:
         return float(self.info["duration"]) if self.info.get("duration") else None
 
+    @property
+    def has_chat(self) -> bool:
+        """A stream replay whose chat the site keeps (YouTube lives); Twitch VOD chat is not served to downloaders."""
+        return (self.single and self.info.get("live_status") not in ("is_live", "is_upcoming")
+                and bool((self.info.get("subtitles") or {}).get("live_chat")))
+
 
 ANSI = re.compile(r"\x1b\[[0-9;]*m")
 REASONS = (
@@ -285,6 +291,31 @@ def fetch_audio(remote: Remote, downloads: Path, cookies_from_browser: str | Non
         log(f"[download] sound first: {remote.title}")
         opts = {**_ydl_options(downloads, 2160, cookies_from_browser, name), "format": remote.sound_track}
         return _download(remote, downloads, name, opts, 1)
+
+
+def chat_file(downloads: Path, vid: str) -> Path:
+    return downloads / f"{vid}.live_chat.json"
+
+
+def fetch_chat(remote: Remote, downloads: Path, cookies_from_browser: str | None = None) -> Path | None:
+    """The chat of a stream replay, saved next to the video (the cache and a chat's deletion treat it alike)."""
+    target = chat_file(downloads, remote.vid)
+    if target.is_file():
+        return target
+    if not remote.has_chat:
+        return None
+    log("[download] stream chat replay")
+    partial = downloads / f".part-{remote.vid}-chat-{uuid.uuid4().hex[:8]}"
+    partial.mkdir()
+    try:
+        opts = {**_ydl_options(partial, 2160, cookies_from_browser, "chat"), "skip_download": True,
+                "writesubtitles": True, "subtitleslangs": ["live_chat"]}
+        with _site_errors(remote.url), _session(opts) as ydl:
+            ydl.extract_info(remote.url, download=True)
+        done = next(partial.glob("chat*.json"), None)
+        return move_atomic(done, target) if done is not None else None
+    finally:
+        shutil.rmtree(partial, ignore_errors=True)
 
 
 def fetch(source: str, downloads: Path, max_height: int = 2160, cookies_from_browser: str | None = None) -> tuple[Path, str]:
