@@ -173,6 +173,11 @@ class DB:
              json.dumps(info, ensure_ascii=False, default=str), mp4, jpg, txt, timeline, time.time()))
         return self.get_clip(cur.lastrowid)
 
+    def update_clip_texts(self, clip_id: int, clip: dict) -> dict | None:
+        """The post texts of a stored version (title, description…); the video itself does not change."""
+        self._exec("UPDATE clips SET clip = ? WHERE id = ?", (json.dumps(clip, ensure_ascii=False), clip_id))
+        return self.get_clip(clip_id)
+
     def get_clip(self, clip_id: int) -> dict | None:
         return self._one("SELECT * FROM clips WHERE id = ?", (clip_id,))
 

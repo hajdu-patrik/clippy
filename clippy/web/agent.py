@@ -56,6 +56,9 @@ Actions:
     title, undo. A separate
     video editor reads the user's message and does the details: you only pick the clips (the one the user names,
     "all" when they say every / all clips, the highest number for "the last one").
+- {"type": "texts", "clips": [<clip numbers>] or "all"}
+    new post TITLES and DESCRIPTIONS for existing clips (e.g. "írj címet és leírást a klipeknek", "generate titles
+    and descriptions", "legyen jobb címük"): only the post texts change, the video stays. New clips get them anyway.
 - {"type": "delete", "clip": <clip number>}
 - {"type": "none"}  (questions, small talk, unclear requests -> ask a short clarifying question in "reply")
 
@@ -108,7 +111,7 @@ AGENT_SCHEMA = {
         "actions": {"type": "array", "items": {
             "type": "object",
             "properties": {
-                "type": {"type": "string", "enum": ["generate", "more", "edit", "delete", "none"]},
+                "type": {"type": "string", "enum": ["generate", "more", "edit", "delete", "texts", "none"]},
                 "url": {"type": "string"}, "n": {"type": "integer"}, "instructions": {"type": "string"},
                 "clip": {"type": "integer"}, "clips": {}, "hook": {"type": "string"}, "title": {"type": "string"},
                 "start_shift": {"type": "number"}, "end_shift": {"type": "number"},
@@ -259,7 +262,16 @@ class ActionValidator:
             self.note("note.no_such_clip", clip=value)
         return None
 
-    HANDLERS = {"generate": _generate, "more": _more, "edit": _edit, "delete": _delete}
+    def _texts(self, raw: dict, opts: dict) -> dict | None:
+        target = raw.get("clips", raw.get("clip", "all"))
+        if target in ("all", None) or target == ["all"]:
+            numbers = sorted(self.numbers)
+        else:
+            target = target if isinstance(target, list) else [target]
+            numbers = sorted({n for n in (self._clip(v) for v in target) if n is not None})
+        return {"type": "texts", "clips": numbers} if numbers else None
+
+    HANDLERS = {"generate": _generate, "more": _more, "edit": _edit, "delete": _delete, "texts": _texts}
 
 
 def build_state(chat: dict, clips: list[dict], excerpt) -> str:

@@ -1,4 +1,5 @@
 import re
+from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
@@ -484,3 +485,32 @@ def test_profile_links_are_saved_locally_and_checked(env):
     assert many.json()["detail"]["key"] == "error.too_many_links"
     assert client.get("/api/settings").json() == saved
     assert TestClient(client.app).put("/api/settings", json={"profile_links": ""}).status_code == 403
+
+
+def test_old_clips_get_new_titles_and_descriptions(env, monkeypatch):
+    from clippy.web import jobs
+
+    client, runner, storage = env
+    cid = client.post("/api/chats").json()["id"]
+    say(client, cid, "https://www.youtube.com/watch?v=abc", {"reply": "Ok", "actions": [
+        {"type": "generate", "url": "https://www.youtube.com/watch?v=abc", "n": 2}]})
+    run_pending(runner)
+    client.put("/api/settings", json={"profile_links": "TikTok: https://www.tiktok.com/@me"})
+
+    def write(llm, clips, words, title, language):
+        for i, c in enumerate(clips):
+            c.title, c.description = f"Nobody expected #{i}", f"Teaser {i}."
+        return len(clips)
+
+    monkeypatch.setattr(jobs, "write_texts", write)
+    FakeProject.spoken_language = "en"
+    out = say(client, cid, "írj címet és leírást a klipeknek", {"reply": "Ok", "actions": [{"type": "texts", "clips": "all"}]})
+    assert out["actions"] == [{"type": "texts", "clips": [1, 2]}]
+    run_pending(runner)
+    rows = runner.db.current_clips(cid)
+    assert [(r["version"], r["clip"]["title"], r["clip"]["description"]) for r in rows] == [
+        (1, "Nobody expected #0", "Teaser 0."), (1, "Nobody expected #1", "Teaser 1.")]
+    txt = Path(rows[0]["txt"]).read_text(encoding="utf-8")
+    assert txt.startswith("Nobody expected #0\n\nTeaser 0.") and "TikTok: https://www.tiktok.com/@me" in txt
+    library = list((storage.library / "Test video").glob(f"chat{cid}_clip_01_*.txt"))
+    assert len(library) == 1 and "Teaser 0." in library[0].read_text(encoding="utf-8")

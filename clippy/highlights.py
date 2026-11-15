@@ -341,6 +341,47 @@ def _check_endings(llm: LLM, clips: list[Clip], words: list[dict], bounds: Bound
         log(f"[hook] end fixed: {verdict} ({before:.1f} s -> {clip.end:.1f} s)")
 
 
+TEXTS_PROMPT = """You are a native {text_language} social media editor. Write the post texts of short clips cut
+from the video "{title}". Each clip comes with what is said in it. For every clip:
+{title_rule}
+{description_rule}
+Write both in {text_language}, specific to that clip's own moment (never the video's title again).
+Return ONLY JSON: {{"clips": [{{"id": <id>, "title": "...", "description": "..."}}]}}"""
+
+TEXTS_SCHEMA = {
+    "type": "object",
+    "properties": {"clips": {"type": "array", "items": {
+        "type": "object", "properties": {"id": {"type": "integer"}, "title": {"type": "string"},
+                                         "description": {"type": "string"}},
+        "required": ["id", "title", "description"]}}},
+    "required": ["clips"],
+}
+
+
+def write_texts(llm: LLM, clips: list[Clip], words: list[dict], title: str, text_language: str) -> int:
+    """New title and description for clips that already exist (made before these texts, or to try other ones).
+    Returns how many clips got new texts."""
+    lines = [f"id={i} | {c.duration:.0f}s\n{_clip_text(c, words)}" for i, c in enumerate(clips)]
+    prompt = TEXTS_PROMPT.format(text_language=text_language, title=title.replace('"', "'"),
+                                 title_rule=playbook.TITLE_RULE, description_rule=playbook.DESCRIPTION_RULE)
+    reply = llm.chat_json(prompt, "\n\n".join(lines), think=think_enabled(), schema=TEXTS_SCHEMA)
+    changed = 0
+    for item in reply.get("clips", []) if isinstance(reply, dict) else []:
+        try:
+            c = clips[int(item["id"])]
+            new_title, new_description = clean_text(str(item["title"]))[:100], clean_text(str(item["description"]))
+        except (KeyError, ValueError, IndexError, TypeError):
+            continue
+        if new_title:
+            c.title, c.description = new_title, new_description[:300]
+            changed += 1
+    return changed
+
+
+def text_language_name(code: str | None, spoken: str | None) -> str:
+    return LANG_NAMES.get(code or "", LANG_NAMES.get(spoken or "", spoken or "English"))
+
+
 POLISH_PROMPT = """You are a copy editor for viral short-form video hooks in {language}.
 Rewrite each hook to at most {max_words} words (ideally 4-6), keeping its exact meaning and names.
 Punchy, natural, grammatical {language}, creates curiosity, no clickbait lies, no emojis, no hashtags,

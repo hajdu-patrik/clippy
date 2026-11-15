@@ -22,12 +22,13 @@ from ..editing.planner import EditPlanner
 from ..editing.render.base import BaseRender, BaseStore
 from ..editing.repository import TimelineRepository
 from ..editing.service import EditService
-from ..highlights import Clip
+from ..highlights import Clip, text_language_name, write_texts
+from ..settings import Settings
 from ..llm import create_llm
 from ..i18n import t
-from ..pipeline import Options, Project
+from ..pipeline import Options, Project, post_text
 from ..storage import Storage
-from ..tools import ClippyError, SharedProgress, log, log_sink
+from ..tools import ClippyError, SharedProgress, atomic_write_text, log, log_sink
 from .agent import RENDER_KEYS
 from .clips import ClipLibrary, ClipPresenter, slim_info
 from .hub import Hub
@@ -548,6 +549,38 @@ class EditJob(JobHandler):
         return 1
 
 
+class TextsJob(JobHandler):
+    """New titles and descriptions for existing clips: the LLM writes them from what is said in each clip; the post
+    text file and the library copy follow, the video stays as it is."""
+
+    kind = "texts"
+    stages = ("edit",)
+
+    def run(self, ctx: JobContext) -> dict:
+        p, chat = ctx.job.payload, ctx.chat
+        if not chat.get("source"):
+            raise ClippyError(key="error.no_video")
+        rows = [c for c in ctx.current_clips() if c["number"] in set(p.get("clips") or [])]
+        if not rows:
+            raise ClippyError(key="error.no_clip", clip=", ".join(map(str, p.get("clips") or [])))
+        proj = ctx.project(chat["source"], ctx.options()).prepare()
+        clips = [Clip.from_dict(row["clip"]) for row in rows]
+        log(f"[edit] writing titles and descriptions for {len(clips)} clip(s)")
+        language = text_language_name(ctx.options().captions, proj.spoken_language)
+        changed = write_texts(GuardedLLM(create_llm(proj.opts.llm, proj.opts.model)), clips, proj.words,
+                              proj.title, language)
+        links = Settings(ctx.runner.storage).profile_links()
+        for row, clip in zip(rows, clips):
+            data = {**row["clip"], "title": clip.title, "description": clip.description}
+            stored = ctx.db.update_clip_texts(row["id"], data)
+            if stored.get("txt"):
+                atomic_write_text(Path(stored["txt"]), post_text(clip, chat["source"], stored["info"] or {}, links))
+            ctx.runner.library.publish(chat, stored)
+            ctx.runner.hub.publish(chat["id"], {"type": "clip",
+                                                "clip": ctx.runner.presenter.present(stored, current=True)})
+        return tx("done.texts", count=changed)
+
+
 class UndoJob(JobHandler):
     """The previous version of a clip comes back as a new version, without the LLM and without rendering."""
 
@@ -564,7 +597,7 @@ class UndoJob(JobHandler):
         return tx("done.undo", clip=number) if EditJob.report(ctx, row, outcome) else tx("done.nothing")
 
 
-HANDLERS: dict[str, JobHandler] = {h.kind: h for h in (GenerateJob(), MoreJob(), EditJob(), UndoJob())}
+HANDLERS: dict[str, JobHandler] = {h.kind: h for h in (GenerateJob(), MoreJob(), EditJob(), UndoJob(), TextsJob())}
 
 
 def default_edit_service(runner: "Runner") -> Callable[[Project], EditService]:

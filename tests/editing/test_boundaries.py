@@ -138,3 +138,15 @@ def test_more_clips_reuse_the_window_answers_until_they_run_out(tmp_path):
     assert sorted(p.name.split(".")[0] for p in tmp_path.iterdir()) == ["vid"] * asked
     find_highlights(transcript, llm, max_clips=2, min_len=5, max_len=15, exclude=first + second, cache=cache)
     assert llm.windows == 2 * asked and "already clips" in llm.systems[-1]
+
+
+def test_texts_for_existing_clips_take_only_valid_answers():
+    from clippy.highlights import write_texts
+
+    words = speech(GTA)
+    clips = [Clip(0.0, 8.0, 50, title="old"), Clip(10.0, 18.0, 50, title="old 2")]
+    llm = Reply({"clips": [{"id": 1, "title": "Senki nem számított erre", "description": "A vihar mindent  átír."},
+                           {"id": 9, "title": "x", "description": "y"}, {"title": "no id"}]})
+    assert write_texts(llm, clips, words, "GTA", "Hungarian") == 1
+    assert (clips[0].title, clips[1].title, clips[1].description) == (
+        "old", "Senki nem számított erre", "A vihar mindent átír.")

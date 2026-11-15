@@ -1,5 +1,5 @@
 import { api } from "./api.js";
-import { markDeleted, markOldVersions } from "./cards.js";
+import { cardHtml, markDeleted, markOldVersions } from "./cards.js";
 import { t } from "./i18n.js";
 import { onLive } from "./live.js";
 import { hideTyping, scrollBottom, showTyping, updateProgress, upsertMessage } from "./messages.js";
@@ -49,7 +49,11 @@ const HANDLERS = {
       showWorker(true, `${stage} ${Math.round(ev.data.percent)}% · ${fmtEta(ev.data.eta)}`, ev.data.percent);
     }
   },
-  clip: (ev) => { state.clips.set(ev.clip.id, { ...ev.clip, current: true }); markOldVersions(ev.clip); },
+  clip: (ev) => {
+    state.clips.set(ev.clip.id, { ...ev.clip, current: true });
+    markOldVersions(ev.clip);
+    document.querySelectorAll(`.card[data-cid="${ev.clip.id}"]`).forEach((card) => { card.outerHTML = cardHtml(ev.clip.id); });
+  },
   deleted: (ev) => markDeleted(ev.number),
   status: (ev) => setWorker(ev.status),
   chat: (ev) => upsertChat(ev.chat),
