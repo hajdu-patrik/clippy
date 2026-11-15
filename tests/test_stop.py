@@ -49,3 +49,22 @@ def test_deleting_a_chat_stops_its_jobs(tmp_path):
     kept = runner.submit(other["id"], "generate", {"url": "https://youtu.be/y"})
     runner.forget(first["id"])
     assert runner.stop_of(job).is_set() and not runner.stop_of(kept).is_set()
+
+
+def test_unfinished_download_folders_are_swept_after_hours(tmp_path):
+    import os
+    import time
+
+    from clippy.download import PARTIAL_MAX_AGE, remove_partial, sweep_partials
+
+    old, fresh, cache = tmp_path / ".part-a-1", tmp_path / ".part-b-2", tmp_path / "video.mkv"
+    for folder in (old, fresh):
+        folder.mkdir()
+        (folder / "x.part").write_bytes(b"x")
+    cache.write_bytes(b"v")
+    long_ago = time.time() - PARTIAL_MAX_AGE - 60
+    os.utime(old, (long_ago, long_ago))
+    assert sweep_partials(tmp_path) == 1
+    assert not old.exists() and fresh.exists() and cache.exists()
+    remove_partial(fresh)
+    assert not fresh.exists()

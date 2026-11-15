@@ -22,6 +22,7 @@ from pydantic import BaseModel, Field, StringConstraints
 from .. import i18n, streamers
 from ..editing.assets import LIMITS
 from ..tools import ClippyError, log
+from ..download import sweep_partials
 from ..llm import create_llm
 from ..publish import LABELS
 from ..publish.oauth import OAuthFlows
@@ -132,6 +133,7 @@ def create_app(storage: Storage | None = None, db_path: Path | None = None, runn
     chats.watcher = watcher
     if start_worker:
         watcher.start()
+        sweep_partials(storage.cache("downloads"))
         threading.Thread(target=lambda: (llm_factory or create_llm)().warm(), name="clippy-llm-warmup",
                          daemon=True).start()
 

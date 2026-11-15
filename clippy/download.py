@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import gc
 import glob
 import ipaddress
 import os
@@ -9,6 +10,7 @@ import re
 import shutil
 import socket
 import tempfile
+import threading
 import time
 import uuid
 from contextlib import contextmanager
@@ -251,6 +253,33 @@ def cached_video(downloads: Path, vid: str) -> Path | None:
     return _downloaded(downloads, vid)
 
 
+PARTIAL_MAX_AGE = 6 * 3600
+
+
+def remove_partial(folder: Path, tries: int = 6) -> None:
+    """A download's private folder goes. A stopped download can still hold its file open on Windows until its thread
+    has ended, so a folder that stays is tried again a little later."""
+    shutil.rmtree(folder, ignore_errors=True)
+    if folder.exists() and tries:
+        def again() -> None:
+            gc.collect()
+            remove_partial(folder, tries - 1)
+        timer = threading.Timer(5.0, again)
+        timer.daemon = True
+        timer.start()
+
+
+def sweep_partials(downloads: Path, now: float | None = None) -> int:
+    """Private folders of downloads that never finished (a stopped job, a crash), left for hours: removed."""
+    now = now or time.time()
+    gone = 0
+    for folder in downloads.glob(".part-*"):
+        if folder.is_dir() and now - folder.stat().st_mtime > PARTIAL_MAX_AGE:
+            remove_partial(folder)
+            gone += not folder.exists()
+    return gone
+
+
 def _download(remote: Remote, downloads: Path, name: str, opts: dict, parts: int) -> Path:
     """A refused media link (HTTP 403, YouTube does it now and then mid-download) is asked for again: every attempt
     resolves the page anew, so it gets fresh links."""
@@ -284,7 +313,7 @@ def _download_once(remote: Remote, downloads: Path, name: str, opts: dict, parts
             raise ClippyError(key="error.download_missing")
         return move_atomic(done, downloads / done.name)
     finally:
-        shutil.rmtree(partial, ignore_errors=True)
+        remove_partial(partial)
 
 
 def fetch_video(remote: Remote, downloads: Path, max_height: int = 2160, cookies_from_browser: str | None = None) -> Path:
@@ -406,7 +435,7 @@ def fetch_chat(remote: Remote, downloads: Path, cookies_from_browser: str | None
         done = next(partial.glob("chat*.json"), None)
         return move_atomic(done, target) if done is not None else None
     finally:
-        shutil.rmtree(partial, ignore_errors=True)
+        remove_partial(partial)
 
 
 def fetch(source: str, downloads: Path, max_height: int = 2160, cookies_from_browser: str | None = None) -> tuple[Path, str]:
