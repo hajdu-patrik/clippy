@@ -117,4 +117,4 @@ class FinishingRenderer:
         proc = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", errors="replace", cwd=work)
         if proc.returncode != 0:
             tail = "\n".join(proc.stderr.strip().splitlines()[-12:])
-            raise ClippyError(f"ffmpeg finishing failed:\n{tail}")
+            raise ClippyError(f"ffmpeg finishing failed (exit {proc.returncode}):\n{tail}")
