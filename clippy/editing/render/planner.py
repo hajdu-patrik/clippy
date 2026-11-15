@@ -6,7 +6,7 @@ import shutil
 from dataclasses import dataclass
 from pathlib import Path
 
-from ...render import fonts_dir_for, prepare_fonts
+from ...render import Encoder, fonts_dir_for, prepare_fonts
 from ...concurrency import RENDER
 from ...tools import log, move_atomic, report_span
 from ..assets import AssetIndex
@@ -25,7 +25,8 @@ class TimelineRender:
 class TimelineRenderer:
     def __init__(self, project, store: BaseStore, finisher: FinishingRenderer | None = None):
         self.project, self.store = project, store
-        self.finisher = finisher or FinishingRenderer()
+        encoder = getattr(getattr(project, "opts", None), "encoder", "auto")
+        self.finisher = finisher or FinishingRenderer(Encoder.choose(encoder))
 
     def base(self, timeline: Timeline) -> tuple[BaseRender, bool]:
         key = timeline.base_key()

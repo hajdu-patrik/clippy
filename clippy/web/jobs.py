@@ -15,6 +15,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable
 
+from .. import recovery
 from ..concurrency import RENDER, GuardedLLM
 from ..editing.assets import AssetService
 from ..editing.planner import EditPlanner
@@ -191,6 +192,15 @@ class Progress:
         self.detail_t = tx
         self.detail = english(tx) if tx else ""
 
+    def retry(self, reason_t: dict, attempt: int) -> None:
+        """The card stays: it says why the job starts again and which attempt this is."""
+        with self._lock:
+            self._line(f"[retry] {english(reason_t)} ({attempt}/{recovery.MAX_ATTEMPTS})")
+            self._detail(tx("detail.retry", n=attempt, max=recovery.MAX_ATTEMPTS))
+            if self.active:
+                self.state[self.active] = "active"
+            self._push(force=True)
+
     def finish(self, summary_t: dict, error: bool = False) -> None:
         with self._lock:
             self._finish(summary_t, error)
@@ -274,6 +284,12 @@ class Progress:
             self._saved = now
 
 
+def short_error(exc: Exception) -> str:
+    if isinstance(exc, ClippyError) and exc.key:
+        return english(tx(exc.key, **exc.params))
+    return f"{type(exc).__name__}: {str(exc)[:160]}"
+
+
 def expected_clips(payload: dict) -> int:
     clips = payload.get("clips")
     if isinstance(clips, list):
@@ -294,7 +310,12 @@ class JobContext:
         return chat
 
     def options(self, extra: dict | None = None) -> Options:
-        return Options.from_dict({**(self.chat.get("options") or {}), **(extra or {})})
+        """The chat's settings, the job's own, then what earlier failed attempts changed (see recovery)."""
+        return Options.from_dict({**(self.chat.get("options") or {}), **(extra or {}),
+                                  **(self.job.payload.get("fixes") or {})})
+
+    def note(self, key: str, **params) -> None:
+        self.say(t("en", key, **params), data={"t": tx(key, **params)})
 
     def project(self, source: str, opts: Options) -> Project:
         return self.runner.project_for(self.job.chat_id, source, opts)
@@ -376,18 +397,50 @@ class JobHandler(ABC):
             return ctx.render(proj, clip, first + k, 1, overrides)
 
         shared = SharedProgress(total)
+        failed: list[tuple[int, Exception]] = []
+        stored = 0
         with ThreadPoolExecutor(max_workers=min(RENDER.slots, total), thread_name_prefix="clippy-render") as pool:
             tasks = [pool.submit(shared.wrap(k, one), k, clip) for k, clip in enumerate(clips)]
             try:
                 for k, (clip, task) in enumerate(zip(clips, tasks)):
-                    info = task.result()
+                    try:
+                        info = task.result()
+                    except ClippyError as exc:
+                        if exc.key == "error.chat_deleted":
+                            raise
+                        failed.append((k, exc))
+                        continue
+                    except Exception as exc:  # noqa: BLE001 - one clip must not sink the others
+                        failed.append((k, exc))
+                        continue
                     row = ctx.store(first + k, 1, clip.to_dict(), overrides, info, info["mp4"], info["jpg"], info["txt"])
                     ctx.keep_base(row, info)
+                    stored += 1
             except BaseException:
                 for task in tasks:
                     task.cancel()
                 raise
-        return total
+        lost: list[tuple[int, Exception]] = []
+        for k, exc in failed:
+            fix = recovery.diagnose(exc, proj.opts.to_dict())
+            if fix is not None:
+                log(f"[retry] clip #{first + k} failed ({type(exc).__name__}); once more: {fix.reason}")
+                proj.opts = proj.opts.merged(fix.options)
+                try:
+                    info = one(k, clips[k])
+                    row = ctx.store(first + k, 1, clips[k].to_dict(), overrides, info, info["mp4"], info["jpg"],
+                                    info["txt"])
+                    ctx.keep_base(row, info)
+                    stored += 1
+                    continue
+                except Exception as again:  # noqa: BLE001 - reported below, the other clips are done
+                    exc = again
+            lost.append((k, exc))
+        if lost and not stored:
+            raise lost[0][1]
+        for k, exc in lost:
+            ctx.note("note.clip_failed", clip=first + k, error=short_error(exc))
+        return stored
 
 
 class GenerateJob(JobHandler):
@@ -438,8 +491,9 @@ class EditJob(JobHandler):
         if not chat.get("source"):
             raise ClippyError(key="error.no_video")
         rows = {c["number"]: c for c in ctx.current_clips()}
-        numbers = list(dict.fromkeys(n for n in p["clips"] if n in rows))
-        if not numbers:
+        done = p.setdefault("done", [])
+        numbers = list(dict.fromkeys(n for n in p["clips"] if n in rows and n not in done))
+        if not numbers and not done:
             raise ClippyError(key="error.no_clip", clip=", ".join(map(str, p["clips"])))
         proj = ctx.project(chat["source"], ctx.options()).prepare()
         attached = tuple(p.get("attachments") or ())
@@ -448,16 +502,27 @@ class EditJob(JobHandler):
             log(f"[edit] clip #{number} ({i + 1}/{len(numbers)})")
             return ctx.runner.edit_service(proj).edit(proj, chat, rows[number], p["request"], attached)
 
-        edited, shared = 0, SharedProgress(len(numbers))
-        with ThreadPoolExecutor(max_workers=min(RENDER.slots, len(numbers)), thread_name_prefix="clippy-edit") as pool:
+        edited, shared, failed = len(done), SharedProgress(max(1, len(numbers))), []
+        with ThreadPoolExecutor(max_workers=max(1, min(RENDER.slots, len(numbers))),
+                                thread_name_prefix="clippy-edit") as pool:
             tasks = [pool.submit(shared.wrap(i, one), i, number) for i, number in enumerate(numbers)]
             try:
                 for number, task in zip(numbers, tasks):
-                    edited += self.report(ctx, rows[number], task.result())
+                    try:
+                        outcome = task.result()
+                    except Exception as exc:  # noqa: BLE001 - the other clips' edits still count
+                        failed.append((number, exc))
+                        continue
+                    edited += self.report(ctx, rows[number], outcome)
+                    done.append(number)
             except BaseException:
                 for task in tasks:
                     task.cancel()
                 raise
+        if failed and len(failed) == len(numbers):
+            raise failed[0][1]
+        for number, exc in failed:
+            ctx.note("note.edit_failed", clip=number, error=short_error(exc))
         if not edited:
             return tx("done.nothing")
         return tx("done.edit", clip=numbers[0]) if len(numbers) == 1 else tx("done.edit_many", count=edited)
@@ -653,8 +718,7 @@ class Runner:
         progress.begin()
         self._broadcast_status()
         try:
-            with log_sink(progress.line, progress.report):
-                summary = HANDLERS[job.kind].run(JobContext(self, job))
+            summary = self._attempts(job, progress)
             progress.finish(summary or job.label_t)
         except Exception as exc:  # noqa: BLE001 - every failure must reach the chat and the worker must survive
             if not isinstance(exc, ClippyError):
@@ -673,6 +737,29 @@ class Runner:
                 self.storage.purge_chat(job.chat_id)
                 self.library.remove_chat(job.chat_id)
             self._broadcast_status()
+
+    def _attempts(self, job: Job, progress: "Progress") -> dict:
+        """Runs the job; a failure that another attempt may fix starts it again on the same card, with the settings
+        the diagnosis changes (they are kept in the payload, so a restart keeps them too)."""
+        attempt = 1
+        while True:
+            try:
+                with log_sink(progress.line, progress.report):
+                    return HANDLERS[job.kind].run(JobContext(self, job))
+            except Exception as exc:
+                fixes = job.payload.get("fixes") or {}
+                fix = recovery.diagnose(exc, fixes) if attempt < recovery.MAX_ATTEMPTS else None
+                if fix is None or self.db.get_chat(job.chat_id) is None:
+                    raise
+                if not isinstance(exc, ClippyError):
+                    traceback.print_exc()
+                attempt += 1
+                job.payload["fixes"] = {**fixes, **fix.options}
+                progress.retry(tx(f"retry.{fix.reason}"), attempt)
+                time.sleep(self.retry_pause(attempt))
+
+    def retry_pause(self, attempt: int) -> float:
+        return recovery.pause(attempt)
 
     def _loop(self) -> None:
         while True:

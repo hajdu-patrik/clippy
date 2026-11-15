@@ -12,6 +12,7 @@ from clippy import i18n
 from clippy.web import agent
 from clippy.web.clips import ClipLibrary, ClipPresenter
 from clippy.web.db import DB
+from clippy.tools import ClippyError
 from clippy.web.hub import Hub
 from clippy.web.jobs import Runner
 from clippy.web.media import MediaStore
@@ -428,3 +429,42 @@ def test_jobs_cut_off_by_a_restart_start_again(env):
     assert recovered["id"] == older["id"] and recovered["data"]["summary_t"]["key"] == "job.interrupted"
     assert [m["data"]["job"]["kind"] for m in new] == ["more", "more"] and not new[0]["data"]["done"]
     assert after.resume() == 2, "still unfinished after another restart: they start again"
+
+
+def test_a_failed_job_is_fixed_and_tried_again_and_a_bad_clip_is_skipped(env, monkeypatch):
+    client, runner, _ = env
+    monkeypatch.setattr(runner, "retry_pause", lambda attempt: 0.0)
+    calls = {"prepare": 0, "render": []}
+    original_prepare, original_render = FakeProject.prepare, FakeProject.render
+
+    def prepare(self):
+        calls["prepare"] += 1
+        if calls["prepare"] == 1:
+            raise RuntimeError("CUDA error: out of memory")
+        assert self.opts.isolate == "off", "the second attempt runs without voice isolation"
+        return original_prepare(self)
+
+    def render(self, clip, dest, name, overrides=None, keep_base=False):
+        calls["render"].append((name, self.opts.encoder))
+        if name.startswith("clip_02") and self.opts.encoder != "x264":
+            raise RuntimeError("[h264_nvenc] OpenEncodeSessionEx failed: no capable devices")
+        if name.startswith("clip_03"):
+            raise ClippyError(key="error.plain", error="broken frame")
+        return original_render(self, clip, dest, name, overrides, keep_base)
+
+    monkeypatch.setattr(FakeProject, "prepare", prepare)
+    monkeypatch.setattr(FakeProject, "render", render)
+    cid = client.post("/api/chats").json()["id"]
+    say(client, cid, "https://www.youtube.com/watch?v=abc", {"reply": "Ok", "actions": [
+        {"type": "generate", "url": "https://www.youtube.com/watch?v=abc", "n": 3}]})
+    run_pending(runner)
+    assert calls["prepare"] == 2
+    assert [c["number"] for c in runner.db.current_clips(cid)] == [1, 2]
+    assert ("clip_02_v1", "x264") in calls["render"]
+    messages = runner.db.list_messages(cid)
+    card = next(m for m in messages if m["kind"] == "progress")
+    assert card["data"]["done"] and not card["data"].get("error")
+    assert any(line.startswith("[retry] The graphics card ran out of memory") for line in card["data"]["lines"])
+    assert card["data"]["job"]["payload"]["fixes"] == {"isolate": "off"}
+    notes = [m["data"]["t"] for m in messages if (m.get("data") or {}).get("t")]
+    assert notes == [{"key": "note.clip_failed", "params": {"clip": 3, "error": "broken frame"}}]

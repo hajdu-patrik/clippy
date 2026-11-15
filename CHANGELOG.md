@@ -46,6 +46,11 @@ change, what changed rather than how; dates are ISO 8601.
   profile / channel / playlist link, no video in the post, no sound – each with what helps.
 
 ### Changed
+- Self-repair: a failed job is diagnosed and tried again on the same card, up to three times, with the setting
+  that caused it changed (GPU out of memory: no voice isolation, then the CPU; hardware encoder: x264; no moment
+  fitting the length: looser lengths; network or model hiccups: a pause). Hopeless cases (private video, no
+  sound) stop at once with the reason. A clip that fails is tried once more and otherwise skipped, the others
+  are delivered; an edit of several clips keeps the ones that worked.
 - Jobs survive a restart: a job cut off by a restart or a crash starts again by itself, and `clippy restart`
   waits for running jobs (`--force` restarts at once).
 - A media link the site refuses mid-download (HTTP 403, YouTube does it now and then) is resolved again and the
