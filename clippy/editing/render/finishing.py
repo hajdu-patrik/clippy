@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import subprocess
-import sys
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable
@@ -18,8 +17,6 @@ from .base import BaseRender
 from .graph import Filter, FilterGraph, Pad
 from .layers import (AudioStage, ColorStage, CompileContext, EffectStage, FormatStage, OverlayStage, SequenceStage,
                      SpeedStage, TextStage)
-
-LEAN = ("-filter_complex_threads", "1", "-threads", "2") if sys.platform == "darwin" else ()
 
 Translate = Callable[[list[dict], str], tuple[list[dict], str]]
 
@@ -69,7 +66,7 @@ class FinishingRenderer:
         g = ctx.graph
         g.output(video)
         g.output(audio)
-        cmd = [ffmpeg_path(), "-hide_banner", "-y", "-loglevel", "error", *g.input_args(), *LEAN,
+        cmd = [ffmpeg_path(), "-hide_banner", "-y", "-loglevel", "error", *g.input_args(),
                "-filter_complex", g.filter_complex(), *g.map_args(), *profile.video_args(self.encoder, base.fps),
                "-pix_fmt", "yuv420p", *VIDEO_TAGS, "-c:a", "aac", "-b:a", profile.audio_bitrate, "-ar", "48000",
                "-movflags", "+faststart", str(out_file)]

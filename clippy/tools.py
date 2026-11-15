@@ -220,8 +220,23 @@ def fmt_ts(seconds: float) -> str:
 _SINKS: dict[int, object] = {}
 
 
+_STOPS: dict[int, threading.Event] = {}
+
+
+def check_stop() -> None:
+    """A job whose chat was deleted stops at its next log line or progress report (its worker threads too)."""
+    stop = _STOPS.get(threading.get_ident())
+    if stop is not None and stop.is_set():
+        raise ClippyError(key="error.chat_deleted")
+
+
+def current_stop() -> threading.Event | None:
+    return _STOPS.get(threading.get_ident())
+
+
 def log(msg: str) -> None:
     """Print progress; a thread may register a sink (web app jobs) that also receives every line."""
+    check_stop()
     print(msg, file=sys.stderr, flush=True)
     sink = _SINKS.get(threading.get_ident())
     if sink is not None:
@@ -234,20 +249,23 @@ def log(msg: str) -> None:
 class log_sink:
     """with log_sink(fn, on_report): ... , route this thread's log() lines (and report() fractions) to callbacks."""
 
-    def __init__(self, fn, on_report=None):
-        self.fn, self.on_report = fn, on_report
+    def __init__(self, fn, on_report=None, stop: threading.Event | None = None):
+        self.fn, self.on_report, self.stop = fn, on_report, stop
 
     def __enter__(self):
         self.tid = threading.get_ident()
         _SINKS[self.tid] = self.fn
         if self.on_report is not None:
             _REPORTERS[self.tid] = self.on_report
+        if self.stop is not None:
+            _STOPS[self.tid] = self.stop
         return self
 
     def __exit__(self, *exc):
         _SINKS.pop(self.tid, None)
         _REPORTERS.pop(self.tid, None)
         _SPANS.pop(self.tid, None)
+        _STOPS.pop(self.tid, None)
         return False
 
 
@@ -257,6 +275,7 @@ _SPANS: dict[int, list[tuple[float, float]]] = {}
 
 def report(fraction: float) -> None:
     """Fine-grained progress of the current step (0..1), mapped through the active report_span()s."""
+    check_stop()
     tid = threading.get_ident()
     fn = _REPORTERS.get(tid)
     if fn is None:
@@ -275,6 +294,7 @@ class ThreadContext:
     sink: Callable | None = None
     reporter: Callable | None = None
     spans: list[tuple[float, float]] = field(default_factory=list)
+    stop: threading.Event | None = None
 
     def wrap(self, fn: Callable) -> Callable:
         def run(*args, **kwargs):
@@ -284,18 +304,21 @@ class ThreadContext:
             if self.reporter is not None:
                 _REPORTERS[tid] = self.reporter
             _SPANS[tid] = list(self.spans)
+            if self.stop is not None:
+                _STOPS[tid] = self.stop
             try:
                 return fn(*args, **kwargs)
             finally:
                 _SINKS.pop(tid, None)
                 _REPORTERS.pop(tid, None)
                 _SPANS.pop(tid, None)
+                _STOPS.pop(tid, None)
         return run
 
 
 def thread_context() -> ThreadContext:
     tid = threading.get_ident()
-    return ThreadContext(_SINKS.get(tid), _REPORTERS.get(tid), list(_SPANS.get(tid) or []))
+    return ThreadContext(_SINKS.get(tid), _REPORTERS.get(tid), list(_SPANS.get(tid) or []), _STOPS.get(tid))
 
 
 class SharedProgress:

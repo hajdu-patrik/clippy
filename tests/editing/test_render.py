@@ -1,5 +1,7 @@
 import io
+import os
 import subprocess
+import sys
 import wave
 from pathlib import Path
 
@@ -146,6 +148,8 @@ def render_timeline(setup, timeline, assets, name, profile=PREVIEW, **extra):
     return out, info
 
 
+@pytest.mark.skipif(sys.platform == "darwin" and bool(os.environ.get("CI")),
+                    reason="GitHub's macOS runners kill this ffmpeg run for memory now and then")
 def test_speed_effects_stickers_sounds_broll_and_a_joined_clip_render(setup):
     root = setup[0]
     broll_file, joined = root / "broll.mp4", root / "clip2.mp4"

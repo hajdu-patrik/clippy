@@ -23,7 +23,7 @@ from .settings import URL, Settings, site_of
 from .llm import create_llm
 from .render import RenderSettings, prepare_fonts, render_clip
 from .storage import Storage
-from .tools import (ClippyError, ThreadContext, atomic_write_text, fmt_ts, log, move_atomic, probe_media,
+from .tools import (ClippyError, ThreadContext, atomic_write_text, current_stop, fmt_ts, log, move_atomic, probe_media,
                     read_json, report_span, write_json)
 from .translate import CaptionTranslator
 from .transcribe import all_words, transcribe
@@ -244,7 +244,7 @@ class Project:
         if self._downloader is None:
             self._downloader = ThreadPoolExecutor(max_workers=1, thread_name_prefix="clippy-download")
         self._downloaded = 0.0
-        track = ThreadContext(reporter=lambda f: setattr(self, "_downloaded", f))
+        track = ThreadContext(reporter=lambda f: setattr(self, "_downloaded", f), stop=current_stop())
         self._video, self._video_task = None, self._downloader.submit(
             track.wrap(fetch_video), remote, self.storage.cache("downloads"),
             cookies_from_browser=self.opts.cookies_from_browser)

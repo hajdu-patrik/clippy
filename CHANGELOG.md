@@ -6,6 +6,8 @@ change, what changed rather than how; dates are ISO 8601.
 ## [Unreleased]
 
 ### Added
+- Deleting a chat stops its running job at once (download, transcript or render), so nothing keeps working
+  for a chat that is gone.
 - Streamers by name: "klippeld N3on legújabb streamjét" or "clip the latest stream of Kai Cenat" finds the newest
   finished stream of one of fifty well-known streamers (or of a `twitch.tv/name`, `kick.com/name` or `@name`) across
   YouTube, Twitch and Kick, skips one that is live now, and clips it with the gameplay and stream kind.

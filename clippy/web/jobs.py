@@ -760,6 +760,8 @@ class Runner:
         self.progress: dict[int, Progress] = {}
         self._lock = threading.Lock()
         self._wake = threading.Condition(self._lock)
+        self._stops: dict[int, threading.Event] = {}
+        self._stops_lock = threading.Lock()
         if start:
             self.resume()
             for i in range(workers):
@@ -857,8 +859,16 @@ class Runner:
             return proj
 
     def forget(self, chat_id: int) -> None:
+        """A deleted chat: its project goes and its running job stops at its next step."""
         with self._lock:
             self.projects.pop(chat_id, None)
+            for job in self.running + self.pending:
+                if job.chat_id == chat_id:
+                    self.stop_of(job).set()
+
+    def stop_of(self, job: Job) -> threading.Event:
+        with self._stops_lock:
+            return self._stops.setdefault(job.id, threading.Event())
 
     def _take(self) -> Job:
         with self._wake:
@@ -921,7 +931,7 @@ class Runner:
         attempt = 1
         while True:
             try:
-                with log_sink(progress.line, progress.report):
+                with log_sink(progress.line, progress.report, self.stop_of(job)):
                     return HANDLERS[job.kind].run(JobContext(self, job))
             except Exception as exc:
                 fixes = job.payload.get("fixes") or {}
