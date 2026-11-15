@@ -524,3 +524,6 @@ kbd { font: 11px var(--mono); color: var(--faint); border: 1px solid var(--borde
 .kit-files { margin: 4px 0 10px; }
 .file-btn { display: inline-flex; align-items: center; }
 .kit-files .account > .watch-btns { display: flex; }
+.voice-btn.recording { color: var(--danger); background: color-mix(in srgb, var(--danger) 14%, transparent); }
+.voice-btn.recording svg { animation: pulse-up 1s var(--ease) infinite; }
+.voice-btn.busy { opacity: .6; cursor: wait; }

@@ -28,6 +28,8 @@
   <link rel="modulepreload" href="/static/js/watches.js">
   <link rel="modulepreload" href="/static/js/results.js">
   <link rel="modulepreload" href="/static/js/kit.js">
+  <link rel="modulepreload" href="/static/js/voice.js">
+  <link rel="modulepreload" href="/static/js/notify.js">
   <link rel="modulepreload" href="/static/js/messages.js">
   <link rel="modulepreload" href="/static/js/cards.js">
   <link rel="modulepreload" href="/static/js/progress.js">
@@ -65,6 +67,7 @@
     <symbol id="i-palette" viewBox="0 0 24 24"><path d="M12 3.5a8.5 8.5 0 1 0 0 17c1.2 0 1.8-.9 1.4-2l-.4-1a1.5 1.5 0 0 1 1.4-2h2.1A4 4 0 0 0 20.5 11.5c0-4.4-3.8-8-8.5-8z" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="7.8" cy="11" r="1.2" fill="currentColor"/><circle cx="10.5" cy="7.5" r="1.2" fill="currentColor"/><circle cx="14.8" cy="7.8" r="1.2" fill="currentColor"/></symbol>
     <symbol id="i-undo" viewBox="0 0 24 24"><path d="M9 7L4.5 11.5 9 16M5 11.5h9a5 5 0 0 1 0 10h-2" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></symbol>
     <symbol id="i-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 2.8v2.4M12 18.8v2.4M2.8 12h2.4M18.8 12h2.4M5.5 5.5l1.7 1.7M16.8 16.8l1.7 1.7M5.5 18.5l1.7-1.7M16.8 7.2l1.7-1.7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+    <symbol id="i-mic" viewBox="0 0 24 24"><rect x="9" y="3.5" width="6" height="11" rx="3" fill="none" stroke="currentColor" stroke-width="1.9"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5v3" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></symbol>
     <symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 8v5M12 16.5v.5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></symbol>
   </svg>
 
@@ -148,6 +151,9 @@
           <input type="file" id="fileInput" multiple accept="image/*,audio/*,video/*,.cube" hidden>
           <label class="sr-only" for="input" data-i18n="composer.label">Message</label>
           <textarea id="input" rows="1" placeholder="Paste a video link (YouTube, TikTok, Twitch…), or describe what you want…" autocomplete="off" enterkeyhint="send"></textarea>
+          <button type="button" class="icon-btn voice-btn" id="voiceBtn" aria-pressed="false" aria-label="Speak" title="Speak">
+            <svg aria-hidden="true"><use href="#i-mic"/></svg>
+          </button>
           <button type="submit" class="send" id="send" aria-label="Send" data-i18n-attr="aria-label:composer.send">
             <svg aria-hidden="true"><use href="#i-send"/></svg>
           </button>
@@ -185,6 +191,11 @@
             <button type="button" class="primary" id="igSave" data-i18n="accounts.tokenSave">Connect</button>
           </div>
         </div>
+      </section>
+      <section class="notify" aria-labelledby="notifyTitle">
+        <h3 id="notifyTitle" data-i18n="notify.title">Notifications</h3>
+        <label class="check inline"><input type="checkbox" id="notifyToggle"><span data-i18n="notify.toggle">Tell me when a job is done (also when this window is in the background)</span></label>
+        <p class="hint" id="notifyHint" hidden data-i18n="notify.unavailable">This browser cannot show notifications here; on the computer that runs Clippy it works.</p>
       </section>
       <section class="kit" aria-labelledby="kitTitle">
         <h3 id="kitTitle" data-i18n="kit.title">Style kit</h3>

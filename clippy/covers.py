@@ -9,7 +9,8 @@ from PIL import Image, ImageDraw, ImageFont
 
 from .tools import atomic_path, log
 
-FONTS = ("ariblk.ttf", "impact.ttf", "arialbd.ttf", "arial.ttf")
+FONTS = ("ariblk.ttf", "impact.ttf", "arialbd.ttf", "Arial Black.ttf", "Impact.ttf", "Arial Bold.ttf",
+         "DejaVuSans-Bold.ttf", "LiberationSans-Bold.ttf", "arial.ttf", "DejaVuSans.ttf")
 WIDTH_SHARE = 0.86
 TOP_SHARE = 0.11
 MAX_LINES = 3

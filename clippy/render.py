@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import shutil
+import sys
 import subprocess
 from collections import deque
 from concurrent.futures import ThreadPoolExecutor
@@ -80,10 +81,30 @@ class Encoder:
         return ["-c:v", "libx264", "-preset", "veryfast", "-crf", "10", "-profile:v", "high", "-g", gop]
 
 
+FONT_DIRS = {"darwin": ("/System/Library/Fonts/Supplemental", "/Library/Fonts", "~/Library/Fonts"),
+             "linux": ("/usr/share/fonts", "/usr/local/share/fonts", "~/.local/share/fonts", "~/.fonts")}
+FONT_FILES = {"darwin": ("Arial Black.ttf", "Impact.ttf", "Arial Bold.ttf", "Arial.ttf"),
+              "linux": ("DejaVuSans-Bold.ttf", "LiberationSans-Bold.ttf", "DejaVuSans.ttf", "LiberationSans-Regular.ttf")}
+
+
+def system_fonts() -> list[Path]:
+    """The caption fonts of this system: Arial Black and friends on Windows and macOS, DejaVu / Liberation on Linux
+    (their own names stay; libass finds the closest family through fontconfig there)."""
+    if sys.platform == "win32":
+        return [Path(os.environ.get("WINDIR", "C:/Windows")) / "Fonts" / n for n in SYSTEM_FONTS]
+    kind = "darwin" if sys.platform == "darwin" else "linux"
+    found = []
+    for folder in FONT_DIRS[kind]:
+        base = Path(folder).expanduser()
+        for name in FONT_FILES[kind]:
+            found += list(base.rglob(name)) if base.is_dir() else []
+    return found
+
+
 def prepare_fonts(folder: Path) -> Path:
     """libass in static Windows builds has no font config, so it gets one folder with every usable font."""
     folder.mkdir(parents=True, exist_ok=True)
-    sources = [Path(os.environ.get("WINDIR", "C:/Windows")) / "Fonts" / n for n in SYSTEM_FONTS]
+    sources = [path for path in system_fonts() if path.is_file()]
     user = ROOT / "fonts"
     if user.is_dir():
         sources += [p for p in user.iterdir() if p.suffix.lower() in (".ttf", ".otf")]

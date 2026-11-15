@@ -6,6 +6,8 @@ import { applyStatic, getLang, loadCatalog, setLang } from "./i18n.js";
 import { startLive } from "./live.js";
 import { bindSettings, loadSettings, openSettingsFromLink } from "./settings.js";
 import { bindPublish } from "./publish.js";
+import { bindNotify } from "./notify.js";
+import { bindVoice } from "./voice.js";
 import { bindCopyDialog } from "./cards.js";
 import { bindScroll } from "./messages.js";
 import { loadChats, setWorker } from "./sidebar.js";
@@ -90,6 +92,8 @@ function bindChrome() {
   bindScroll();
   bindSettings();
   bindPublish();
+  bindNotify();
+  bindVoice();
   bindCopyDialog();
 }
 

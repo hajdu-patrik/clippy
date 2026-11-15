@@ -61,6 +61,7 @@ function open() {
   loadWatches();
   loadResults();
   loadKit();
+  document.dispatchEvent(new CustomEvent("clippy:settingsOpen"));
 }
 
 async function save(event) {

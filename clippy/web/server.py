@@ -59,6 +59,7 @@ def index_html(build: str) -> str:
 AssetId = Annotated[str, StringConstraints(pattern=r"^[a-z0-9]{6,16}$")]
 MAX_UPLOAD = max(LIMITS.values())
 SPOOL_BYTES = 16 * 1024 * 1024
+DICTATION_BYTES = 8 * 1024 * 1024
 
 
 class NewMessage(BaseModel):
@@ -350,6 +351,25 @@ def create_app(storage: Storage | None = None, db_path: Path | None = None, runn
         return {"ok": True}
 
     kit = StyleKit(storage)
+
+    @app.post("/api/dictate")
+    async def dictate(request: Request, lang: str = Query(default="", max_length=5)):
+        """Voice input: a short recording in, its words out (the small Whisper model on the CPU)."""
+        from ..dictation import dictate as words_of
+
+        with tempfile.TemporaryDirectory(prefix="clippy-voice-") as folder:
+            path = Path(folder) / "voice.webm"
+            size = 0
+            with path.open("wb") as out:
+                async for chunk in request.stream():
+                    size += len(chunk)
+                    if size > DICTATION_BYTES:
+                        raise HTTPException(413, "Recording too long")
+                    out.write(chunk)
+            try:
+                return {"text": await run_in_threadpool(words_of, path, lang or None)}
+            except ClippyError as exc:
+                raise HTTPException(400, error_detail(exc)) from None
 
     @app.get("/api/kit")
     def get_kit():

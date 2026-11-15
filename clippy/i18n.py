@@ -229,7 +229,6 @@ CATALOG: dict[str, dict[str, str]] = {
         "cli.usage": "Usage",
         "cli.clip_options": "every clipping option (count, length, CTA, layout, captions…)",
         "cli.footer": "Tab completion in PowerShell and cmd (Clink) · Web UI: {url} · Language: clippy lang hu|en",
-        "cli.install_unix": "clippy install sets up Windows terminals; on other systems put bin/ on your PATH.",
         "cli.install_path_added": "PATH: added {path}",
         "cli.install_path_has": "PATH: already contains {path}",
         "cli.install_uptodate": "{label}: up to date ({path})",
@@ -266,6 +265,9 @@ CATALOG: dict[str, dict[str, str]] = {
         "kit.applied": "Style kit: logo and outro added.",
         "note.kit_failed": "The style kit could not go on clip #{clip}: {error}",
         "error.kit_kind": "This file does not fit the {slot} slot: the logo is an image, the outro a video or an image.",
+        "error.dictation_long": "The recording is too long: at most {max} seconds.",
+        "error.dictation_failed": "The recording could not be turned into text: {error}",
+        "cli.install_unix_path": "Add {path} to your PATH (e.g. in ~/.profile) so the clippy command is found.",
     },
     "hu": {
         "job.generate": "Videó feldolgozása, {n} klip",
@@ -479,7 +481,6 @@ CATALOG: dict[str, dict[str, str]] = {
         "cli.usage": "Használat",
         "cli.clip_options": "minden vágási beállítás (darabszám, hossz, CTA, elrendezés, feliratok…)",
         "cli.footer": "Tab-kiegészítés PowerShellben és cmd-ben (Clink) · Webes felület: {url} · Nyelv: clippy lang hu|en",
-        "cli.install_unix": "A clippy install Windows-terminálokat állít be; más rendszeren tedd a bin/ mappát a PATH-ra.",
         "cli.install_path_added": "PATH: hozzáadva {path}",
         "cli.install_path_has": "PATH: már tartalmazza: {path}",
         "cli.install_uptodate": "{label}: naprakész ({path})",
@@ -562,6 +563,9 @@ CATALOG: dict[str, dict[str, str]] = {
         "kit.applied": "Stíluscsomag: logó és outró hozzáadva.",
         "note.kit_failed": "A stíluscsomag nem került rá a(z) {clip}. klipre: {error}",
         "error.kit_kind": "Ez a fájl nem jó ide ({slot}): a logó kép, az outró videó vagy kép.",
+        "error.dictation_long": "Túl hosszú a felvétel: legfeljebb {max} másodperc lehet.",
+        "error.dictation_failed": "A felvételt nem sikerült szöveggé alakítani: {error}",
+        "cli.install_unix_path": "Tedd a(z) {path} mappát a PATH-ra (pl. a ~/.profile-ban), hogy a clippy parancs meglegyen.",
     },
 }
 

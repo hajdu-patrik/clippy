@@ -6,6 +6,9 @@ change, what changed rather than how; dates are ISO 8601.
 ## [Unreleased]
 
 ### Added
+- Comfort: voice input in the chat (local Whisper on the CPU), browser notifications when a job is done, one-step
+  installers (`install.ps1`, `install.sh`) and macOS / Linux support (bin/clippy, browser and Ollama start, system
+  fonts, bash completion, CI on Windows, Ubuntu and macOS).
 - Quality: a native proofreading pass and Hungarian quotation marks for Hungarian texts; speakers told apart by
   voice for picking exchanges; covers with the title written on them plus a B cover and a B title for A/B tests
   (choose A or B when posting); a saved style kit (caption font, colour, capitals, logo, outro) for every new clip;

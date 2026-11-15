@@ -27,7 +27,12 @@ No subscription and no upload: fast on an NVIDIA RTX GPU, and it also runs on th
 
 ## Quick start
 
-Requirements: Windows 10/11, [Python 3.12](https://www.python.org/downloads/), [Node.js](https://nodejs.org/) or
+**One-step install.** In the cloned folder run `powershell -ExecutionPolicy Bypass -File install.ps1` on Windows
+(add `-Studio` for the voice isolation extras) or `sh install.sh` on macOS and Linux: it creates the Python
+environment, installs the GPU packages when an NVIDIA card is there, sets up the local LLM in Ollama and the `clippy`
+command with tab completion. The manual steps are below.
+
+Requirements: Windows 10/11, macOS or Linux, [Python 3.12](https://www.python.org/downloads/), [Node.js](https://nodejs.org/) or
 [Deno](https://deno.com/) (for YouTube downloads) and [Ollama](https://ollama.com/) for the local LLM. An NVIDIA
 GPU with 12-16 GB VRAM is recommended; ffmpeg ships with the pip packages.
 
@@ -162,6 +167,13 @@ tokens stay in `data/web/accounts.json` on this computer. TikTok sends the clip 
 until it reviews your app); YouTube may keep uploads of a new API project private until its audit. Setup, step by
 step: **[docs/publishing.md](docs/publishing.md)**.
 
+## Voice input and notifications
+
+The microphone button next to Send turns your speech into the message (a small Whisper model on the CPU, so it never
+waits for a running job). *Settings, Notifications* lets the browser tell you when a job is done, also when the
+window is in the background. Both need a secure page: they work on the computer that runs Clippy
+(http://127.0.0.1); a phone over the local network cannot use the microphone or notifications without HTTPS.
+
 ## Style kit, covers and A/B titles
 
 *Settings, Style kit* saves your look once: caption font, highlight colour and capitals, a logo (with its corner)
@@ -258,8 +270,9 @@ Conventions: [CLAUDE.md](CLAUDE.md). Release history: [CHANGELOG.md](CHANGELOG.m
 
 ## Limitations
 
-* Windows-first: the `clippy` command, tab completion and NVENC encoding target Windows 10/11; the pipeline itself is
-  plain Python and ffmpeg.
+* Windows-first: it is used and tuned on Windows 10/11 with an NVIDIA GPU. macOS and Linux run the same code (tested
+  in CI on both, `install.sh`, bash completion); there the encoder falls back to x264 unless NVENC is available, and
+  captions use the system's fonts (DejaVu or Liberation on Linux).
 * The camera follows the active speaker by mouth motion; the voices are told apart only for picking (who says
   what), by a light voice print that labels speakers only when their voices clearly differ.
 * Hungarian and English only: other languages are transcribed as one of the two.

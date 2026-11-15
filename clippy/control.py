@@ -8,6 +8,7 @@ import shutil
 import subprocess
 import sys
 import time
+import webbrowser
 from pathlib import Path
 
 import requests
@@ -18,7 +19,7 @@ from .shell import COMMANDS, command_doc, flags_of
 from .storage import DATA
 from .tools import ROOT
 
-PY = ROOT / ".venv" / "Scripts" / "python.exe"
+PY = ROOT / ".venv" / ("Scripts/python.exe" if sys.platform == "win32" else "bin/python")
 STATE = DATA / "web"
 PID_FILE = STATE / "server.pid"
 LOG_FILE = STATE / "server.log"
@@ -129,6 +130,9 @@ def _opera_gx() -> str | None:
 
 
 def _detached(argv: list[str], **kw) -> subprocess.Popen:
+    if sys.platform != "win32":
+        return subprocess.Popen(argv, close_fds=True, start_new_session=True, stdout=subprocess.DEVNULL,
+                                stderr=subprocess.DEVNULL, **kw)
     return subprocess.Popen(argv, close_fds=True, creationflags=getattr(subprocess, "DETACHED_PROCESS", 0), **kw)
 
 
@@ -136,6 +140,12 @@ def open_browser() -> None:
     """New tab in Opera GX (preferred), else a new Edge/Chrome window, else the default browser.
     CLIPPY_BROWSER=<path to exe> overrides."""
     custom = os.environ.get("CLIPPY_BROWSER")
+    if sys.platform != "win32":
+        if custom and Path(custom).exists():
+            _detached([custom, URL])
+        else:
+            webbrowser.open(URL)
+        return
     preferred = custom if custom and Path(custom).exists() else _opera_gx()
     if preferred:
         _detached([preferred, URL])
@@ -153,12 +163,17 @@ def open_browser() -> None:
 def ensure_ollama() -> None:
     if ollama_running():
         return
-    app = Path(os.environ.get("LOCALAPPDATA", "")) / "Programs" / "Ollama" / "ollama app.exe"
-    if not app.exists():
+    if sys.platform == "win32":
+        app = Path(os.environ.get("LOCALAPPDATA", "")) / "Programs" / "Ollama" / "ollama app.exe"
+        argv = [str(app)] if app.exists() else None
+    else:
+        found = shutil.which("ollama")
+        argv = [found, "serve"] if found else None
+    if argv is None:
         say(f"{Y}{tr('cli.ollama_missing')}{N}")
         return
     say(tr("cli.ollama_starting"))
-    _detached([str(app)], env={**os.environ, **OLLAMA_SERVER_ENV})
+    _detached(argv, env={**os.environ, **OLLAMA_SERVER_ENV})
     for _ in range(30):
         if ollama_running():
             return
