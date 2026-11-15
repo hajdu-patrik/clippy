@@ -132,7 +132,6 @@ DIRECTORY = (
     _streamer("Gaules", twitch="gaules", youtube="Gaules"),
     _streamer("Rybson", "rybsonlol", kick="rybsonlol"),
     _streamer("StRoGo", twitch="strogo"),
-    _streamer("eliasn97", twitch="eliasn97", youtube="eliasn97"),
     _streamer("aminematue", twitch="aminematue"),
     _streamer("absi", kick="absi"),
     _streamer("Maherco", kick="maherco"),
@@ -243,6 +242,7 @@ def _first_finished(streamer: Streamer, channel: Channel, lister: Callable, mome
         found = []
     if not found and channel.platform == "kick":
         found = kick_api(channel.handle, LIMIT)
+    found = sorted(found, key=lambda u: -(u.when or 0))
     for upload in found[:PROBES]:
         when = upload.when
         if when is None or channel.platform == "twitch":

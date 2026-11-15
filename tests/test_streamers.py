@@ -404,3 +404,16 @@ def test_the_streamer_names_are_listed(web):
     listed = client.get("/api/streamers").json()["streamers"]
     assert listed[0]["name"] == "Kai Cenat" and len(listed) == len(streamers.DIRECTORY)
     assert {"name": "xQc", "urls": {"twitch": "https://www.twitch.tv/xqc", "kick": "https://kick.com/xqc"}} in listed
+
+
+def test_the_newest_dated_stream_wins_whatever_the_listing_order():
+    from clippy.download import Upload
+    from clippy.streamers import Streamer, latest_stream
+
+    def lister(page, limit):
+        return [Upload("a", "https://kick.com/x/videos/a", "older", 1_000.0),
+                Upload("b", "https://kick.com/x/videos/b", "newer", 2_000.0)]
+
+    streamer = Streamer("Example", ("example",), kick="examplecreator")
+    found = latest_stream(streamer, lister=lister, moment=lambda url: (None, True), kick_api=lambda *a: [])
+    assert found.title == "newer"
