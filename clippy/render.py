@@ -110,8 +110,11 @@ def prepare_fonts(folder: Path) -> Path:
         sources += [p for p in user.iterdir() if p.suffix.lower() in (".ttf", ".otf")]
     for src in sources:
         if src.is_file() and not (folder / src.name).exists():
-            with atomic_path(folder / src.name) as tmp:
-                shutil.copy2(src, tmp)
+            try:
+                with atomic_path(folder / src.name) as tmp:
+                    shutil.copyfile(src, tmp)
+            except OSError as exc:
+                log(f"[render] font {src.name} skipped: {exc}")
     return folder
 
 
