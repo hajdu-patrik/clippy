@@ -219,9 +219,12 @@ def pair(reset: bool = False) -> int:
     if not code:
         say(f"{R}{tr('cli.lan_failed')}{N}")
         return 1
-    print(_qr(code["url"]), end="")
+    qr = _qr(code["url"])
+    print(qr, end="")
     say(tr("cli.lan_pair", minutes=code["minutes"]))
     print(f"  {BOLD}{code['url']}{N}")
+    if not qr:
+        print(f"{Y}{tr('cli.lan_no_qr')}{N}")
     print(f"{D}{tr('cli.lan_firewall')}{N}")
     return 0
 
