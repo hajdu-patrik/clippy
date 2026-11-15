@@ -33,6 +33,7 @@ class EditContext:
     taken: set[str] = field(default_factory=set)
     number: int = 0
     clips: dict[int, int] = field(default_factory=dict)
+    source_words: tuple[dict, ...] = ()
 
     def new_id(self, timeline: Timeline, prefix: str) -> str:
         used = {layer.id for layer in timeline.layers} | self.taken

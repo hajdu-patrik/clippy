@@ -60,7 +60,8 @@ class EditService:
         source_duration = float((project.transcript or {}).get("duration") or timeline.cut.source.end + 60)
         others = {c["number"]: c["version"] for c in self.db.current_clips(chat_id) if c["number"] != number}
         ctx = EditContext(assets=index, resolver=TimeResolver(base.duration, words), clock=base.clock,
-                          source_duration=source_duration, number=number, clips=others)
+                          source_duration=source_duration, number=number, clips=others,
+                          source_words=tuple(getattr(project, "words", None) or ()))
         info = row["clip"]
         req = EditRequest(request, timeline, tuple(index.assets.values()), tuple(attached), tuple(words), number,
                           info.get("title", ""), info.get("alt_hook", ""), info.get("question", ""),

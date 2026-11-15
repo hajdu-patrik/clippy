@@ -6,6 +6,7 @@ from typing import ClassVar, Literal
 
 from pydantic import Field
 
+from ...boundaries import Boundaries
 from ...tools import ClippyError
 from ..assets import AssetKind
 from ..changes import Change
@@ -55,7 +56,8 @@ class CutRange(Operation):
 
 @operation
 class Trim(Operation):
-    """Moves the clip's start / end in the source: negative start_shift starts earlier, positive end_shift ends later."""
+    """Moves the clip's start / end in the source: negative start_shift starts earlier, positive end_shift ends later.
+    The new start lands on a sentence start and the new end on a complete thought, in the direction of the move."""
 
     kind: Literal["trim"] = "trim"
     start_shift: float = Field(0.0, ge=-60, le=60)
@@ -66,6 +68,12 @@ class Trim(Operation):
         src = timeline.cut.source
         start = max(0.0, src.start + self.start_shift)
         end = min(ctx.source_duration, src.end + self.end_shift)
+        if ctx.source_words:
+            bounds = Boundaries(ctx.source_words)
+            if self.start_shift:
+                start = bounds.start_at(start, later=self.start_shift > 0) or start
+            if self.end_shift:
+                end = min(ctx.source_duration, bounds.end_at(end, later=self.end_shift > 0) or end)
         if end - start < MIN_CLIP_SECONDS:
             raise ClippyError(key="edit.too_short", min=MIN_CLIP_SECONDS)
         span = TimeRange(start=round(start, 3), end=round(end, 3))

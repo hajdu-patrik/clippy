@@ -46,6 +46,10 @@ change, what changed rather than how; dates are ISO 8601.
   profile / channel / playlist link, no video in the post, no sound – each with what helps.
 
 ### Changed
+- Clips end on a complete thought: they start at a sentence start and end where the sentence is over and the
+  next one does not carry it on (or at a clear pause without punctuation), may run a little past the length
+  setting to finish, and an LLM payoff check can move the end by whole sentences. Before, a pick shorter than the
+  minimum was stretched word by word and could stop mid-sentence. Trim edits in the chat land on whole sentences.
 - Self-repair: a failed job is diagnosed and tried again on the same card, up to three times, with the setting
   that caused it changed (GPU out of memory: no voice isolation, then the CPU; hardware encoder: x264; no moment
   fitting the length: looser lengths; network or model hiccups: a pause). Hopeless cases (private video, no

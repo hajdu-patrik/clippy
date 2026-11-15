@@ -41,6 +41,11 @@ RISK_RULES = {
     "copyrighted_music": "a song or game radio plays clearly under the speech",
 }
 
+CONNECTORS = frozenset({
+    "and", "but", "because", "cause", "so", "which", "or", "then", "plus", "although", "though", "unless", "until",
+    "és", "de", "mert", "hogy", "szóval", "ugyanis", "viszont", "tehát", "vagyis", "azaz", "meg", "aztán", "pedig",
+    "hiszen", "mivel", "ezért", "így", "illetve", "valamint", "sőt", "amikor", "ami", "amit", "aki", "ahol",
+})
 HOOK_MAX_WORDS = 7
 QUESTION_MAX_WORDS = 12
 PAYOFF_FIRST_MAX_SECONDS = 20
@@ -100,7 +105,10 @@ Rules:
   land the payoff later, then stop within about 2 seconds.
 - Reject windows that start with filler or bridge words ("so", "anyway", "as I said", "um", "szóval", "hát", "na",
   "ugye", "és"), start or end mid-sentence, need earlier context, or whose payoff falls after the cut.
-- Never pick a moment only because it is loud; the promise of the opening must be paid off inside the clip."""
+- Never pick a moment only because it is loud; the promise of the opening must be paid off inside the clip.
+- The clip ENDS on the punchline, the conclusion or the answer, at the end of a sentence. Never end on a sentence
+  that sets up, lists or asks something that comes after it. A transcript line may be only part of a long sentence:
+  then the clip ends where that sentence ends, not where the line ends."""
 
 
 def writing_rules(text_language: str) -> str:

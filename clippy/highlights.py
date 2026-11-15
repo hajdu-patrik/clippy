@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass, field
 
 from . import playbook
+from .boundaries import END_OVERFLOW, Boundaries, end_time, start_time
 from .llm import LLM, think_enabled
 from .text import clean_text, ends_sentence
 from .tools import ClippyError, fmt_ts, log, report, report_span
@@ -150,40 +151,23 @@ def _format_window(win: list[dict]) -> str:
     return "\n".join(f"[{s['start']:.2f}-{s['end']:.2f}] {s['text']}" for s in win)
 
 
-def _snap(clip: Clip, words: list[dict], min_len: float, max_len: float) -> Clip | None:
-    """Align a clip to sentence ends inside the length bounds, never into a neighbour word."""
+def _snap(clip: Clip, words: list[dict], min_len: float, max_len: float,
+          bounds: Boundaries | None = None) -> Clip | None:
+    """Start the clip where a sentence starts and end it where the thought is complete (see boundaries), as near
+    as possible to the picker's choice; a complete ending is worth a little more than the length limit."""
     if not words:
         return None
-    starts = [i for i, w in enumerate(words) if w["start"] >= clip.start - 0.35]
-    if not starts:
+    bounds = bounds or Boundaries(words)
+    i0 = bounds.start_near(clip.start)
+    i1 = None if i0 is None else bounds.end_near(i0, clip.end, min_len, max_len)
+    if i1 is None or bounds.duration(i0, i1) < min_len * 0.6:
         return None
-    i0 = starts[0]
-    i1 = i0
-    while i1 + 1 < len(words) and words[i1 + 1]["end"] <= clip.end + 0.35:
-        i1 += 1
+    return _place(clip, words, i0, i1)
 
-    def dur(a: int, b: int) -> float:
-        return words[b]["end"] - words[a]["start"]
 
-    if dur(i0, i1) > max_len:
-        j = i1
-        while j > i0 and dur(i0, j) > max_len:
-            j -= 1
-        k = j
-        while k > i0 and not ends_sentence(words[k]["word"]) and dur(i0, k) > min_len:
-            k -= 1
-        i1 = k if ends_sentence(words[k]["word"]) and dur(i0, k) >= min_len else j
-    while dur(i0, i1) < min_len and i1 + 1 < len(words):
-        i1 += 1
-        if dur(i0, i1) >= min_len and ends_sentence(words[i1]["word"]):
-            break
-    if dur(i0, i1) < min_len * 0.6:
-        return None
-
-    prev_end = words[i0 - 1]["end"] + 0.04 if i0 > 0 else 0.0
-    next_start = words[i1 + 1]["start"] - 0.06 if i1 + 1 < len(words) else words[i1]["end"] + 0.5
-    clip.start = round(max(0.0, min(words[i0]["start"], max(words[i0]["start"] - 0.2, prev_end))), 3)
-    clip.end = round(max(words[i1]["end"], min(words[i1]["end"] + 0.4, next_start)), 3)
+def _place(clip: Clip, words: list[dict], i0: int, i1: int) -> Clip:
+    """Clip times from its first and last word."""
+    clip.start, clip.end = start_time(words, i0), end_time(words, i1)
     return clip
 
 
@@ -249,6 +233,76 @@ def _rerank(llm: LLM, cands: list[Clip], words: list[dict], n: int, title: str, 
         return cands
     rest = [c for c in cands if c not in picked]
     return picked + sorted(rest, key=lambda c: c.score, reverse=True)
+
+
+ENDINGS_PROMPT = """You check where short video clips END. For each clip you get its last sentences and, after
+"NEXT:", what is said right after it in the video ({language}).
+A good ending lands the punchline, the conclusion or the answer. A bad ending stops on a set-up, a list that goes
+on, a promise or a question that the next sentences answer, or it adds the first sentence of a new topic.
+For each clip answer:
+- "ok": the ending is complete;
+- "extend" with "sentences" 1 or 2: the next sentence(s) finish this clip's thought;
+- "trim": the clip's last sentence already starts something new that the clip does not need.
+Return ONLY JSON: {{"clips": [{{"id": <id>, "verdict": "ok" | "extend" | "trim", "sentences": 1}}]}}"""
+
+ENDINGS_SCHEMA = {
+    "type": "object",
+    "properties": {"clips": {"type": "array", "items": {
+        "type": "object", "properties": {"id": {"type": "integer"},
+                                         "verdict": {"type": "string", "enum": ["ok", "extend", "trim"]},
+                                         "sentences": {"type": "integer"}},
+        "required": ["id", "verdict"]}}},
+    "required": ["clips"],
+}
+TAIL_WORDS, NEXT_WORDS = 45, 40
+
+
+def _words_text(words: list[dict]) -> str:
+    return " ".join(w["word"] for w in words)
+
+
+def _check_endings(llm: LLM, clips: list[Clip], words: list[dict], bounds: Boundaries, min_len: float,
+                   max_len: float, language: str) -> None:
+    """The picker's last word on each ending: an end may move by whole sentences (to another complete boundary
+    within the length limits), never into the middle of one."""
+    spans = []
+    for c in clips:
+        i0 = next((i for i, w in enumerate(words) if w["start"] >= c.start - 0.01), None)
+        i1 = bounds.index_at_end(c.end)
+        spans.append((i0, i1) if i0 is not None and i1 is not None and i1 >= i0 else None)
+    lines = [f"id={k}\n{_words_text(words[max(i0, i1 - TAIL_WORDS + 1):i1 + 1])}\nNEXT: "
+             f"{_words_text(words[i1 + 1:i1 + 1 + NEXT_WORDS]) or '(the video ends)'}"
+             for k, span in enumerate(spans) if span for i0, i1 in [span]]
+    if not lines:
+        return
+    try:
+        reply = llm.chat_json(ENDINGS_PROMPT.format(language=language), "\n\n".join(lines), think=False,
+                              schema=ENDINGS_SCHEMA)
+    except Exception as exc:  # noqa: BLE001 - the snapped endings are already whole sentences
+        log(f"[hook] ending check skipped: {exc}")
+        return
+    for item in reply.get("clips", []) if isinstance(reply, dict) else []:
+        try:
+            k, verdict = int(item["id"]), str(item["verdict"])
+            span, clip = spans[k], clips[k]
+        except (KeyError, ValueError, IndexError, TypeError):
+            continue
+        if span is None or verdict not in ("extend", "trim"):
+            continue
+        i0, i1 = span
+        ends = bounds.complete_ends(i0, max_len + END_OVERFLOW)
+        if verdict == "extend":
+            later = [j for j in ends if j > i1]
+            steps = max(1, min(2, int(item.get("sentences") or 1)))
+            target = later[min(steps, len(later)) - 1] if later else None
+        else:
+            earlier = [j for j in ends if j < i1 and bounds.duration(i0, j) >= min_len]
+            target = earlier[-1] if earlier else None
+        if target is None:
+            continue
+        before = clip.end
+        _place(clip, words, i0, target)
+        log(f"[hook] end fixed: {verdict} ({before:.1f} s -> {clip.end:.1f} s)")
 
 
 POLISH_PROMPT = """You are a copy editor for viral short-form video hooks in {language}.
@@ -337,7 +391,8 @@ def find_highlights(transcript: dict, llm: LLM, max_clips: int = 5, min_len: flo
                 if clip and clip.end > clip.start:
                     raw.append(clip)
 
-    snapped = [c for c in (_snap(c, words, min_len, max_len) for c in raw) if c]
+    bounds = Boundaries(words)
+    snapped = [c for c in (_snap(c, words, min_len, max_len, bounds) for c in raw) if c]
     snapped.sort(key=lambda c: c.score, reverse=True)
     unique: list[Clip] = []
     for c in snapped:
@@ -350,6 +405,8 @@ def find_highlights(transcript: dict, llm: LLM, max_clips: int = 5, min_len: flo
             unique = _rerank(llm, unique, words, max_clips, title, language, text_language)
 
     chosen = unique[:max_clips]
+    if llm.backend != "none" and chosen:
+        _check_endings(llm, chosen, words, bounds, min_len, max_len, language)
     for c in chosen:
         c.hook, c.title, c.alt_hook, c.question = map(clean_text, (c.hook, c.title, c.alt_hook, c.question))
     if llm.backend != "none":

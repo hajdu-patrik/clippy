@@ -34,3 +34,19 @@ The LLM scores every candidate from 0 to 100 (the rules are in `clippy/playbook.
 Risks (needs context, misquote, claims about a real person, spoiler, background music) lower the score. The hook
 text never repeats the first spoken line; it adds curiosity instead, and the clip must deliver what it promises
 (ethical clickbait). Each clip also gets a B hook of another type and a comment question.
+
+## Where a clip starts and ends
+
+A clip starts where a sentence starts and ends where a thought is complete (`clippy/boundaries.py`):
+- **The end is a sentence end:** a sentence end that the next sentence does not carry on. If the next sentence
+  starts with a connector ("and", "but", "because", "és", "de", "mert"…), or the clip ends on a question answered
+  right away or on a colon, the clip runs on.
+- **Without punctuation:** in streams and music without punctuation, a pause of at least 0.7 s counts as an end.
+- **Starts:** a clip never starts on a connector without the sentence before it.
+- **Length:** if no complete ending fits the length setting, the clip may run up to 12 s longer rather than stop
+  mid-sentence.
+- **Payoff check:** an LLM check then looks at each chosen clip's last sentences and what follows. It may move the
+  end by whole sentences to land the punchline, never into the middle of one.
+- **Chat edits:** moving a clip's start or end in the chat lands on whole sentences too.
+
+On the cached GTA stream transcript, 200 random picks ended mid-thought 60% of the time before this and 0% after.

@@ -1,0 +1,103 @@
+import dataclasses
+
+from clippy.boundaries import COMPLETE_SENTENCE, END_OVERFLOW, OPEN_SENTENCE, Boundaries
+from clippy.highlights import Clip, _check_endings, _snap
+
+
+def speech(text: str, start: float = 0.0, step: float = 0.5, pause_after: dict | None = None) -> list[dict]:
+    """Words of `text`, one every `step` seconds; pause_after {index: seconds} inserts silences."""
+    words, t = [], start
+    for i, word in enumerate(text.split()):
+        words.append({"word": word, "start": round(t, 3), "end": round(t + step * 0.8, 3)})
+        t += step + (pause_after or {}).get(i, 0.0)
+    return words
+
+
+def ending(clip: Clip, words: list[dict]) -> tuple[str, str]:
+    inside = [w["word"] for w in words if clip.start - 0.01 <= w["start"] <= clip.end]
+    after = [w["word"] for w in words if w["start"] > clip.end]
+    return " ".join(inside[-3:]), (after[0] if after else "")
+
+
+GTA = ("Tropical storms are confirmed. The map floods during heists. Honestly, that might be the most GTA sentence "
+       "in this whole video. Here is the rest of the rumor. ") * 3
+
+
+def test_a_short_pick_runs_on_to_the_end_of_its_sentence_not_to_the_minimum():
+    words = speech(GTA)
+    cut = next(w for w in words if w["word"] == "might")
+    clip = _snap(Clip(0.0, cut["end"], 50), words, min_len=8, max_len=40)
+    assert ending(clip, words)[0].endswith("whole video.")
+    assert clip.end - clip.start > 8
+
+
+def test_questions_get_their_answer_and_connectors_carry_the_thought():
+    words = speech("Why did he quit? Because the money was gone. And then he moved abroad. New topic starts here.")
+    bounds = Boundaries(words)
+    level = {w["word"]: bounds.level[i] for i, w in enumerate(words)}
+    assert level["quit?"] == OPEN_SENTENCE and level["gone."] == OPEN_SENTENCE
+    assert level["abroad."] == COMPLETE_SENTENCE
+    clip = _snap(Clip(0.0, words[3]["end"], 50), words, min_len=1, max_len=20)
+    assert ending(clip, words)[0].endswith("moved abroad.")
+    hu = speech("Ez a legjobb rész. De ezt senki nem tudja. Másik téma jön.")
+    assert ending(_snap(Clip(0.0, hu[3]["end"], 50), hu, 1, 20), hu)[0].endswith("nem tudja.")
+
+
+def test_without_punctuation_a_clear_pause_is_the_end():
+    words = speech("we push in from the left flank now and grab the car they never saw it coming "
+                   "next round we try the bridge", pause_after={16: 1.2})
+    clip = _snap(Clip(0.0, 5.0, 50), words, min_len=4, max_len=30)
+    assert ending(clip, words) == ("saw it coming", "next")
+
+
+def test_finishing_the_thought_may_pass_the_maximum_only_a_little():
+    words = speech("This is one very long sentence " + "that keeps going " * 20 + "and finally ends here. Next.")
+    clip = _snap(Clip(0.0, 10.0, 50), words, min_len=5, max_len=20)
+    assert clip.end - clip.start <= 20 + END_OVERFLOW + 0.5
+    last, _ = ending(clip, words)
+    assert last.split()[-1] in {w["word"] for w in words}
+
+
+def test_a_start_on_a_connector_takes_the_sentence_before_it():
+    words = speech("The car is fast. And it can mark weak points on enemies. Then it ends.")
+    i = next(i for i, w in enumerate(words) if w["word"] == "And")
+    clip = _snap(Clip(words[i]["start"], words[-1]["end"], 50), words, min_len=3, max_len=30)
+    assert clip.start <= words[0]["start"] + 0.01
+
+
+def test_trim_lands_on_whole_sentences(timeline, ctx):
+    from clippy.editing.operations.structure import Trim
+
+    words = speech("Intro words here. " * 30, start=80.0, step=0.7)
+    ctx = dataclasses.replace(ctx, source_words=tuple(words))
+    tl, _ = Trim(start_shift=-2.0, end_shift=1.0).apply(timeline, ctx)
+    start = next(w for w in words if abs(w["start"] - tl.cut.source.start) < 0.25)
+    end = next(w for w in words if abs(w["end"] - tl.cut.source.end) < 0.45)
+    assert start["word"] == "Intro" and end["word"] == "here."
+    assert tl.cut.source.start <= 98.0 and tl.cut.source.end >= 121.0
+
+
+class Reply:
+    def __init__(self, reply):
+        self.reply = reply
+
+    def chat_json(self, *args, **kwargs):
+        if isinstance(self.reply, Exception):
+            raise self.reply
+        return self.reply
+
+
+def test_the_payoff_check_moves_endings_only_by_whole_sentences():
+    words = speech(GTA)
+    bounds = Boundaries(words)
+    clips = [_snap(Clip(0.0, 6.0, 50), words, 2, 30, bounds), _snap(Clip(14.0, 22.0, 50), words, 2, 30, bounds)]
+    first, second = clips[0].end, clips[1].end
+    _check_endings(Reply({"clips": [{"id": 0, "verdict": "extend", "sentences": 1},
+                                    {"id": 1, "verdict": "trim"}]}), clips, words, bounds, 2, 30, "English")
+    assert clips[0].end > first and ending(clips[0], words)[0].endswith(".")
+    assert clips[1].end < second and ending(clips[1], words)[0].endswith(".")
+    before = [(c.start, c.end) for c in clips]
+    for garbage in ({"clips": [{"id": 7, "verdict": "extend"}, {"id": "x"}, {"verdict": "trim"}]}, "nonsense",
+                    RuntimeError("model gone")):
+        _check_endings(Reply(garbage), clips, words, bounds, 2, 30, "English")
+    assert [(c.start, c.end) for c in clips] == before
