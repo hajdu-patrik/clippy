@@ -13,8 +13,7 @@
 
 [![Clippy in one minute: paste a link, get vertical clips with captions, edit them by asking in the chat](docs/assets/demo.gif)](https://hajdu-patrik.github.io/clippy/assets/demo.mp4)
 
-**[Watch the one-minute demo in 4K with sound](https://hajdu-patrik.github.io/clippy/assets/demo.mp4)**
-([1080p](https://hajdu-patrik.github.io/clippy/assets/demo-1080p.mp4)): a link goes in,
+**[Watch the one-minute demo in 4K with sound](https://hajdu-patrik.github.io/clippy/assets/demo.mp4)**: a link goes in,
 three captioned clips come out, then one is edited from the chat. The clips are made from a public-domain NASA video;
 the long wait is sped up and marked.
 

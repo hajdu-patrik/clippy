@@ -6,8 +6,8 @@ change, what changed rather than how; dates are ISO 8601.
 ## [Unreleased]
 
 ### Added
-- A one-minute product demo in 4K (`docs/assets/demo.mp4`, with a 1080p copy): an animated preview at the top of the
-  README links to it, and the project page plays it under the introduction (the 1080p copy on small screens).
+- A one-minute product demo in 4K (`docs/assets/demo.mp4`): an animated preview at the top of the README links to it,
+  and the project page plays it under the introduction.
 - Every video is transcribed and captioned in its own language (English stays English, Hungarian
   Hungarian, other languages their own); captions change language only when the user asks for it, never because
   of the language they write to the chat in.
