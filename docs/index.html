@@ -3,36 +3,34 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Clippy: free, local AI clipper for TikTok, Shorts and Reels</title>
-  <meta name="description" content="Clippy turns long videos, podcasts and streams into vertical 9:16 clips with hooks, word by word captions and a ready post text, edited by chat. Free, open source, runs on your own PC. Install guide for Windows, macOS and Linux.">
-  <meta name="keywords" content="AI clipper, video clipping, YouTube Shorts, TikTok clips, Instagram Reels, podcast clips, stream clips, auto captions, Whisper, Ollama, Qwen3, open source, local, free, Hungarian">
-  <meta name="author" content="The Clippy contributors">
-  <meta name="robots" content="index, follow, max-image-preview:large">
+  <title>Clippy: free, open-source AI clipper for TikTok, Shorts and Reels</title>
+  <meta name="description" content="Clippy is a free, open-source AI clipper that runs on your own computer. Paste a YouTube, Twitch or podcast link into its chat and get vertical 9:16 clips with captions and a ready post text for TikTok, YouTube Shorts and Instagram Reels.">
+  <meta name="robots" content="index, follow, max-image-preview:large, max-video-preview:-1">
   <link rel="canonical" href="https://hajdu-patrik.github.io/clippy/">
-  <link rel="alternate" hreflang="en" href="https://hajdu-patrik.github.io/clippy/">
-  <link rel="alternate" hreflang="hu" href="https://hajdu-patrik.github.io/clippy/#magyarul">
   <link rel="alternate" type="text/plain" title="llms.txt" href="https://hajdu-patrik.github.io/clippy/llms.txt">
-  <meta name="theme-color" content="#121113">
+  <meta name="theme-color" content="#18171a" media="(prefers-color-scheme: dark)">
+  <meta name="theme-color" content="#f4f3f5" media="(prefers-color-scheme: light)">
   <meta name="color-scheme" content="dark light">
   <link rel="icon" href="assets/favicon.ico" sizes="16x16 32x32 48x48">
   <link rel="icon" type="image/svg+xml" href="assets/mark.svg">
   <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+  <link rel="preload" as="image" href="assets/clip-frame.webp" type="image/webp">
 
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="Clippy">
-  <meta property="og:title" content="Clippy: free, local AI clipper for TikTok, Shorts and Reels">
-  <meta property="og:description" content="Long videos in, viral clips out. Hooks, captions, post texts and a chat editor, free and on your own PC.">
+  <meta property="og:title" content="Clippy: free, open-source AI clipper for TikTok, Shorts and Reels">
+  <meta property="og:description" content="Long videos in, vertical clips out. Captions, post texts and a chat editor, free and on your own computer.">
   <meta property="og:url" content="https://hajdu-patrik.github.io/clippy/">
   <meta property="og:image" content="https://hajdu-patrik.github.io/clippy/assets/og.png">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
-  <meta property="og:image:alt" content="Clippy logo and a 9:16 clip with an animated caption">
+  <meta property="og:image:alt" content="Clippy logo and a vertical clip with an animated caption">
   <meta property="og:video" content="https://hajdu-patrik.github.io/clippy/assets/demo.mp4">
+  <meta property="og:video:type" content="video/mp4">
   <meta property="og:locale" content="en_US">
-  <meta property="og:locale:alternate" content="hu_HU">
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="Clippy: free, local AI clipper">
-  <meta name="twitter:description" content="Long videos in, viral clips out. Free, open source, on your own PC.">
+  <meta name="twitter:title" content="Clippy: free, open-source AI clipper">
+  <meta name="twitter:description" content="Long videos in, vertical clips out. Free and on your own computer.">
   <meta name="twitter:image" content="https://hajdu-patrik.github.io/clippy/assets/og.png">
 
   <script type="application/ld+json">
@@ -43,52 +41,74 @@
         "@type": "SoftwareApplication",
         "@id": "https://hajdu-patrik.github.io/clippy/#app",
         "name": "Clippy",
-        "alternateName": "Clippy AI clipper",
-        "description": "A free, open-source, local AI clipper: it turns long videos, podcasts and streams into vertical 9:16 clips with the strongest hooks, word by word captions, speaker-tracking framing, a ready post text and a chat editor.",
+        "description": "Clippy is a free, open-source AI clipper that runs on your own computer. It turns long videos, podcasts and streams into vertical 9:16 clips for TikTok, YouTube Shorts and Instagram Reels, with word-by-word captions, a speaker-tracking camera and a ready post text, and edits them on request in a chat.",
         "applicationCategory": "MultimediaApplication",
         "applicationSubCategory": "Video editing",
         "operatingSystem": "Windows 10, Windows 11, macOS, Linux",
         "license": "https://opensource.org/licenses/MIT",
         "isAccessibleForFree": true,
         "offers": {"@type": "Offer", "price": "0", "priceCurrency": "USD"},
-        "inLanguage": ["en", "hu"],
+        "inLanguage": "en",
         "url": "https://hajdu-patrik.github.io/clippy/",
         "downloadUrl": "https://github.com/hajdu-patrik/clippy",
+        "installUrl": "https://hajdu-patrik.github.io/clippy/#install",
         "codeRepository": "https://github.com/hajdu-patrik/clippy",
+        "softwareRequirements": "Python 3.12, Ollama, FFmpeg (bundled); NVIDIA GPU with 12-16 GB VRAM recommended",
         "image": "https://hajdu-patrik.github.io/clippy/assets/og.png",
-        "screenshot": "https://hajdu-patrik.github.io/clippy/assets/demo-poster.jpg",
-        "video": {"@type": "VideoObject", "name": "Clippy in one minute",
-          "description": "A video link goes into the chat, Clippy makes three captioned vertical clips, then edits one on request.",
-          "contentUrl": "https://hajdu-patrik.github.io/clippy/assets/demo.mp4",
-          "thumbnailUrl": "https://hajdu-patrik.github.io/clippy/assets/demo-poster.jpg",
-          "uploadDate": "2026-11-16", "duration": "PT1M1S"},
+        "screenshot": "https://hajdu-patrik.github.io/clippy/assets/step-clips.webp",
+        "video": {"@id": "https://hajdu-patrik.github.io/clippy/#demo"},
         "featureList": [
-          "Finds the moments with the strongest hooks with a local LLM (Qwen3-14B via Ollama)",
-          "Vertical 9:16 framing with face tracking and an active-speaker camera; facecam on top for streams",
-          "Word by word captions in the video's own language",
-          "Dead air and filler words cut on word boundaries, sound mastered for phones",
-          "Ready post text: title, description, comment question, hashtags, covers and an A/B title",
-          "Chat editor: opening text, music, logos, effects, formats, cuts, undo",
-          "Posts to your own YouTube, Instagram and TikTok, also at a set time",
-          "Watched channels and daily picks of the most watched streamer moments of a game",
-          "Runs locally on an NVIDIA GPU or the CPU; no upload, no subscription"
-        ],
-        "author": {"@type": "Organization", "name": "The Clippy contributors"}
+          "Picks the moments with the strongest hooks with a local language model (Qwen3-14B through Ollama)",
+          "Vertical 9:16 framing with face tracking and an active-speaker camera; facecam on top and game below for streams",
+          "Word-by-word captions in the video's own language, any language Whisper knows",
+          "Cuts dead air and filler words on word boundaries and masters the sound for phones",
+          "Writes a title, description, comment question, hashtags, covers and an A/B title for every clip",
+          "Edits clips from chat requests: opening text, music, logo, effects, formats, cuts, undo",
+          "Posts to your own YouTube, Instagram and TikTok accounts, also at a set time",
+          "Watches channels and picks the most watched streamer moments of a game every day",
+          "Runs locally: no upload, no account, no subscription, no watermark"
+        ]
+      },
+      {
+        "@type": "VideoObject",
+        "@id": "https://hajdu-patrik.github.io/clippy/#demo",
+        "name": "Clippy in one minute",
+        "description": "A video link goes into the Clippy chat, Clippy makes three captioned vertical clips, then edits one on request.",
+        "contentUrl": "https://hajdu-patrik.github.io/clippy/assets/demo.mp4",
+        "thumbnailUrl": "https://hajdu-patrik.github.io/clippy/assets/demo-poster.jpg",
+        "uploadDate": "2026-11-16",
+        "duration": "PT1M1S"
+      },
+      {
+        "@type": "HowTo",
+        "@id": "https://hajdu-patrik.github.io/clippy/#install",
+        "name": "Install Clippy on Windows",
+        "totalTime": "PT15M",
+        "tool": [{"@type": "HowToTool", "name": "Python 3.12"}, {"@type": "HowToTool", "name": "Ollama"},
+                 {"@type": "HowToTool", "name": "Git"}, {"@type": "HowToTool", "name": "Node.js"}],
+        "step": [
+          {"@type": "HowToStep", "name": "Install the free tools", "text": "Run winget install Python.Python.3.12, Ollama.Ollama, Git.Git and OpenJS.NodeJS.LTS, then open a new terminal."},
+          {"@type": "HowToStep", "name": "Get Clippy", "text": "git clone https://github.com/hajdu-patrik/clippy.git and cd clippy."},
+          {"@type": "HowToStep", "name": "Run the installer", "text": "powershell -ExecutionPolicy Bypass -File install.ps1"},
+          {"@type": "HowToStep", "name": "Start Clippy", "text": "In a new terminal run clippy start; the app opens at http://127.0.0.1:7860."}
+        ]
       },
       {
         "@type": "FAQPage",
         "@id": "https://hajdu-patrik.github.io/clippy/#faq",
         "mainEntity": [
           {"@type": "Question", "name": "What is Clippy?",
-           "acceptedAnswer": {"@type": "Answer", "text": "A free, open-source AI clipper that runs on your own computer. Paste a video link into a chat and get vertical clips for TikTok, YouTube Shorts and Instagram Reels with hooks, captions and a ready post text."}},
+           "acceptedAnswer": {"@type": "Answer", "text": "Clippy is a free, open-source AI clipper that runs on your own computer. You paste a video link into its chat and it returns vertical 9:16 clips for TikTok, YouTube Shorts and Instagram Reels with captions and a ready post text."}},
           {"@type": "Question", "name": "Is Clippy free?",
-           "acceptedAnswer": {"@type": "Answer", "text": "Yes. It is MIT-licensed and uses free, local models: faster-whisper, Qwen3-14B through Ollama and FFmpeg. There is no subscription and nothing is uploaded."}},
-          {"@type": "Question", "name": "What computer do I need?",
-           "acceptedAnswer": {"@type": "Answer", "text": "Windows 10 or 11, macOS or Linux, about 25 GB of free disk space and ideally an NVIDIA GPU with 12-16 GB of VRAM. Without one it runs on the CPU more slowly, or it can use a free hosted LLM such as Groq or Gemini."}},
+           "acceptedAnswer": {"@type": "Answer", "text": "Yes. Clippy is MIT-licensed and uses free models on your own computer: faster-whisper for speech, Qwen3-14B through Ollama for picking and editing, and FFmpeg for video. There is no subscription, account or watermark."}},
+          {"@type": "Question", "name": "How is Clippy different from online clipping tools?",
+           "acceptedAnswer": {"@type": "Answer", "text": "Clippy runs on your own computer, so videos are never uploaded and there are no credits or monthly limits. It is open source, and every change to a clip is asked for in a chat and can be undone."}},
+          {"@type": "Question", "name": "What computer do I need for Clippy?",
+           "acceptedAnswer": {"@type": "Answer", "text": "Windows 10 or 11, macOS or Linux with about 25 GB of free disk space. An NVIDIA graphics card with 12-16 GB of VRAM is recommended; without one Clippy runs on the CPU more slowly or uses a free hosted language model such as Groq or Gemini."}},
           {"@type": "Question", "name": "Which languages does Clippy support?",
-           "acceptedAnswer": {"@type": "Answer", "text": "Every video is transcribed and captioned in its own language. The app, the chat and caption translation work in Hungarian and English."}},
-          {"@type": "Question", "name": "Can I edit the clips after they are made?",
-           "acceptedAnswer": {"@type": "Answer", "text": "Yes, by asking in the chat: an opening text, music, a logo, effects, another format, cutting parts out. Every change is a new version you can undo."}}
+           "acceptedAnswer": {"@type": "Answer", "text": "Every video is transcribed and captioned in its own language, in any language Whisper knows. The app is in English, and captions can be translated between English and Hungarian."}},
+          {"@type": "Question", "name": "Can Clippy post the clips for me?",
+           "acceptedAnswer": {"@type": "Answer", "text": "Yes. After a one-time setup with your own developer apps, Clippy posts a clip with its text to your YouTube, Instagram and TikTok accounts, right away or at a set time."}}
         ]
       }
     ]
@@ -96,335 +116,419 @@
   </script>
   <style>
     :root {
-      --bg: #121113; --bg-2: #18171a; --card: #1d1b1f; --line: #322f35; --text: #f4f3f5; --muted: #b3aeb6;
-      --wine: #9e1d3e; --wine-hover: #bf2c52; --wine-text: #eb8da6; --glow: rgba(158, 29, 62, .35);
-      --code: #0d0c0e; --radius: 18px;
+      --wine-900: #3d0a17; --wine-700: #7d1631; --wine-600: #9e1d3e; --wine-500: #bf2c52; --wine-300: #eb8da6;
+      --bg: #18171a; --bg-elev: #211f23; --side: #121113; --text: #ecebee; --muted: #9d99a2; --border: #322f35;
+      --user: #2b282e; --card: #1f1d21; --code: #121113; --ok: #4fc58f;
+      --accent: var(--wine-600); --accent-hover: var(--wine-500); --accent-text: var(--wine-300);
+      --accent-soft: color-mix(in srgb, var(--wine-500) 16%, transparent);
+      --shadow: 0 24px 60px rgba(0, 0, 0, .45); --radius: 16px;
+      --ease: cubic-bezier(.2, .8, .2, 1);
       --font: "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, Roboto, sans-serif;
       --display: "Segoe UI Variable Display", "Segoe UI", system-ui, -apple-system, Roboto, sans-serif;
-      --mono: "Cascadia Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      --mono: "Cascadia Mono", Consolas, ui-monospace, SFMono-Regular, Menlo, monospace;
     }
     @media (prefers-color-scheme: light) {
-      :root { --bg: #f7f6f8; --bg-2: #ffffff; --card: #ffffff; --line: #dad6db; --text: #1d1b1f; --muted: #5f5a63;
-        --wine-text: #7d1631; --glow: rgba(158, 29, 62, .16); --code: #18171a; }
+      :root {
+        --bg: #f4f3f5; --bg-elev: #ffffff; --side: #e9e7ea; --text: #1d1b1f; --muted: #67626b; --border: #dad6db;
+        --user: #e7e4e8; --card: #ffffff; --accent: var(--wine-700); --accent-hover: var(--wine-600);
+        --accent-text: var(--wine-700); --accent-soft: color-mix(in srgb, var(--wine-600) 10%, transparent);
+        --shadow: 0 24px 60px rgba(40, 10, 20, .14);
+      }
     }
-    * { box-sizing: border-box; }
-    html { scroll-behavior: smooth; scroll-padding-top: 76px; }
+    *, *::before, *::after { box-sizing: border-box; }
+    html { scroll-behavior: smooth; scroll-padding-top: 80px; -webkit-text-size-adjust: 100%; }
     body { margin: 0; background: var(--bg); color: var(--text); font: 17px/1.6 var(--font); -webkit-font-smoothing: antialiased; }
-    a { color: var(--wine-text); }
-    img, video { max-width: 100%; }
-    .wrap { max-width: 1120px; margin: 0 auto; padding: 0 20px; }
-    .bar { position: sticky; top: 0; z-index: 10; background: color-mix(in srgb, var(--bg) 82%, transparent);
-      backdrop-filter: blur(14px); border-bottom: 1px solid color-mix(in srgb, var(--line) 60%, transparent); }
-    .bar .wrap { display: flex; align-items: center; gap: 14px; min-height: 64px; flex-wrap: wrap; }
-    .brand { display: flex; align-items: center; gap: 10px; color: var(--text); text-decoration: none; font: 700 21px/1 var(--display);
-      letter-spacing: -.02em; }
-    .brand img { width: 34px; height: 34px; }
-    .bar nav { margin-left: auto; display: flex; align-items: center; gap: 4px 20px; flex-wrap: wrap; font-size: 15px; }
-    .bar nav a { color: var(--muted); text-decoration: none; }
-    .bar nav a:hover { color: var(--text); }
-    .bar nav .gh { color: var(--text); border: 1px solid var(--line); border-radius: 999px; padding: 6px 14px; }
-    .hero { position: relative; padding: 84px 0 40px; text-align: center; overflow: hidden; }
-    .hero::before { content: ""; position: absolute; inset: -20% -10% auto; height: 640px; z-index: -1;
-      background: radial-gradient(closest-side, var(--glow), transparent 75%); }
-    .eyebrow { display: inline-flex; gap: 8px; align-items: center; padding: 6px 14px; border: 1px solid var(--line);
-      border-radius: 999px; color: var(--muted); font-size: 14px; background: var(--bg-2); }
-    .eyebrow b { color: var(--wine-text); font-weight: 600; }
-    h1 { font: 700 clamp(40px, 7.4vw, 82px)/1.02 var(--display); letter-spacing: -.035em; margin: 22px auto 18px;
-      max-width: 900px; text-wrap: balance; }
-    h1 span { color: var(--wine-text); }
-    .lead { font-size: clamp(17px, 2.2vw, 21px); color: var(--muted); max-width: 760px; margin: 0 auto; text-wrap: pretty; }
-    .ctas { display: flex; justify-content: center; gap: 12px; flex-wrap: wrap; margin: 30px 0 14px; }
-    .btn { display: inline-flex; align-items: center; gap: 8px; padding: 13px 22px; border-radius: 999px; font-weight: 650;
-      text-decoration: none; border: 1px solid transparent; transition: background .2s, transform .2s; }
-    .btn.primary { background: var(--wine); color: #fff; box-shadow: 0 10px 30px var(--glow); }
-    .btn.primary:hover { background: var(--wine-hover); transform: translateY(-1px); }
-    .btn.ghost { color: var(--text); border-color: var(--line); background: var(--bg-2); }
-    .meta { color: var(--muted); font-size: 14px; }
-    .demo { margin: 36px auto 0; max-width: 1040px; }
-    .demo video { display: block; width: 100%; height: auto; border-radius: var(--radius); border: 1px solid var(--line);
-      background: #000; box-shadow: 0 30px 80px rgba(0, 0, 0, .45); }
-    .demo p { color: var(--muted); font-size: 14px; margin: 10px 0 0; }
-    section { padding: 72px 0 8px; }
-    h2 { font: 700 clamp(30px, 4.4vw, 44px)/1.1 var(--display); letter-spacing: -.03em; margin: 0 0 12px; text-wrap: balance; }
-    .sub { color: var(--muted); font-size: 18px; max-width: 700px; margin: 0 0 34px; }
-    .steps { display: grid; gap: 54px; }
-    .step { display: grid; grid-template-columns: 1.35fr 1fr; gap: 40px; align-items: center; }
-    .step:nth-child(even) .shot { order: 2; }
-    .shot img { display: block; width: 100%; height: auto; border-radius: 14px; border: 1px solid var(--line);
-      box-shadow: 0 20px 50px rgba(0, 0, 0, .35); }
-    .num { display: inline-grid; place-items: center; width: 38px; height: 38px; border-radius: 50%; background: var(--wine);
-      color: #fff; font: 700 18px/1 var(--display); margin-bottom: 12px; }
-    .step h3 { font: 700 26px/1.2 var(--display); letter-spacing: -.02em; margin: 0 0 10px; }
-    .step p { margin: 0 0 10px; color: var(--muted); }
-    .step em { color: var(--text); font-style: normal; background: var(--bg-2); border: 1px solid var(--line);
-      border-radius: 8px; padding: 1px 7px; font-size: 15px; }
-    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(196px, 1fr)); gap: 14px; padding: 0; list-style: none; margin: 0; }
-    .grid li { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 20px; }
-    .grid .ico { font-size: 24px; display: block; margin-bottom: 8px; }
-    .grid b { display: block; font: 650 17px/1.3 var(--display); margin-bottom: 4px; }
-    .grid span { color: var(--muted); font-size: 15px; }
-    .needs { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin: 0 0 30px; padding: 0;
-      list-style: none; }
-    .needs li { border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; background: var(--bg-2); font-size: 15px; }
-    .needs b { display: block; font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--wine-text); }
-    .tabs { display: inline-flex; gap: 4px; padding: 4px; border: 1px solid var(--line); border-radius: 999px;
-      background: var(--bg-2); margin-bottom: 18px; }
-    .tabs button { border: 0; background: transparent; color: var(--muted); font: 600 15px/1 var(--font); padding: 10px 18px;
-      border-radius: 999px; cursor: pointer; }
-    .tabs button[aria-selected="true"] { background: var(--wine); color: #fff; }
-    .os[hidden] { display: none; }
-    .os ol { list-style: none; counter-reset: s; padding: 0; margin: 0; display: grid; gap: 16px; }
-    .os li { counter-increment: s; display: grid; grid-template-columns: 38px 1fr; gap: 14px; align-items: start; }
-    .os li::before { content: counter(s); display: grid; place-items: center; width: 38px; height: 38px; border-radius: 50%;
-      border: 1px solid var(--line); color: var(--wine-text); font: 700 17px/1 var(--display); }
+    img, video { display: block; max-width: 100%; height: auto; }
+    a { color: var(--accent-text); text-underline-offset: 3px; }
+    :focus-visible { outline: 2px solid var(--accent-text); outline-offset: 3px; border-radius: 6px; }
+    code { font: .9em var(--mono); background: var(--side); border: 1px solid var(--border); border-radius: 6px; padding: 1px 6px; }
+    .skip { position: absolute; left: 16px; top: -48px; background: var(--accent); color: #fff; padding: 10px 16px;
+      border-radius: 10px; z-index: 20; text-decoration: none; }
+    .skip:focus { top: 12px; }
+    .wrap { width: min(1120px, 100%); margin: 0 auto; padding: 0 20px; }
+
+    .bar { position: sticky; top: 0; z-index: 10; background: color-mix(in srgb, var(--side) 88%, transparent);
+      backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); }
+    .bar .wrap { display: flex; align-items: center; gap: 16px; min-height: 60px; }
+    .brand { display: flex; align-items: center; gap: 10px; color: var(--text); text-decoration: none;
+      font: 700 20px/1 var(--display); letter-spacing: -.02em; }
+    .brand img { width: 30px; height: 30px; }
+    .bar nav { margin-left: auto; display: flex; align-items: center; gap: 6px; font-size: 15px; }
+    .bar nav a { color: var(--muted); text-decoration: none; padding: 8px 10px; border-radius: 10px; }
+    .bar nav a:hover { color: var(--text); background: var(--bg-elev); }
+    .bar nav .gh { color: var(--text); border: 1px solid var(--border); }
+
+    .btn { display: inline-flex; align-items: center; justify-content: center; min-height: 46px; padding: 0 22px;
+      border-radius: 999px; font: 650 16px/1 var(--font); text-decoration: none; border: 1px solid transparent;
+      transition: background .2s var(--ease); }
+    .btn.primary { background: var(--accent); color: #fff; }
+    .btn.primary:hover { background: var(--accent-hover); }
+    .btn.ghost { color: var(--text); border-color: var(--border); background: var(--bg-elev); }
+    .btn.ghost:hover { border-color: var(--accent-text); }
+
+    .hero { display: grid; grid-template-columns: 1.05fr .95fr; gap: 56px; align-items: center; padding: 72px 20px 64px; }
+    h1 { font: 700 clamp(40px, 6vw, 68px)/1.03 var(--display); letter-spacing: -.035em; margin: 0 0 20px; text-wrap: balance; }
+    .lead { font-size: clamp(17px, 1.9vw, 19.5px); color: var(--muted); margin: 0 0 28px; max-width: 34em; text-wrap: pretty; }
+    .ctas { display: flex; flex-wrap: wrap; gap: 12px; }
+    .fine { color: var(--muted); font-size: 14.5px; margin: 18px 0 0; }
+
+    .window { background: var(--bg); border: 1px solid var(--border); border-radius: 22px; box-shadow: var(--shadow);
+      overflow: hidden; }
+    .window-top { display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-bottom: 1px solid var(--border);
+      background: var(--side); font: 650 14px/1.2 var(--display); }
+    .window-top img { width: 22px; height: 22px; }
+    .window-top span { color: var(--muted); font: 400 12.5px/1.2 var(--font); margin-left: auto; }
+    .thread { padding: 18px 16px 8px; display: grid; gap: 14px; font-size: 14.5px; }
+    .bubble { justify-self: end; background: var(--user); border-radius: 18px 18px 6px 18px; padding: 9px 14px;
+      max-width: 88%; overflow-wrap: anywhere; }
+    .said { display: flex; gap: 10px; align-items: flex-start; }
+    .said > img { width: 26px; height: 26px; flex: 0 0 26px; }
+    .said > div { min-width: 0; flex: 1; display: grid; gap: 10px; }
+    .said p { margin: 0; }
+    .prog { border: 1px solid var(--border); background: var(--bg-elev); border-radius: 14px; padding: 12px 14px; }
+    .prog-head { display: flex; align-items: center; gap: 12px; }
+    .ring { position: relative; width: 40px; height: 40px; flex: 0 0 40px; }
+    .ring svg { width: 40px; height: 40px; transform: rotate(-90deg); }
+    .ring circle { fill: none; stroke-width: 4; }
+    .ring .track { stroke: var(--border); }
+    .ring .fill { stroke: var(--accent-text); stroke-linecap: round; stroke-dasharray: 113.1; stroke-dashoffset: 0;
+      animation: ring 2.6s var(--ease) .3s both; }
+    .ring .tick { position: absolute; inset: 0; display: grid; place-items: center; color: var(--ok); font-weight: 700;
+      animation: show .3s ease 2.9s both; }
+    .prog-title { min-width: 0; }
+    .prog-title b { color: var(--accent-text); font-weight: 650; }
+    .prog-title small { display: block; color: var(--muted); font-size: 12.5px; }
+    .segs { display: grid; grid-template-columns: repeat(6, 1fr); gap: 5px; margin-top: 12px; }
+    .segs i { height: 4px; border-radius: 4px; background: var(--border); position: relative; overflow: hidden; }
+    .segs i::after { content: ""; position: absolute; inset: 0; background: var(--accent-text); transform-origin: left;
+      animation: fillx .42s var(--ease) both; }
+    .segs i:nth-child(1)::after { animation-delay: .3s; } .segs i:nth-child(2)::after { animation-delay: .72s; }
+    .segs i:nth-child(3)::after { animation-delay: 1.14s; } .segs i:nth-child(4)::after { animation-delay: 1.56s; }
+    .segs i:nth-child(5)::after { animation-delay: 1.98s; } .segs i:nth-child(6)::after { animation-delay: 2.4s; }
+    .segnames { display: grid; grid-template-columns: repeat(6, 1fr); gap: 5px; margin-top: 6px; color: var(--muted);
+      font-size: 11px; }
+    .segnames span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .clip { display: grid; grid-template-columns: 112px 1fr; gap: 12px; border: 1px solid var(--border); background: var(--card);
+      border-radius: 14px; padding: 10px; animation: rise .5s var(--ease) 3s both; }
+    .clip img { width: 112px; aspect-ratio: 9 / 16; object-fit: cover; border-radius: 10px; }
+    .clip h3 { font: 700 15px/1.25 var(--display); margin: 2px 0 6px; }
+    .clip p { color: var(--muted); font-size: 13px; margin: 0 0 8px; }
+    .facts { display: flex; flex-wrap: wrap; gap: 5px; }
+    .facts span { border: 1px solid var(--border); border-radius: 999px; padding: 1px 8px; font-size: 11.5px; color: var(--muted); }
+    .facts .hot { color: var(--accent-text); border-color: color-mix(in srgb, var(--accent-text) 40%, var(--border)); }
+    .composer { margin: 8px 16px 16px; display: flex; align-items: center; gap: 10px; border: 1px solid var(--border);
+      border-radius: 18px; background: var(--bg-elev); padding: 8px 8px 8px 16px; color: var(--muted); font-size: 14px; }
+    .composer span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .composer i { width: 32px; height: 32px; border-radius: 50%; background: var(--accent); flex: 0 0 32px; position: relative; }
+    .composer i::before { content: ""; position: absolute; left: 50%; top: 50%; width: 9px; height: 9px;
+      border-left: 2px solid #fff; border-top: 2px solid #fff; transform: translate(-50%, -25%) rotate(45deg); }
+    @keyframes ring { from { stroke-dashoffset: 113.1; } }
+    @keyframes fillx { from { transform: scaleX(0); } }
+    @keyframes show { from { opacity: 0; } }
+    @keyframes rise { from { opacity: 0; transform: translateY(10px); } }
+
+    section { padding: 72px 0 0; }
+    h2 { font: 700 clamp(28px, 4vw, 40px)/1.12 var(--display); letter-spacing: -.03em; margin: 0 0 12px; text-wrap: balance; }
+    .intro { color: var(--muted); font-size: 18px; max-width: 40em; margin: 0 0 32px; }
+    .demo video { width: 100%; border-radius: 18px; border: 1px solid var(--border); background: #000; box-shadow: var(--shadow); }
+    .demo p { color: var(--muted); font-size: 14.5px; margin: 12px 0 0; }
+
+    .steps { list-style: none; counter-reset: step; margin: 0; padding: 0; display: grid; gap: 48px; }
+    .steps li { counter-increment: step; display: grid; grid-template-columns: 1.3fr 1fr; gap: 40px; align-items: center; }
+    .steps li:nth-child(even) img { order: 2; }
+    .steps img { width: 100%; border-radius: 14px; border: 1px solid var(--border); }
+    .steps h3 { font: 700 24px/1.2 var(--display); letter-spacing: -.02em; margin: 0 0 10px; }
+    .steps h3::before { content: counter(step); display: inline-grid; place-items: center; width: 32px; height: 32px;
+      margin-right: 12px; border-radius: 50%; background: var(--accent); color: #fff; font-size: 16px; vertical-align: 3px; }
+    .steps p { color: var(--muted); margin: 0 0 10px; }
+    .ask { color: var(--text); background: var(--user); border-radius: 12px 12px 4px 12px; padding: 1px 8px; white-space: nowrap; }
+
+    .rows { display: grid; grid-template-columns: 1fr 1fr; gap: 0 40px; margin: 0; }
+    .rows div { padding: 18px 0; border-top: 1px solid var(--border); }
+    .rows dt { font: 650 17px/1.3 var(--display); margin: 0 0 4px; }
+    .rows dd { margin: 0; color: var(--muted); font-size: 15.5px; }
+
+    .needs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin: 0 0 32px; }
+    .needs div { border: 1px solid var(--border); background: var(--bg-elev); border-radius: 14px; padding: 14px 16px; }
+    .needs dt { color: var(--accent-text); font-size: 14px; font-weight: 650; margin-bottom: 2px; }
+    .needs dd { margin: 0; font-size: 15px; }
+    .tabs { display: inline-flex; gap: 4px; padding: 4px; border: 1px solid var(--border); border-radius: 12px;
+      background: var(--bg-elev); margin: 0 0 22px; }
+    .tabs button { border: 0; background: transparent; color: var(--muted); font: 650 14.5px/1 var(--font);
+      min-height: 38px; padding: 0 16px; border-radius: 9px; cursor: pointer; }
+    .tabs button[aria-selected="true"] { background: var(--accent); color: #fff; }
+    .os ol { list-style: none; counter-reset: s; margin: 0; padding: 0; display: grid; gap: 22px; max-width: 820px; }
+    .os li { counter-increment: s; display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: 14px; }
     .os li > div { min-width: 0; }
-    .os p { margin: 6px 0 8px; }
+    .os li::before { content: counter(s); display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%;
+      border: 1px solid var(--border); color: var(--accent-text); font: 700 15px/1 var(--display); }
+    .os p { margin: 4px 0 8px; }
     .os small { color: var(--muted); font-size: 14px; }
     .cmd { position: relative; margin: 0 0 6px; }
-    .cmd pre { margin: 0; background: var(--code); color: #f4f3f5; border: 1px solid #2a272d; border-radius: 12px;
-      padding: 14px 92px 14px 16px; overflow-x: auto; font: 14px/1.6 var(--mono); }
-    .cmd button { position: absolute; top: 8px; right: 8px; border: 1px solid #3a363d; background: #232025; color: #f4f3f5;
-      border-radius: 8px; padding: 6px 12px; font: 600 13px/1 var(--font); cursor: pointer; }
-    .cmd button.done { background: var(--wine); border-color: var(--wine); }
-    .tip { border: 1px solid var(--line); border-left: 4px solid var(--wine); border-radius: 12px; padding: 14px 18px;
-      background: var(--bg-2); margin: 22px 0 0; font-size: 15.5px; }
-    .tip b { color: var(--text); }
-    .tip p { margin: 4px 0 0; color: var(--muted); }
-    details { border-bottom: 1px solid var(--line); padding: 16px 0; }
-    summary { cursor: pointer; font-weight: 650; font-size: 18px; }
-    details p { color: var(--muted); margin: 10px 0 0; }
-    .hu { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 28px; }
-    .hu h2 { font-size: 30px; }
-    .hu p { color: var(--muted); margin: 0 0 10px; }
-    .end { text-align: center; padding: 80px 0 40px; }
-    footer { color: var(--muted); font-size: 14px; border-top: 1px solid var(--line); padding: 26px 0 40px; margin-top: 40px; }
-    footer .wrap { display: flex; gap: 8px 18px; flex-wrap: wrap; }
-    @media (max-width: 820px) {
-      .step { grid-template-columns: 1fr; gap: 18px; }
-      .step:nth-child(even) .shot { order: 0; }
-      .hero { padding-top: 56px; }
-      section { padding-top: 56px; }
+    .cmd pre { margin: 0; background: var(--code); color: #ecebee; border: 1px solid #2c2930; border-radius: 12px;
+      padding: 14px 84px 14px 16px; overflow-x: auto; font: 14px/1.65 var(--mono); }
+    .cmd pre code { background: none; border: 0; padding: 0; font: inherit; color: inherit; }
+    .cmd button { position: absolute; top: 8px; right: 8px; min-height: 30px; border: 1px solid #3a363d; background: #232025;
+      color: #ecebee; border-radius: 8px; padding: 0 12px; font: 600 13px/1 var(--font); cursor: pointer; }
+    .cmd button.done { background: var(--wine-600); border-color: var(--wine-600); }
+    .notes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0 32px; margin: 36px 0 0; max-width: 1080px; }
+    .notes div { border-top: 1px solid var(--border); padding: 16px 0 0; }
+    .notes dt { font-weight: 650; margin-bottom: 4px; }
+    .notes dd { margin: 0; color: var(--muted); font-size: 15px; }
+
+    details { border-top: 1px solid var(--border); padding: 16px 0; max-width: 820px; }
+    details:last-of-type { border-bottom: 1px solid var(--border); }
+    summary { cursor: pointer; font: 650 18px/1.35 var(--display); list-style: none; display: flex; gap: 12px; }
+    summary::-webkit-details-marker { display: none; }
+    summary::before { content: "+"; color: var(--accent-text); font-weight: 700; width: 14px; flex: 0 0 14px; }
+    details[open] summary::before { content: "\2212"; }
+    details p { color: var(--muted); margin: 10px 0 0 26px; }
+
+    .end { text-align: center; padding: 96px 20px 24px; }
+    .end p { color: var(--muted); margin: 0 auto 24px; max-width: 34em; }
+    .end .ctas { justify-content: center; }
+    footer { border-top: 1px solid var(--border); margin-top: 72px; padding: 24px 0 40px; color: var(--muted); font-size: 14px; }
+    footer .wrap { display: flex; flex-wrap: wrap; gap: 10px 22px; align-items: center; }
+    footer span { margin-right: auto; }
+
+    @media (max-width: 960px) {
+      .hero { grid-template-columns: 1fr; gap: 40px; padding-top: 48px; }
+      .steps li { grid-template-columns: 1fr; gap: 18px; }
+      .steps li:nth-child(even) img { order: 0; }
+      .needs { grid-template-columns: 1fr 1fr; }
+      .notes { grid-template-columns: 1fr; gap: 0; }
+      .notes div { padding-bottom: 16px; }
     }
-    @media (max-width: 520px) {
-      .bar nav .opt { display: none; }
-      .cmd pre { padding-right: 16px; padding-top: 44px; }
-      .os li { grid-template-columns: 1fr; gap: 8px; }
+    @media (max-width: 640px) {
+      .bar nav .wide { display: none; }
+      .rows { grid-template-columns: 1fr; }
+      .needs { grid-template-columns: 1fr; }
+      section { padding-top: 56px; }
+      .ctas .btn { flex: 1 1 auto; }
+      .cmd pre { padding: 46px 14px 14px; }
+    }
+    @media (max-width: 380px) {
+      body { font-size: 16px; }
+      .wrap, .hero { padding-left: 14px; padding-right: 14px; }
+      .clip { grid-template-columns: 84px 1fr; }
+      .clip img { width: 84px; }
+      .segnames { display: none; }
+      .os li { grid-template-columns: minmax(0, 1fr); gap: 8px; }
     }
     @media (prefers-reduced-motion: reduce) {
       html { scroll-behavior: auto; }
-      .btn { transition: none; }
+      *, *::before, *::after { animation: none !important; transition: none !important; }
     }
   </style>
 </head>
 <body>
+<a class="skip" href="#main">Skip to content</a>
 <header class="bar">
   <div class="wrap">
-    <a class="brand" href="#top"><img src="assets/mark.svg" alt="" width="34" height="34">Clippy</a>
+    <a class="brand" href="#main"><img src="assets/mark.svg" alt="" width="30" height="30">Clippy</a>
     <nav aria-label="Main">
-      <a class="opt" href="#how">How it works</a><a class="opt" href="#features">Features</a><a href="#install">Install</a>
-      <a class="opt" href="#faq">FAQ</a><a href="#magyarul" lang="hu">Magyarul</a>
+      <a class="wide" href="#how">How it works</a>
+      <a class="wide" href="#features">Features</a>
+      <a href="#install">Install</a>
+      <a class="wide" href="#faq">FAQ</a>
       <a class="gh" href="https://github.com/hajdu-patrik/clippy">GitHub</a>
     </nav>
   </div>
 </header>
 
-<main id="top">
+<main id="main">
   <div class="wrap hero">
-    <span class="eyebrow"><b>Free</b> · Open source · Runs on your own PC</span>
-    <h1>Long videos in. <span>Viral clips out.</span></h1>
-    <p class="lead">Clippy turns videos, podcasts and streams into vertical clips for TikTok, YouTube Shorts and Instagram
-      Reels: the strongest hooks, word by word captions and a ready post text. Paste a link into a chat, then edit by
-      just asking. No subscription, no upload.</p>
-    <div class="ctas">
-      <a class="btn primary" href="#install">Install Clippy</a>
-      <a class="btn ghost" href="#demo">Watch the demo</a>
+    <div>
+      <h1>Long videos in. Vertical clips out.</h1>
+      <p class="lead">Clippy is a free, open-source AI clipper that runs on your own computer. Paste a YouTube, Twitch
+        or podcast link into its chat and get 9:16 clips for TikTok, YouTube Shorts and Instagram Reels, with captions
+        and a ready post text. Then change anything by asking.</p>
+      <div class="ctas">
+        <a class="btn primary" href="#install">Install Clippy</a>
+        <a class="btn ghost" href="#demo">Watch the 1-minute demo</a>
+      </div>
+      <p class="fine">MIT license. Windows, macOS and Linux. No account, no upload, no subscription.</p>
     </div>
-    <p class="meta">Windows · macOS · Linux · Hungarian and English · MIT license</p>
-    <div class="demo" id="demo">
-      <video poster="assets/demo-poster.jpg" controls playsinline preload="metadata" width="1920" height="1080"
-        aria-label="One-minute demo: a video link goes into the chat, Clippy makes three captioned vertical clips, then edits one on request">
-        <source src="assets/demo.mp4" type="video/mp4">
-      </video>
-      <p>One minute, in 4K. The clips are made from a public-domain NASA video; the long wait is sped up and marked.</p>
+
+    <div class="window" role="img" aria-label="The Clippy chat: a video link goes in, a progress card runs through each step, and a finished vertical clip with captions comes out">
+      <div class="window-top" aria-hidden="true"><img src="assets/mark.svg" alt="" width="22" height="22">Clippy<span>127.0.0.1:7860</span></div>
+      <div class="thread" aria-hidden="true">
+        <div class="bubble">Make 3 clips from this: youtube.com/watch?v=4x7…</div>
+        <div class="said"><img src="assets/mark.svg" alt="" width="26" height="26">
+          <div>
+            <p>Downloading the video and picking the 3 best moments.</p>
+            <div class="prog">
+              <div class="prog-head">
+                <div class="ring"><svg viewBox="0 0 40 40"><circle class="track" cx="20" cy="20" r="18"/><circle class="fill" cx="20" cy="20" r="18"/></svg><span class="tick">✓</span></div>
+                <div class="prog-title"><b>Done</b> Processing the video, 3 clips<small>Took 6 minutes for a 5-minute video</small></div>
+              </div>
+              <div class="segs"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+              <div class="segnames"><span>Download</span><span>Voice</span><span>Transcript</span><span>Timing</span><span>Picking</span><span>Render</span></div>
+            </div>
+            <div class="clip">
+              <img src="assets/clip-frame.webp" alt="" width="360" height="640">
+              <div>
+                <h3>Floating and Fun: What's It Like in Space?</h3>
+                <p>Why astronauts say space is fun: floating, upside down, with the crew.</p>
+                <div class="facts"><span>19.1 s</span><span class="hot">2.3 s dead air cut</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="composer" aria-hidden="true"><span>Put an opening text on clip 2</span><i></i></div>
     </div>
   </div>
 
-  <section id="how">
-    <div class="wrap">
-      <h2>How it works</h2>
-      <p class="sub">Four steps, all in one chat window on your computer.</p>
-      <div class="steps">
-        <div class="step">
-          <div class="shot"><img src="assets/step-paste.webp" alt="The Clippy chat with a video link being pasted" width="1280" height="720" loading="lazy"></div>
-          <div><span class="num">1</span><h3>Paste a link</h3>
-            <p>YouTube, Twitch, Kick, TikTok, Instagram and the other sites yt-dlp knows, or a file. Say how many
-              clips you want, or pick a ready-made prompt: podcast, gameplay and stream, video and promo, quick shorts.</p>
-            <p>No link at hand? <em>clip the latest stream of Kai Cenat</em> finds it for you.</p></div>
-        </div>
-        <div class="step">
-          <div class="shot"><img src="assets/step-progress.webp" alt="The live progress card: download, voice, transcript, timing, picking, render" width="1280" height="720" loading="lazy"></div>
-          <div><span class="num">2</span><h3>It finds the best moments</h3>
-            <p>Clippy downloads the video, transcribes it in its own language, reads the reactions (laughter, loud
-              moments, the stream chat) and lets a local AI rank the hooks against each other.</p>
-            <p>A live card shows every step and the time left.</p></div>
-        </div>
-        <div class="step">
-          <div class="shot"><img src="assets/step-clips.webp" alt="Finished vertical clips with captions as cards in the chat" width="1280" height="720" loading="lazy"></div>
-          <div><span class="num">3</span><h3>Clips with captions and a post text</h3>
-            <p>Vertical 9:16 with the speaker in frame (or the facecam on top and the game below for streams), dead air
-              cut, sound mastered for phones, word by word captions.</p>
-            <p>Each clip comes with a title, a teaser, a comment question, hashtags, a cover and a B title for A/B tests.</p></div>
-        </div>
-        <div class="step">
-          <div class="shot"><img src="assets/step-edit.webp" alt="A new version of a clip with an opening text, made from a chat request" width="1280" height="720" loading="lazy"></div>
-          <div><span class="num">4</span><h3>Edit by asking, then post</h3>
-            <p><em>put an opening text on clip 3</em>, <em>this song under it, quietly</em>, <em>make it 16:9</em>:
-              every change is a new version with undo, rendered in seconds.</p>
-            <p>Post to your own YouTube, Instagram and TikTok in one click, now or at a set time.</p></div>
-        </div>
-      </div>
-    </div>
+  <section id="demo" class="wrap demo">
+    <h2>See it work in one minute</h2>
+    <video poster="assets/demo-poster.jpg" controls playsinline preload="metadata" width="3840" height="2160"
+      aria-label="One-minute demo: a video link goes into the chat, Clippy makes three captioned vertical clips, then edits one on request">
+      <source src="assets/demo.mp4" type="video/mp4">
+    </video>
+    <p>Recorded in the real app, in 4K. The clips come from a public-domain NASA video; the long wait is sped up and marked.</p>
   </section>
 
-  <section id="features">
-    <div class="wrap">
-      <h2>Everything a clipper needs</h2>
-      <p class="sub">Built for creators and clippers who post every day.</p>
-      <ul class="grid">
-        <li><span class="ico" aria-hidden="true">🎯</span><b>Hooks first</b><span>Every candidate is scored for hook, payoff, emotion and quotability, then ranked against the others.</span></li>
-        <li><span class="ico" aria-hidden="true">🎥</span><b>A real camera operator</b><span>Shot detection, face tracking and the active speaker keep the right person in the 9:16 frame.</span></li>
-        <li><span class="ico" aria-hidden="true">💬</span><b>Captions that pop</b><span>Word by word, on real word timings, in the video's own language or translated on request.</span></li>
-        <li><span class="ico" aria-hidden="true">🎮</span><b>Made for streams</b><span>Facecam on top, game below; peaks found by sound, picture and chat, even without speech.</span></li>
-        <li><span class="ico" aria-hidden="true">📅</span><b>Daily picks</b><span><em>every day 3 GTA VI clips</em>: the most watched streamer moments of a game, each with a time to post.</span></li>
-        <li><span class="ico" aria-hidden="true">📡</span><b>Watched channels</b><span>New videos of a YouTube or Twitch channel become clips by themselves.</span></li>
-        <li><span class="ico" aria-hidden="true">🚀</span><b>Posting built in</b><span>YouTube, Instagram and TikTok from your own developer apps, now or planned.</span></li>
-        <li><span class="ico" aria-hidden="true">📈</span><b>Learns what works</b><span>Views and watch time come back onto each clip and steer the next picks.</span></li>
-        <li><span class="ico" aria-hidden="true">📱</span><b>On your phone too</b><span>Pair your phone over Wi-Fi with a QR code and use the same chats.</span></li>
-        <li><span class="ico" aria-hidden="true">🔒</span><b>Private by design</b><span>Local models, nothing uploaded, accounts and tokens stay on your computer.</span></li>
-      </ul>
-    </div>
+  <section id="how" class="wrap">
+    <h2>How it works</h2>
+    <p class="intro">Everything happens in one chat window on your computer.</p>
+    <ol class="steps">
+      <li><img src="assets/step-paste.webp" alt="The Clippy chat with a video link typed into the message box" width="1280" height="720" loading="lazy">
+        <div><h3>Paste a link</h3>
+          <p>YouTube, Twitch, Kick, TikTok, Instagram and the other sites yt-dlp supports, or a video file. Say how many
+            clips you want, or start from a ready-made prompt for podcasts, gameplay and streams, promos or quick shorts.</p>
+          <p>No link at hand? <span class="ask">clip the latest stream of Kai Cenat</span> finds it.</p></div></li>
+      <li><img src="assets/step-progress.webp" alt="The live progress card stepping through download, voice, transcript, timing, picking and render" width="1280" height="720" loading="lazy">
+        <div><h3>It finds the best moments</h3>
+          <p>Clippy transcribes the video in its own language, reads the reactions (laughter, loud moments, the stream
+            chat) and has a local language model rank every candidate moment by its hook.</p>
+          <p>A live card shows each step and the time left.</p></div></li>
+      <li><img src="assets/step-clips.webp" alt="Finished vertical clips with captions shown as cards in the chat" width="1280" height="720" loading="lazy">
+        <div><h3>You get finished clips</h3>
+          <p>9:16 with the speaker in frame, or the facecam on top and the game below for streams. Dead air is cut, the
+            sound is mastered for phones and the captions follow every word.</p>
+          <p>Each clip comes with a title, a description, a comment question, hashtags, a cover and a second title to test.</p></div></li>
+      <li><img src="assets/step-edit.webp" alt="A new version of a clip with an opening text, made from a chat request" width="1280" height="720" loading="lazy">
+        <div><h3>Change it by asking</h3>
+          <p><span class="ask">put an opening text on clip 3</span> or <span class="ask">make it 16:9</span>: every
+            change is a new version you can undo, rendered in seconds.</p>
+          <p>Post to your own YouTube, Instagram and TikTok, right away or at a set time.</p></div></li>
+    </ol>
   </section>
 
-  <section id="install">
-    <div class="wrap">
-      <h2>Install it on your computer</h2>
-      <p class="sub">About fifteen minutes, most of it downloading. Everything is free.</p>
-      <ul class="needs">
-        <li><b>System</b>Windows 10 or 11, macOS or Linux</li>
-        <li><b>Graphics card</b>NVIDIA with 12-16 GB VRAM recommended; the CPU works too, more slowly</li>
-        <li><b>Disk</b>About 25 GB free for the AI models and the cache</li>
-        <li><b>Free tools</b>Python 3.12, Ollama, Git, Node.js (for YouTube)</li>
-      </ul>
+  <section id="features" class="wrap">
+    <h2>What Clippy does</h2>
+    <p class="intro">The work of a clipper, done on your own computer.</p>
+    <dl class="rows">
+      <div><dt>Picks moments by their hook</dt><dd>Every candidate is scored for its hook, payoff, emotion and quotability, then ranked against the others.</dd></div>
+      <div><dt>Keeps the right person in frame</dt><dd>Shot detection, face tracking and the active speaker drive a virtual camera that never shakes.</dd></div>
+      <div><dt>Captions in the video's language</dt><dd>Word-by-word captions in any language Whisper knows, translated between English and Hungarian on request.</dd></div>
+      <div><dt>Built for streams</dt><dd>Facecam on top and game below; peaks are found by sound, picture and chat, even without speech.</dd></div>
+      <div><dt>Daily picks of a game</dt><dd>Ask for <span class="ask">3 GTA VI clips every day</span> and get the most watched streamer moments with a time to post each.</dd></div>
+      <div><dt>Watches your channels</dt><dd>New videos of a YouTube or Twitch channel become clips without you asking.</dd></div>
+      <div><dt>Posts for you</dt><dd>YouTube, Instagram and TikTok through your own developer apps, now or planned.</dd></div>
+      <div><dt>Learns what works</dt><dd>Views and watch time come back onto each clip and steer the next picks.</dd></div>
+      <div><dt>Works on your phone</dt><dd>Pair a phone on the same Wi-Fi with a QR code and use the same chats.</dd></div>
+      <div><dt>Private by default</dt><dd>Local models, no upload. Account tokens stay on your computer.</dd></div>
+    </dl>
+  </section>
 
-      <div class="tabs" role="tablist" aria-label="Operating system">
-        <button type="button" role="tab" id="tab-win" aria-controls="os-win" aria-selected="true">Windows</button>
-        <button type="button" role="tab" id="tab-mac" aria-controls="os-mac" aria-selected="false">macOS</button>
-        <button type="button" role="tab" id="tab-linux" aria-controls="os-linux" aria-selected="false">Linux</button>
-      </div>
+  <section id="install" class="wrap">
+    <h2>Install Clippy</h2>
+    <p class="intro">About fifteen minutes, most of it downloading. Every tool it needs is free.</p>
+    <dl class="needs">
+      <div><dt>System</dt><dd>Windows 10 or 11, macOS or Linux</dd></div>
+      <div><dt>Graphics card</dt><dd>NVIDIA, 12-16 GB VRAM recommended; the CPU works too</dd></div>
+      <div><dt>Disk</dt><dd>About 25 GB for the AI models and the cache</dd></div>
+      <div><dt>Tools</dt><dd>Python 3.12, Ollama, Git, Node.js</dd></div>
+    </dl>
 
-      <div class="os" id="os-win" role="tabpanel" aria-labelledby="tab-win">
-        <ol>
-          <li><div><p><b>Install the free tools</b> in PowerShell or the Terminal app:</p>
-            <div class="cmd"><pre><code>winget install Python.Python.3.12
+    <div class="tabs" role="tablist" aria-label="Operating system">
+      <button type="button" role="tab" id="tab-win" aria-controls="os-win" aria-selected="true">Windows</button>
+      <button type="button" role="tab" id="tab-mac" aria-controls="os-mac" aria-selected="false" tabindex="-1">macOS</button>
+      <button type="button" role="tab" id="tab-linux" aria-controls="os-linux" aria-selected="false" tabindex="-1">Linux</button>
+    </div>
+
+    <div class="os" id="os-win" role="tabpanel" aria-labelledby="tab-win" tabindex="0">
+      <ol>
+        <li><div><p><b>Install the free tools</b> in PowerShell or Terminal:</p>
+          <div class="cmd"><pre><code>winget install Python.Python.3.12
 winget install Ollama.Ollama
 winget install Git.Git
 winget install OpenJS.NodeJS.LTS</code></pre></div>
-            <small>Then close the terminal and open a new one.</small></div></li>
-          <li><div><p><b>Get Clippy</b> (or <a href="https://github.com/hajdu-patrik/clippy/archive/refs/heads/main.zip">download the ZIP</a> and unpack it):</p>
-            <div class="cmd"><pre><code>git clone https://github.com/hajdu-patrik/clippy.git
+          <small>Then close the terminal and open a new one.</small></div></li>
+        <li><div><p><b>Get Clippy</b>, or <a href="https://github.com/hajdu-patrik/clippy/archive/refs/heads/main.zip">download the ZIP</a> and unpack it:</p>
+          <div class="cmd"><pre><code>git clone https://github.com/hajdu-patrik/clippy.git
 cd clippy</code></pre></div></div></li>
-          <li><div><p><b>Run the installer.</b> It sets up Python, the GPU packages when an NVIDIA card is there, the AI model and the <code>clippy</code> command:</p>
-            <div class="cmd"><pre><code>powershell -ExecutionPolicy Bypass -File install.ps1</code></pre></div>
-            <small>The first run downloads the AI model (about 12 GB). It is safe to run again.</small></div></li>
-          <li><div><p><b>Start it</b> in a new terminal; the app opens in your browser at http://127.0.0.1:7860:</p>
-            <div class="cmd"><pre><code>clippy start</code></pre></div></div></li>
-        </ol>
-      </div>
+        <li><div><p><b>Run the installer.</b> It sets up Python, the GPU packages when an NVIDIA card is present, the AI model and the <code>clippy</code> command:</p>
+          <div class="cmd"><pre><code>powershell -ExecutionPolicy Bypass -File install.ps1</code></pre></div>
+          <small>The first run downloads the language model (about 12 GB). You can run it again any time.</small></div></li>
+        <li><div><p><b>Start Clippy</b> in a new terminal. The app opens in your browser at http://127.0.0.1:7860.</p>
+          <div class="cmd"><pre><code>clippy start</code></pre></div></div></li>
+      </ol>
+    </div>
 
-      <div class="os" id="os-mac" role="tabpanel" aria-labelledby="tab-mac" hidden>
-        <ol>
-          <li><div><p><b>Install the free tools</b> with <a href="https://brew.sh/">Homebrew</a>:</p>
-            <div class="cmd"><pre><code>brew install python@3.12 git node
-brew install --cask ollama</code></pre></div>
-            <small>Open the Ollama app once so it runs in the background.</small></div></li>
-          <li><div><p><b>Get Clippy:</b></p>
-            <div class="cmd"><pre><code>git clone https://github.com/hajdu-patrik/clippy.git
+    <div class="os" id="os-mac" role="tabpanel" aria-labelledby="tab-mac" tabindex="0" hidden>
+      <ol>
+        <li><div><p><b>Install the free tools</b> with <a href="https://brew.sh/">Homebrew</a>, then open the Ollama app once:</p>
+          <div class="cmd"><pre><code>brew install python@3.12 git node
+brew install --cask ollama</code></pre></div></div></li>
+        <li><div><p><b>Get Clippy:</b></p>
+          <div class="cmd"><pre><code>git clone https://github.com/hajdu-patrik/clippy.git
 cd clippy</code></pre></div></div></li>
-          <li><div><p><b>Run the installer:</b></p>
-            <div class="cmd"><pre><code>sh install.sh</code></pre></div>
-            <small>Without an NVIDIA card the video is encoded on the CPU; on Apple Silicon a hosted AI model is the faster choice (see below).</small></div></li>
-          <li><div><p><b>Start it</b> in a new terminal:</p>
-            <div class="cmd"><pre><code>clippy start</code></pre></div></div></li>
-        </ol>
-      </div>
+        <li><div><p><b>Run the installer:</b></p>
+          <div class="cmd"><pre><code>sh install.sh</code></pre></div>
+          <small>Macs encode video on the CPU, and a hosted language model is the faster choice there (see below).</small></div></li>
+        <li><div><p><b>Start Clippy</b> in a new terminal:</p>
+          <div class="cmd"><pre><code>clippy start</code></pre></div></div></li>
+      </ol>
+    </div>
 
-      <div class="os" id="os-linux" role="tabpanel" aria-labelledby="tab-linux" hidden>
-        <ol>
-          <li><div><p><b>Install the free tools</b> (Ubuntu and Debian shown; use your package manager elsewhere):</p>
-            <div class="cmd"><pre><code>sudo apt install python3.12 python3.12-venv git nodejs
+    <div class="os" id="os-linux" role="tabpanel" aria-labelledby="tab-linux" tabindex="0" hidden>
+      <ol>
+        <li><div><p><b>Install the free tools</b> (Ubuntu and Debian shown):</p>
+          <div class="cmd"><pre><code>sudo apt install python3.12 python3.12-venv git nodejs
 curl -fsSL https://ollama.com/install.sh | sh</code></pre></div></div></li>
-          <li><div><p><b>Get Clippy:</b></p>
-            <div class="cmd"><pre><code>git clone https://github.com/hajdu-patrik/clippy.git
+        <li><div><p><b>Get Clippy:</b></p>
+          <div class="cmd"><pre><code>git clone https://github.com/hajdu-patrik/clippy.git
 cd clippy</code></pre></div></div></li>
-          <li><div><p><b>Run the installer:</b></p>
-            <div class="cmd"><pre><code>sh install.sh</code></pre></div>
-            <small>Captions use the system fonts (DejaVu or Liberation).</small></div></li>
-          <li><div><p><b>Start it</b> in a new terminal:</p>
-            <div class="cmd"><pre><code>clippy start</code></pre></div></div></li>
-        </ol>
-      </div>
-
-      <div class="tip"><b>No strong graphics card?</b>
-        <p>Clippy can use a free hosted AI model instead of the local one. Get a free key at
-          <a href="https://console.groq.com/keys">Groq</a> or <a href="https://aistudio.google.com/apikey">Google AI Studio</a>,
-          then in the <code>.env</code> file in the Clippy folder uncomment the matching block and paste the key. The
-          videos still stay on your computer; only the transcript text goes to the AI.</p></div>
-      <div class="tip"><b>On your phone</b>
-        <p>Run <code>clippy restart --lan</code> and scan the QR code with a phone on the same Wi-Fi. <code>clippy pair</code> gives a new code.</p></div>
-      <div class="tip"><b>Updating</b>
-        <p>In the Clippy folder run <code>git pull</code>, then the installer again.</p></div>
+        <li><div><p><b>Run the installer:</b></p>
+          <div class="cmd"><pre><code>sh install.sh</code></pre></div></div></li>
+        <li><div><p><b>Start Clippy</b> in a new terminal:</p>
+          <div class="cmd"><pre><code>clippy start</code></pre></div></div></li>
+      </ol>
     </div>
+
+    <dl class="notes">
+      <div><dt>No strong graphics card</dt><dd>Use a free hosted language model: get a key at <a href="https://console.groq.com/keys">Groq</a> or <a href="https://aistudio.google.com/apikey">Google AI Studio</a> and paste it into the matching block of the <code>.env</code> file. Videos stay on your computer; only transcript text goes to the model.</dd></div>
+      <div><dt>On your phone</dt><dd>Run <code>clippy restart --lan</code> and scan the QR code with a phone on the same Wi-Fi.</dd></div>
+      <div><dt>Updating</dt><dd>Run <code>git pull</code> in the Clippy folder, then the installer again.</dd></div>
+    </dl>
   </section>
 
-  <section id="faq">
-    <div class="wrap">
-      <h2>Questions</h2>
-      <details open><summary>Is it really free?</summary><p>Yes. Clippy is MIT-licensed and uses free models on your own computer: faster-whisper for speech, Qwen3-14B through Ollama for picking and editing, FFmpeg for the video. No subscription, no account, no watermark.</p></details>
-      <details><summary>Does it upload my videos anywhere?</summary><p>No. Downloading, transcribing, picking and rendering all happen on your computer. Only posting sends a clip, to your own accounts, when you ask for it.</p></details>
-      <details><summary>How fast is it?</summary><p>On an RTX card with 16 GB a 7-minute video becomes three finished clips in about seven minutes. An edit of an existing clip takes seconds.</p></details>
-      <details><summary>Which languages?</summary><p>Every video is transcribed and captioned in its own language. The app and the chat speak Hungarian and English, and captions can be translated between the two.</p></details>
-      <details><summary>Can I use other people's videos?</summary><p>Post and monetise only your own footage, footage you have permission for, or clips from an official clipping campaign. Downloading may be restricted by a platform's terms of service.</p></details>
-      <details><summary>Something does not work</summary><p>Run <code>clippy status</code> and <code>clippy logs</code>, and open an issue on <a href="https://github.com/hajdu-patrik/clippy/issues">GitHub</a> with what you see.</p></details>
-    </div>
+  <section id="faq" class="wrap">
+    <h2>Questions</h2>
+    <details open><summary>Is Clippy really free?</summary><p>Yes. It is MIT-licensed and uses free models on your own computer: faster-whisper for speech, Qwen3-14B through Ollama for picking and editing, FFmpeg for video. There is no account, subscription or watermark.</p></details>
+    <details><summary>How is it different from online clipping tools?</summary><p>Clippy runs on your computer, so videos are never uploaded and there are no credits or monthly limits. It is open source, and every change to a clip is asked for in plain words and can be undone.</p></details>
+    <details><summary>How fast is it?</summary><p>On an NVIDIA card with 16 GB of memory a 7-minute video becomes three finished clips in about seven minutes. Changing an existing clip takes seconds.</p></details>
+    <details><summary>Which languages does it support?</summary><p>Every video is transcribed and captioned in its own language, in any language Whisper knows, and its post text follows that language. The app itself is in English.</p></details>
+    <details><summary>Can I clip other people's videos?</summary><p>Post and monetise only your own footage, footage you have permission for, or clips from an official clipping campaign. A platform's terms of service may restrict downloading.</p></details>
+    <details><summary>Something does not work</summary><p>Run <code>clippy status</code> and <code>clippy logs</code>, then open an issue on <a href="https://github.com/hajdu-patrik/clippy/issues">GitHub</a> with what you see.</p></details>
   </section>
 
-  <section id="magyarul" lang="hu">
-    <div class="wrap">
-      <div class="hu">
-        <h2>Magyarul</h2>
-        <p>A Clippy ingyenes, nyílt forráskódú AI klipvágó, ami a saját gépeden fut. Bemásolsz egy linket
-          (YouTube, Twitch, Kick, TikTok, Instagram), és kész, függőleges klipeket kapsz TikTokra, YouTube Shortsra és
-          Instagram Reelsre: a legerősebb pillanatokkal, szavanként megjelenő felirattal és kész posztszöveggel. Utána a
-          chatben kéred a változtatást: nyitó felirat, zene, logó, effekt, formátum, visszavonás.</p>
-        <p><b>Telepítés:</b> fent, az „Install” résznél válaszd ki a rendszered, és futtasd le a négy lépést
-          (ingyenes eszközök, letöltés, telepítő, <code>clippy start</code>). Erős videókártya nélkül egy ingyenes felhős
-          AI kulccsal is működik. Az app magyarul és angolul is beszél (<code>clippy lang hu</code>).</p>
-      </div>
-    </div>
-  </section>
-
-  <div class="wrap end">
+  <div class="end">
     <h2>Make your first clips today</h2>
+    <p>Install it once, paste a link, and your first vertical clips are ready to post.</p>
     <div class="ctas"><a class="btn primary" href="#install">Install Clippy</a>
-      <a class="btn ghost" href="https://github.com/hajdu-patrik/clippy">Star it on GitHub</a></div>
+      <a class="btn ghost" href="https://github.com/hajdu-patrik/clippy">View on GitHub</a></div>
   </div>
 </main>
 
 <footer>
   <div class="wrap">
-    <span>MIT licensed · Clippy is not affiliated with Microsoft</span>
-    <a href="privacy.html">Privacy</a><a href="terms.html">Terms</a><a href="llms.txt">llms.txt</a>
-    <a href="https://github.com/hajdu-patrik/clippy/blob/main/CHANGELOG.md">Changelog</a>
+    <span>MIT licensed. Clippy is not affiliated with Microsoft.</span>
+    <a href="privacy.html">Privacy</a><a href="terms.html">Terms</a>
+    <a href="https://github.com/hajdu-patrik/clippy/blob/main/CHANGELOG.md">Changelog</a><a href="llms.txt">llms.txt</a>
   </div>
 </footer>
 <script src="assets/site.js" defer></script>

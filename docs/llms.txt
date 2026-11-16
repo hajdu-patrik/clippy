@@ -1,25 +1,32 @@
 # Clippy
 
-> Clippy is a free, open-source (MIT) AI clipper for Windows that runs locally. It turns long YouTube videos, podcasts and streams into vertical 9:16 clips for TikTok, YouTube Shorts and Instagram Reels, with the strongest hooks chosen by a local LLM (Qwen3-14B via Ollama), animated word-by-word captions, a speaker-tracking virtual camera, tight cuts, −14 LUFS sound and a chat editor. It speaks Hungarian and English.
+> Clippy is a free, open-source (MIT) AI clipper that runs on your own computer (Windows, macOS, Linux). It turns long videos, podcasts and streams into vertical 9:16 clips for TikTok, YouTube Shorts and Instagram Reels: it picks the moments with the strongest hooks with a local language model (Qwen3-14B via Ollama), frames the speaker with a virtual camera, adds word-by-word captions, cuts dead air, masters the sound and writes a ready post text. Clips are edited by asking in a chat. Nothing is uploaded and there is no subscription.
 
 Key facts:
 
-- Input: a YouTube (or other) link or a local video file, pasted into a ChatGPT-style local web app (`clippy start`, http://127.0.0.1:7860) or given to the `clippy clip` command.
-- Pipeline: yt-dlp → Demucs voice isolation → faster-whisper large-v3 → MMS_FA word alignment → Qwen3 hook scoring → tight edit → shot detection + YuNet faces + active-speaker camera → ASS captions → FFmpeg NVENC → two-pass loudness.
-- Editing: requests like "put this song under it quietly, add my logo, warm the colours, cut from 'but' to 'anyway', undo" become validated edit operations on a timeline; edits re-render in seconds from a cached base.
-- Languages: spoken language detected between Hungarian and English; captions and hooks can be translated between them; UI and CLI in both.
-- Requirements: Windows 10/11, Python 3.12, Ollama; NVIDIA GPU with 12-16 GB VRAM recommended.
-- Privacy and cost: everything runs locally; no upload, no subscription.
+- What it is: a local web app with a chat (`clippy start`, http://127.0.0.1:7860) and a `clippy` command line. Paste a video link (YouTube, Twitch, Kick, TikTok, Instagram and other yt-dlp sites) or a file; finished clips appear as cards in the chat.
+- Output per clip: a 9:16 MP4 with captions, a cover, a title, a description, a comment question, hashtags, a second title for A/B tests and a post text ready to paste.
+- Editing: requests like "put an opening text on clip 2", "add this song quietly", "make it 16:9", "cut from 'but' to 'anyway'", "undo" become validated edit operations; edits re-render in seconds from a cached base.
+- Streams: facecam on top and game below; peaks are found by loudness, laughter, motion on screen and the stream chat. "Clip the latest stream of Kai Cenat" finds a streamer's newest finished stream by name.
+- Daily picks: "every day 3 GTA VI clips" clips the most watched streamer moments of a game's Twitch and Kick category each morning, with a time to post each for a US audience.
+- Posting: to the user's own YouTube, Instagram and TikTok accounts through their own developer apps, immediately or at a set time; views and watch time are read back and steer later picks.
+- Languages: every video is transcribed and captioned in its own language (any language Whisper knows); captions can be translated between English and Hungarian. The interface is English.
+- Pipeline: yt-dlp, Demucs voice isolation, faster-whisper large-v3, MMS_FA word alignment, Qwen3 hook scoring and re-ranking, tight edit on word boundaries, shot detection, YuNet faces and an active-speaker camera, ASS captions, FFmpeg (NVENC when available), two-pass -14 LUFS loudness.
+- Requirements: Windows 10/11, macOS or Linux; Python 3.12, Ollama, Git, Node.js; about 25 GB of disk; an NVIDIA GPU with 12-16 GB VRAM is recommended. Without one it runs on the CPU or with a free hosted model (Groq, Gemini, OpenRouter).
+- Install (Windows): `git clone https://github.com/hajdu-patrik/clippy.git`, `cd clippy`, `powershell -ExecutionPolicy Bypass -File install.ps1`, then `clippy start`. macOS and Linux: `sh install.sh`.
+- Cost and privacy: free and MIT-licensed; videos never leave the computer; account tokens stay local.
 
 ## Docs
 
+- [Project page with demo video and install guide](https://hajdu-patrik.github.io/clippy/)
 - [README](https://github.com/hajdu-patrik/clippy/blob/main/README.md): overview, quick start, configuration
 - [Command line](https://github.com/hajdu-patrik/clippy/blob/main/docs/cli.md): every command and option
-- [Posting](https://github.com/hajdu-patrik/clippy/blob/main/docs/publishing.md): connecting YouTube, Instagram and TikTok to post clips from the app
+- [Posting](https://github.com/hajdu-patrik/clippy/blob/main/docs/publishing.md): connecting YouTube, Instagram and TikTok
 - [Output quality](https://github.com/hajdu-patrik/clippy/blob/main/docs/quality.md): what each stage does, hook scoring
 - [Local LLM](https://github.com/hajdu-patrik/clippy/blob/main/docs/local-llm.md): Qwen3-14B tuning for a 16 GB GPU
 
 ## Optional
 
+- [Demo video (4K, one minute)](https://hajdu-patrik.github.io/clippy/assets/demo.mp4)
 - [Changelog](https://github.com/hajdu-patrik/clippy/blob/main/CHANGELOG.md)
 - [License (MIT)](https://github.com/hajdu-patrik/clippy/blob/main/LICENSE.md)
