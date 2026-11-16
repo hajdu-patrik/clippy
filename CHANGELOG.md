@@ -6,6 +6,9 @@ change, what changed rather than how; dates are ISO 8601.
 ## [Unreleased]
 
 ### Added
+- Every video is transcribed and captioned in its own language (English stays English, Hungarian
+  Hungarian, other languages their own); captions change language only when the user asks for it, never because
+  of the language they write to the chat in.
 - Deleting a chat stops its running job at once (download, transcript or render), so nothing keeps working
   for a chat that is gone.
 - Streamers by name: "klippeld N3on legújabb streamjét" or "clip the latest stream of Kai Cenat" finds the newest

@@ -527,3 +527,11 @@ def test_titles_and_descriptions_never_go_to_the_video_editor():
     assert agent.texts_first("generate titles and descriptions for every clip", edit)[0]["type"] == "texts"
     assert agent.texts_first("legyen zöld a felirat és írj leírást", edit) == edit
     assert agent.texts_first("tedd halkabbra a zenét", edit) == edit
+
+
+def test_captions_follow_the_video_unless_the_user_asks():
+    raw = [{"type": "generate", "url": "https://youtu.be/a", "n": 3, "options": {"captions": "hu", "lang": "hu"}}]
+    plain = agent.ActionValidator(set(), {}, "https://youtu.be/a készíts 3 klipet").validate(raw)
+    assert "captions" not in plain[0]["options"] and "lang" not in plain[0]["options"]
+    asked = agent.ActionValidator(set(), {}, "https://youtu.be/a 3 klip magyar felirattal").validate(raw)
+    assert asked[0]["options"]["captions"] == "hu"

@@ -12,6 +12,20 @@ SUPPORTED = ("hu", "en")
 SETTINGS = Path(__file__).resolve().parent.parent / "data" / "settings.json"
 DEFAULT = "en"
 NAMES = {"hu": "Hungarian", "en": "English"}
+LANGUAGES = {
+    "hu": "Hungarian", "en": "English", "de": "German", "es": "Spanish", "fr": "French", "it": "Italian",
+    "pt": "Portuguese", "nl": "Dutch", "pl": "Polish", "ro": "Romanian", "sk": "Slovak", "cs": "Czech",
+    "hr": "Croatian", "sr": "Serbian", "sl": "Slovenian", "bg": "Bulgarian", "uk": "Ukrainian", "ru": "Russian",
+    "el": "Greek", "tr": "Turkish", "ar": "Arabic", "he": "Hebrew", "fa": "Persian", "hi": "Hindi",
+    "id": "Indonesian", "ms": "Malay", "th": "Thai", "vi": "Vietnamese", "ja": "Japanese", "ko": "Korean",
+    "zh": "Chinese", "sv": "Swedish", "no": "Norwegian", "da": "Danish", "fi": "Finnish", "et": "Estonian",
+    "lv": "Latvian", "lt": "Lithuanian", "tl": "Tagalog",
+}
+
+
+def language_name(code: str | None) -> str:
+    """The English name of a spoken language code (for prompts and logs); the code itself when it is a rare one."""
+    return LANGUAGES.get(str(code or ""), str(code or "English"))
 _HU_HINT = re.compile(
     r"[őűŐŰ]|\b(és|hogy|nem|igen|kérek|kérlek|csinálj|legyen|még|klipet|klipek|klip|ezt|azt|mert|vagy|"
     r"legyenek|szeretném|szeretnék|töröld|vágd|rövidebb|hosszabb|melyik|miért|hány|tedd|rakd|vedd|"

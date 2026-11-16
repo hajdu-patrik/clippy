@@ -34,12 +34,17 @@ def test_cli_help_follows_the_language():
     assert hu["clips"].startswith("hány klip") and en["clips"].startswith("how many clips")
 
 
-def test_transcription_picks_hungarian_or_english_only():
+def test_transcription_keeps_the_video_language_unless_unsure():
     class Model:
-        def detect_language(self, audio, **kw):
-            return "fi", 0.5, [("fi", 0.5), ("hu", 0.3), ("en", 0.1)]
+        def __init__(self, scores):
+            self.scores = scores
 
-    assert detect_language(Model(), None) == "hu"
+        def detect_language(self, audio, **kw):
+            return self.scores[0][0], self.scores[0][1], self.scores
+
+    assert detect_language(Model([("fi", 0.5), ("hu", 0.3), ("en", 0.1)]), None) == "hu"
+    assert detect_language(Model([("es", 0.92), ("en", 0.05)]), None) == "es"
+    assert detect_language(Model([("en", 0.6), ("hu", 0.3)]), None) == "en"
 
     class Broken:
         def detect_language(self, audio, **kw):

@@ -8,7 +8,7 @@ import sys
 from contextlib import nullcontext
 from pathlib import Path
 
-from .i18n import DEFAULT, NAMES, SUPPORTED
+from .i18n import DEFAULT, SUPPORTED, language_name
 from .tools import decode_audio, log, read_json, report, write_json
 
 TRANSCRIBE_VERSION = "v2"
@@ -61,16 +61,22 @@ def _load_model(model_name: str, device: str):
     return WhisperModel(model_name, device="cpu", compute_type="int8"), "cpu"
 
 
+SURE = 0.7
+
+
 def detect_language(model, audio) -> str:
-    """Hungarian or English: Whisper's language scores over several speech windows, restricted to the two."""
+    """The video's own language from Whisper's scores over several speech windows. An unsure guess for a language
+    other than Hungarian or English gives way to the likelier of those two (noise and music fool the detector)."""
     try:
         _, _, scores = model.detect_language(audio, vad_filter=True, language_detection_segments=6)
         probs = dict(scores)
     except Exception as exc:
         log(f"[transcribe] language detection failed ({type(exc).__name__}), assuming English")
         return DEFAULT
-    best = max(SUPPORTED, key=lambda code: probs.get(code, 0.0))
-    log(f"[transcribe] language: {NAMES[best]} (hu {probs.get('hu', 0):.2f} / en {probs.get('en', 0):.2f})")
+    best = max(probs, key=probs.get) if probs else DEFAULT
+    if best not in SUPPORTED and probs.get(best, 0.0) < SURE:
+        best = max(SUPPORTED, key=lambda code: probs.get(code, 0.0))
+    log(f"[transcribe] language: {language_name(best)} ({probs.get(best, 0):.2f})")
     return best
 
 

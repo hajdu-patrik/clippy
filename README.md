@@ -98,9 +98,12 @@ Every change becomes a new version (v2, v3…) and older versions stay playable.
 you keep chatting. The layout works from 320 px phones to wide desktops, with a swipe drawer, keyboard shortcuts
 (`Ctrl+Shift+O`, `/`, `Esc`) and motion that honours *reduce motion*.
 
-**Languages.** The spoken language is detected between Hungarian and English (or set with `--lang`) and transcribed
-as spoken. Captions and hooks follow the video, or ask for the other language (*"English captions on clip 5"*,
-`--captions hu`) and they are translated line by line and kept in sync with the speech. The chat understands and
+**Languages.** Every video is transcribed in its own language: an English video gets English captions and texts,
+a Hungarian one Hungarian, a Spanish stream Spanish (any language Whisper knows; an unsure guess falls back to
+Hungarian or English, which Whisper sometimes mistakes for Finnish). The language you write to the chat in never
+changes that. Ask for another language only when you want it (*"magyar felirattal"*, *"English captions on clip
+5"*, `--captions hu`): captions are then translated into Hungarian or English line by line and kept in sync with
+the speech. The chat understands and
 answers in both, and every label of the web app and the CLI exists in both (`HU` / `EN` switch, `clippy lang`).
 
 ## Ready-made prompts
@@ -283,7 +286,8 @@ Conventions: [CLAUDE.md](CLAUDE.md). Release history: [CHANGELOG.md](CHANGELOG.m
   captions use the system's fonts (DejaVu or Liberation on Linux).
 * The camera follows the active speaker by mouth motion; the voices are told apart only for picking (who says
   what), by a light voice print that labels speakers only when their voices clearly differ.
-* Hungarian and English only: other languages are transcribed as one of the two.
+* The interface, the chat and caption translation are Hungarian and English; videos in other languages are
+  transcribed and captioned in their own language, and words in non-Latin scripts keep Whisper's timing.
 * Post and monetise only your own footage, footage you have permission for, or content from an official clipping
   campaign. Downloading may be restricted by a platform's terms of service.
 

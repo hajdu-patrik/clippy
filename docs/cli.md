@@ -61,7 +61,7 @@ Every stage is cached, so re-runs are fast.
 | `-n 5` | number of clips |
 | `--min 20 --max 60` | clip length in seconds before the tight edit (20-45 s is a good start; TikTok Creator Rewards needs 60+) |
 | `--wish "..."` | what kind of moments to pick, e.g. "the funniest parts" |
-| `--lang hu` | spoken language (default: detected between Hungarian and English) |
+| `--lang hu` | spoken language (default: detected, the video's own language) |
 | `--captions en` | language of the captions and the hook; a different one than the spoken language is translated |
 | `--vocab "DESH, Young Fly"` | names and slang to spell right; the video title is added automatically |
 | `--whisper large-v3-turbo` | faster transcription (default: `auto` = large-v3 on the GPU) |

@@ -82,6 +82,9 @@ options (all optional, for generate / more):
   translated automatically, e.g. an English video with Hungarian captions), vocab (names to spell right)
 
 Rules:
+- Captions, opening texts, titles and descriptions stay in the VIDEO's own spoken language. Set "captions" (or
+  "lang") only when the user's message asks for a language ("magyar felirattal", "English captions"); the
+  language the user writes to you in is never a reason to change them.
 - Clip numbers are the "#" numbers in the state below. "the last one" / "az utolsó" = highest number.
 - The hook is the clip's first 3 seconds (a funny, bold or surprising moment); the opening text only supports
   it, and short videos that already open strongly get none. Opening texts you write: max 7 words, in the VIDEO's language, punchy, honest (paid off in the clip).
@@ -208,6 +211,8 @@ WATCH_WORDS = re.compile(r"\b(figyeld|figyeljed|figyelj|kövesd|kövessed|kovesd
 RECENT_WORDS = re.compile(r"\b(legujabb\w*|legutobbi\w*|legutolso\w*|utolso\w*|friss\w*|legfrissebb\w*|latest|newest|"
                           r"last|recent\w*|most recent)\b")
 STREAM_WORDS = re.compile(r"\b(stream\w*|vod\w*|adas\w*|elo|live\w*|kozvetites\w*|broadcast\w*)\b")
+LANGUAGE_REQUEST = re.compile(r"\b(felirat\w*|subtitle\w*|captions?|fordít\w*|fordit\w*|translat\w*|nyelv\w*|"
+                              r"language|magyarul|angolul|in english|in hungarian)", re.I)
 COUNT_RE = re.compile(r"\b(\d{1,2})\s*(?:clips?|db|darab|klip|rész)", re.I)
 NEAR = 30
 SENTENCE_END = re.compile(r"[.!?\n]")
@@ -244,6 +249,9 @@ class ActionValidator:
             if handler is None:
                 continue
             opts, warnings = clean_options(raw.get("options"))
+            if not LANGUAGE_REQUEST.search(self.message):
+                opts.pop("captions", None)
+                opts.pop("lang", None)
             for key, params in warnings:
                 self.note(key, **params)
             action = handler(self, raw, opts)

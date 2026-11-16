@@ -7,15 +7,14 @@ import json
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
-from . import playbook
+from . import i18n, playbook
 from .boundaries import END_OVERFLOW, Boundaries, end_time, start_time
 from .llm import LLM, think_enabled
 from .signals import Signals
 from .text import ends_sentence, post_clean
 from .tools import ClippyError, fmt_ts, log, report, report_span, write_json
 
-LANG_NAMES = {"hu": "Hungarian", "en": "English", "de": "German", "es": "Spanish", "fr": "French",
-              "it": "Italian", "pl": "Polish", "ro": "Romanian", "sk": "Slovak", "cs": "Czech"}
+LANG_NAMES = i18n.LANGUAGES
 
 SYSTEM_PROMPT = """You are a senior short-form video editor (10+ years) who turns long podcasts, interviews,
 news pieces and streams into viral vertical clips for TikTok, YouTube Shorts and Instagram Reels.
