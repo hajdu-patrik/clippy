@@ -68,6 +68,7 @@ class Options:
     punch: bool = False
     audio: str = "voice"
     duck: float = 0.0
+    whole: bool = False
     encoder: str = "auto"
     cookies_from_browser: str | None = field(default_factory=lambda: os.environ.get("CLIPPY_COOKIES_FROM_BROWSER") or None)
 
@@ -258,9 +259,10 @@ class Project:
 
     def select(self, n: int | None = None, exclude: list[Clip] | tuple = (), instructions: str | None = None,
                opts: Options | None = None, lessons: str = "") -> list[Clip]:
-        """The best moments. A short source (a TikTok, a Reel) becomes one clip of all of it, the LLM only writes its
-        texts; without speech it gets no texts, since moments and hooks come from what is said. A short video's own
-        first seconds are its hook, so it gets no opening text over them."""
+        """The best moments. A short source (a TikTok, a Reel, or with `whole` any source up to the longest clip, such
+        as a streamer moment of the daily picks) becomes one clip of all of it, the LLM only writes its texts; without
+        speech it gets no texts, since moments and hooks come from what is said. A short video's own first seconds are
+        its hook, so it gets no opening text over them."""
         self.prepare()
         o = opts or self.opts
         duration = float((self.transcript or {}).get("duration") or (self.words[-1]["end"] if self.words else 0.0))
@@ -274,7 +276,8 @@ class Project:
             return [Clip(0.0, min(duration, max_len), 50.0, title=self.title[:70], reason="no speech in the video")]
         if not self.words:
             log("[hook] no speech: the moments come from the reactions (sound, picture, chat)")
-        short = bool(duration) and duration < min_len + SHORT_SOURCE_MARGIN
+        short = bool(duration) and (duration < min_len + SHORT_SOURCE_MARGIN
+                                    or (o.whole and duration <= max_len + SHORT_SOURCE_MARGIN))
         if short and exclude:
             raise ClippyError(key="error.no_suitable_clip")
         if short:
@@ -289,6 +292,9 @@ class Project:
                                 instructions=o.instructions if instructions is None else instructions,
                                 cache=PickCache(self.storage.cache("picks"), self.video_stem) if self.video_stem else None,
                                 signals=reactions, lessons=lessons, speakers=self.speaker_turns)
+        if not clips and short and o.whole:
+            log("[hook] the picker found nothing: the whole moment becomes the clip")
+            clips = [Clip(0.0, min(duration, o.max_len), 50.0, title=self.title[:70], reason="the whole moment")]
         if not clips:
             raise ClippyError(key="error.no_suitable_clip")
         if short:

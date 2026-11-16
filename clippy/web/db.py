@@ -64,6 +64,17 @@ CREATE TABLE IF NOT EXISTS watches (
     problem TEXT NOT NULL DEFAULT '{}',
     created REAL NOT NULL
 );
+CREATE TABLE IF NOT EXISTS daily (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    game TEXT NOT NULL,
+    settings TEXT NOT NULL DEFAULT '{}',
+    seen TEXT NOT NULL DEFAULT '[]',
+    picks TEXT NOT NULL DEFAULT '[]',
+    enabled INTEGER NOT NULL DEFAULT 1,
+    ran REAL NOT NULL DEFAULT 0,
+    problem TEXT NOT NULL DEFAULT '{}',
+    created REAL NOT NULL
+);
 CREATE TABLE IF NOT EXISTS scheduled (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     chat_id INTEGER NOT NULL REFERENCES chats(id) ON DELETE CASCADE,
@@ -80,7 +91,8 @@ CREATE INDEX IF NOT EXISTS idx_msg_chat ON messages(chat_id, id);
 CREATE INDEX IF NOT EXISTS idx_clip_chat ON clips(chat_id, number, version);
 """
 
-_JSON_COLS = {"options", "data", "clip", "overrides", "info", "problem", "settings", "seen", "platforms", "stats"}
+_JSON_COLS = {"options", "data", "clip", "overrides", "info", "problem", "settings", "seen", "platforms", "stats",
+              "picks"}
 
 
 def _row(r: sqlite3.Row | None) -> dict | None:
@@ -278,6 +290,31 @@ class DB:
 
     def delete_watch(self, watch_id: int) -> bool:
         return self._exec("DELETE FROM watches WHERE id = ?", (watch_id,)).rowcount > 0
+
+    def add_daily(self, game: str, settings: dict) -> dict:
+        cur = self._exec("INSERT INTO daily (game, settings, created) VALUES (?,?,?)",
+                         (game, json.dumps(settings, ensure_ascii=False), time.time()))
+        return self.get_daily(cur.lastrowid)
+
+    def get_daily(self, daily_id: int) -> dict | None:
+        return self._one("SELECT * FROM daily WHERE id = ?", (daily_id,))
+
+    def list_daily(self) -> list[dict]:
+        return self._all("SELECT * FROM daily ORDER BY id")
+
+    def update_daily(self, daily_id: int, **fields) -> dict | None:
+        allowed = {"settings", "seen", "picks", "enabled", "ran", "problem"}
+        sets, args = [], []
+        for k, v in fields.items():
+            if k in allowed:
+                sets.append(f"{k} = ?")
+                args.append(json.dumps(v, ensure_ascii=False) if k in _JSON_COLS else v)
+        if sets:
+            self._exec(f"UPDATE daily SET {', '.join(sets)} WHERE id = ?", (*args, daily_id))
+        return self.get_daily(daily_id)
+
+    def delete_daily(self, daily_id: int) -> bool:
+        return self._exec("DELETE FROM daily WHERE id = ?", (daily_id,)).rowcount > 0
 
     def add_scheduled(self, chat_id: int, number: int, platforms: list[str], settings: dict, due: float) -> dict:
         cur = self._exec("INSERT INTO scheduled (chat_id, number, platforms, settings, due, created) VALUES (?,?,?,?,?,?)",

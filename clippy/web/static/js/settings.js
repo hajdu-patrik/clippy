@@ -5,6 +5,7 @@ import { loadAccounts } from "./publish.js";
 import { state } from "./state.js";
 import { bindKit, loadKit } from "./kit.js";
 import { bindResults, loadResults } from "./results.js";
+import { bindPicks, loadPicks } from "./picks.js";
 import { bindWatches, loadWatches } from "./watches.js";
 import { $, esc, toast } from "./util.js";
 
@@ -58,6 +59,7 @@ function open() {
   $("#settingsDialog").showModal();
   $("#profileLinks").focus();
   refreshAccounts();
+  loadPicks();
   loadWatches();
   loadResults();
   loadKit();
@@ -138,6 +140,7 @@ export function bindSettings() {
     if (e.key === "Enter") { e.preventDefault(); saveToken(); }
   });
   document.addEventListener("clippy:settings", open);
+  bindPicks();
   bindWatches();
   bindResults();
   bindKit();

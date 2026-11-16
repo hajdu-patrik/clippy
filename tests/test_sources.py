@@ -85,6 +85,22 @@ def test_a_short_video_becomes_one_clip_of_nearly_all_of_it(monkeypatch, tmp_pat
     assert seen == {"n": 5, "min_len": 20, "max_len": 60}
 
 
+def test_a_whole_moment_stays_one_clip_even_when_the_picker_finds_nothing(monkeypatch, tmp_path):
+    from clippy import pipeline
+
+    proj, seen = project_with(monkeypatch, tmp_path, 35.0, [{"word": "yo", "start": 0.5, "end": 1.0}])
+    proj.opts = pipeline.Options(min_len=20, max_len=90, whole=True)
+    [clip] = proj.select(n=1)
+    assert seen["n"] == 1 and seen["max_len"] == 35.0 and (clip.start, clip.end) == (0.0, 35.0)
+    monkeypatch.setattr(pipeline, "find_highlights", lambda *a, **k: [])
+    [kept] = proj.select(n=1)
+    assert (kept.start, kept.end, kept.title, kept.hook) == (0.0, 35.0, "A TikTok", "")
+    proj.opts = pipeline.Options(min_len=20, max_len=45)
+    with pytest.raises(ClippyError) as caught:
+        proj.select(n=1)
+    assert caught.value.key == "error.no_suitable_clip"
+
+
 def test_a_short_video_without_speech_is_kept_whole(monkeypatch, tmp_path):
     proj, _ = project_with(monkeypatch, tmp_path, 14.0, [])
     [clip] = proj.select()

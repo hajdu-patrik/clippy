@@ -4,7 +4,7 @@ from clippy.tools import ClippyError
 from clippy.transcribe import detect_language
 
 WEB_GROUPS = ("job", "done", "detail", "error", "note", "reply", "chat", "edit", "change", "what", "asset", "hooktype", "risk",
-              "post")
+              "post", "daily")
 
 
 def test_every_web_and_server_text_exists_in_both_languages():

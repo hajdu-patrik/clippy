@@ -6,6 +6,9 @@ change, what changed rather than how; dates are ISO 8601.
 ## [Unreleased]
 
 ### Added
+- Daily picks: "minden nap 3 GTA VI klipet" (or Settings, Daily picks) clips the most watched streamer moments of a
+  game's Twitch and Kick category every morning, one per streamer, in the audience's language, and gives each a time
+  to post it for a US audience with its post text; Settings lists the day's picks with their times and texts.
 - A one-minute product demo in 4K (`docs/assets/demo.mp4`): an animated preview at the top of the README links to it,
   and the project page plays it under the introduction.
 - Every video is transcribed and captioned in its own language (English stays English, Hungarian

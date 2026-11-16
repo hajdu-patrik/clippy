@@ -505,8 +505,21 @@ kbd { font: 11px var(--mono); color: var(--faint); border: 1px solid var(--borde
 .post.planned { color: var(--text); }
 .link-btn { background: none; border: 0; padding: 0 2px; color: var(--accent-text); font: inherit; font-weight: 600;
   text-decoration: underline; cursor: pointer; min-height: 0 !important; }
+.account.pick { display: grid; grid-template-columns: 104px minmax(0, 1fr); gap: 6px 12px; align-items: start;
+  margin-left: 14px; border-left: 3px solid var(--accent); }
+.account.pick > .watch-btns { grid-column: 2; justify-content: flex-start; }
+.account.pick .watch-btns button { min-height: 32px; padding: 0 10px; font-size: 12.5px; }
+.pick-text.failed { color: var(--danger); }
+.pick-time { display: grid; gap: 2px; min-width: 104px; }
+.pick-time b { font-size: 14px; }
+.pick-time span { color: var(--muted); font-size: 12px; }
+.pick-body { flex: 1; min-width: 0; display: grid; gap: 2px; }
+.pick-text { margin: 4px 0 0; font-size: 13px; line-height: 1.45; white-space: pre-line; overflow-wrap: anywhere;
+  display: -webkit-box; -webkit-line-clamp: 5; -webkit-box-orient: vertical; overflow: hidden; }
 @media (max-width: 420px) {
   .account.watch { flex-direction: column; align-items: stretch; }
+  .account.pick { grid-template-columns: minmax(0, 1fr); margin-left: 6px; }
+  .account.pick > .watch-btns { grid-column: 1; }
   .watch-btns { justify-content: flex-start; }
 }
 .post-stats { display: block; color: var(--muted); font-size: 12px; margin-top: 2px; }

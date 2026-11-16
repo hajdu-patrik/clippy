@@ -18,6 +18,7 @@ from . import results, schedule
 from .clips import ClipLibrary, ClipPresenter
 from .hub import Hub
 from .jobs import PLACEHOLDER_TITLE, Runner
+from .daily import DEFAULT_AT, daily_settings
 from .watch import generate_payload, watch_settings
 
 NEW_TITLE = "New chat"
@@ -194,6 +195,11 @@ class ChatService:
             return [("generate", self._latest_stream_job(chat, action))]
         if kind == "watch":
             self.watcher.add(action["url"], watch_settings(action["n"], action["preset"]))
+            return []
+        if kind == "daily":
+            current = next((d["settings"] for d in self.db.list_daily() if d["game"] == action["game"]), {})
+            self.watcher.daily.add(action["game"], daily_settings(action["n"], current.get("at") or DEFAULT_AT,
+                                                                  current.get("times") or ""))
             return []
         return [(kind, action)]
 

@@ -210,6 +210,15 @@ the reply says which stream it picked. A number works too (*"5 klipet"*), and a 
 as `twitch.tv/name`, `kick.com/name` or `@name`. Kick's stream list is read with yt-dlp, and from Kick's public JSON when
 yt-dlp cannot.
 
+**Daily picks.** Say *"minden nap 3 GTA VI klipet"* or *"every day 3 GTA VI clips"* (or start it under *Settings,
+Daily picks*): every morning at 09:00 Clippy takes the most watched clips of the last day in that game's Twitch and
+Kick category, which are the streamers' biggest live reactions, keeps one per streamer in the audience's language,
+and makes a vertical clip of each in its own chat, with the stream layout and a post text that credits the streamer.
+Each pick comes with a time to post it for a US audience (New York 19:00, 15:00 and 12:00 by default, the most
+watched moment first), shown in your own time too; *Settings, Daily picks* lists today's picks with their times and
+a *Copy text* button. GTA VI, GTA V, Minecraft, Fortnite, Valorant, Counter-Strike, League of Legends and Warzone are
+known by name (`clippy/categories.py`).
+
 Posts can wait for their time: choose *At a set time* in the Post dialog, and the card shows the planned post with a
 *cancel* link. A watched channel can also post its new clips by itself: give it the platforms and the daily times
 (*18:00, 21:00*) and each new clip takes the next free time, one clip per time across all channels. That is off until

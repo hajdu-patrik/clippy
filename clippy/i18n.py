@@ -271,6 +271,16 @@ CATALOG: dict[str, dict[str, str]] = {
         "done.generate_planned": "Done: {n} clip{s} from “{title}”; {count} planned for posting.",
         "reply.watch": "I am watching this channel: every new video will become clips here.",
         "reply.latest_search": "Looking for the latest finished stream of {streamer}.",
+        "reply.daily": "Every day I pick the {n} most watched {game} moments of the streamers on Twitch and Kick, "
+                       "one per streamer, make a clip of each and tell you when to post it for a US audience. The "
+                       "first ones start now, each in its own chat; Settings, Daily picks lists them with their "
+                       "times and texts.",
+        "daily.pick_today": "Daily {game} pick {i} of {n}: {streamer} on {platform}, {views} views in the last day. "
+                            "Post it today at {time} ({ny} in New York).",
+        "daily.pick_tomorrow": "Daily {game} pick {i} of {n}: {streamer} on {platform}, {views} views in the last "
+                               "day. Post it tomorrow at {time} ({ny} in New York).",
+        "error.daily_nothing": "No new {game} moment from the last day yet; trying again at the next daily run.",
+        "error.daily_unknown_game": "This game is not on the list of daily picks yet.",
         "reply.latest_found": "Found it: {streamer} on {platform}, “{title}” ({date}). Making clips of it.",
         "error.streamer_unknown": "I do not know this streamer. Write the channel as twitch.tv/name, kick.com/name or @name, or give a link.",
         "error.stream_none": "I found no finished stream of {streamer} on YouTube, Twitch or Kick.",
@@ -573,6 +583,16 @@ CATALOG: dict[str, dict[str, str]] = {
         "done.generate_planned": "Kész: {n} klip ebből: „{title}”; {count} posztolásra időzítve.",
         "reply.watch": "Figyelem ezt a csatornát: minden új videójából klipek készülnek itt.",
         "reply.latest_search": "Megkeresem {streamer} legutóbbi befejezett streamjét.",
+        "reply.daily": "Minden nap kiválasztom a streamerek {n} legnézettebb {game} pillanatát a Twitchen és a Kicken, "
+                       "streamerenként egyet, mindegyikből klipet készítek, és megmondom, mikor posztold az amerikai "
+                       "közönségnek. Az elsők most indulnak, mindegyik a saját chatjében; a Beállítások, Napi "
+                       "válogatás alatt időponttal és szöveggel együtt látod őket.",
+        "daily.pick_today": "Napi {game} válogatás, {i}/{n}: {streamer} ({platform}), {views} megtekintés az elmúlt "
+                            "napban. Posztold ma {time}-kor (New Yorkban {ny}).",
+        "daily.pick_tomorrow": "Napi {game} válogatás, {i}/{n}: {streamer} ({platform}), {views} megtekintés az elmúlt "
+                               "napban. Posztold holnap {time}-kor (New Yorkban {ny}).",
+        "error.daily_nothing": "Még nincs új {game} pillanat az elmúlt napból; a következő napi futáskor újra próbálom.",
+        "error.daily_unknown_game": "Ez a játék még nincs a napi válogatás listáján.",
         "reply.latest_found": "Megvan: {streamer}, {platform}, „{title}” ({date}). Klipeket készítek belőle.",
         "error.streamer_unknown": "Ezt a streamert nem ismerem. A csatornáját így írd le: twitch.tv/név, kick.com/név vagy @név, vagy adj meg linket.",
         "error.stream_none": "Nem találtam befejezett streamet {streamer} csatornáin (YouTube, Twitch, Kick).",

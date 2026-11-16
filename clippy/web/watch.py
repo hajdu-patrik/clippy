@@ -60,6 +60,7 @@ class Watcher:
         self.lister = lister or (lambda url, limit: latest_uploads(url, limit))
         self._lock = threading.Lock()
         self._measured = 0.0
+        self.daily = None
 
     def start(self) -> None:
         threading.Thread(target=self._loop, name="clippy-watch", daemon=True).start()
@@ -83,6 +84,8 @@ class Watcher:
                 every = 60 * int((w.get("settings") or {}).get("every") or DEFAULT_EVERY)
                 if w["enabled"] and now - float(w["checked"] or 0) >= every:
                     self.check(w)
+        if self.daily is not None:
+            self.daily.tick()
 
     def post_due(self) -> int:
         """Planned posts whose time has come start as posting jobs; a clip deleted since then is dropped."""

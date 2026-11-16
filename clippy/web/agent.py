@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import re
 
-from .. import i18n, playbook, streamers
+from .. import categories, i18n, playbook, streamers
 from ..captions import COLORS
 from ..download import is_list_url
 from ..render import LAYOUTS
@@ -215,6 +215,9 @@ LANGUAGE_REQUEST = re.compile(r"\b(felirat\w*|subtitle\w*|captions?|fordít\w*|f
                               r"language|magyarul|angolul|in english|in hungarian)", re.I)
 COUNT_RE = re.compile(r"\b(\d{1,2})\s*(?:clips?|db|darab|klip|rész)", re.I)
 NEAR = 30
+DAILY_WORDS = re.compile(r"\b(minden ?nap\w*|naponta|napi|every ?day|daily|each day|a day|per day)\b")
+CLIP_WORDS = re.compile(r"\b(klip\w*|clip\w*|short\w*|reel\w*|tiktok\w*|video\w*)")
+DAILY_COUNT = re.compile(r"\b([1-9])\s+(?:[^\s\d]+\s+){0,3}?(?:klip|clip|short|video)")
 SENTENCE_END = re.compile(r"[.!?\n]")
 CHANNEL_WORDS = re.compile(r"\b(csatorn\w*|channel\w*|playlist\w*|lejátszási|profil\w*|streamer\w*|új videó\w*|"
                            r"new videos?)", re.I)
@@ -423,12 +426,25 @@ def build_state(chat: dict, clips: list[dict], excerpt, lessons: str = "") -> st
     return "\n".join(lines)
 
 
+def daily_action(message: str) -> dict | None:
+    """"Every day 3 GTA VI clips": a word for every day, a word for clips and a known game, all in the user's own
+    message (the picks reach out to Twitch and Kick on their own later)."""
+    text = streamers.fold(message)
+    if not (DAILY_WORDS.search(text) and CLIP_WORDS.search(text)):
+        return None
+    game = categories.find_game(message)
+    if game is None:
+        return None
+    count = DAILY_COUNT.search(re.sub(game.pattern, " ", text))
+    return {"type": "daily", "game": game.key, "n": int(count.group(1)) if count else 3}
+
+
 def fast_path(message: str, chat: dict, has_clips: bool = False) -> dict | None:
     """A link in the user's own message always means: work on this video (the chat's own video again only when it
     has no clips yet, e.g. after a failed download)."""
     url = URL_RE.search(message or "")
     if not url:
-        return latest_action(message)
+        return daily_action(message) or latest_action(message)
     if url.group(0) == chat.get("source") and has_clips:
         return None
     count = COUNT_RE.search(message)
@@ -471,9 +487,11 @@ def run_agent(llm, chat: dict, clips: list[dict], history: list[dict], message: 
     validator = ActionValidator({c["number"] for c in clips}, chat, message, lang, tuple(a["id"] for a in attachments))
     actions = validator.validate(raw_actions)
     if fast and not any(a["type"] == fast["type"] for a in actions):
-        actions = [a for a in actions if a["type"] not in ("generate", "watch", "latest_stream")]
+        actions = [a for a in actions if a["type"] not in ("generate", "watch", "latest_stream", "daily")]
         actions.insert(0, fast)
-        if fast["type"] == "latest_stream":
+        if fast["type"] == "daily":
+            reply = i18n.t(lang, "reply.daily", n=fast["n"], game=categories.game(fast["game"]).name)
+        elif fast["type"] == "latest_stream":
             reply = i18n.t(lang, "reply.latest_search", streamer=fast["streamer"])
         else:
             reply = reply or (i18n.t(lang, "reply.watch") if fast["type"] == "watch"

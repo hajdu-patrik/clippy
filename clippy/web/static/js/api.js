@@ -85,5 +85,10 @@ export const api = {
   toggleWatch: (id, enabled) => request(`/api/watches/${id}`, { method: "PATCH", body: JSON.stringify({ enabled }) }),
   checkWatch: (id) => request(`/api/watches/${id}/check`, { method: "POST" }),
   deleteWatch: (id) => request(`/api/watches/${id}`, { method: "DELETE" }),
+  daily: () => request("/api/daily"),
+  addDaily: (body) => request("/api/daily", { method: "POST", body: JSON.stringify(body) }),
+  toggleDaily: (id, enabled) => request(`/api/daily/${id}`, { method: "PATCH", body: JSON.stringify({ enabled }) }),
+  runDaily: (id) => request(`/api/daily/${id}/run`, { method: "POST" }),
+  deleteDaily: (id) => request(`/api/daily/${id}`, { method: "DELETE" }),
   events: () => new EventSource("/api/events"),
 };

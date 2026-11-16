@@ -61,7 +61,7 @@ export function cardHtml(id) {
   </article>`;
 }
 
-function showCopyDialog(text) {
+export function showCopyDialog(text) {
   const area = $("#copyText");
   area.value = text;
   $("#copyDialog").showModal();

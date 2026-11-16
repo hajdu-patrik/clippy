@@ -26,6 +26,7 @@
   <link rel="modulepreload" href="/static/js/settings.js">
   <link rel="modulepreload" href="/static/js/publish.js">
   <link rel="modulepreload" href="/static/js/watches.js">
+  <link rel="modulepreload" href="/static/js/picks.js">
   <link rel="modulepreload" href="/static/js/results.js">
   <link rel="modulepreload" href="/static/js/kit.js">
   <link rel="modulepreload" href="/static/js/voice.js">
@@ -233,6 +234,35 @@
         <p class="hint warn" id="resultsAnalytics" hidden data-i18n="results.reconnect">Connect YouTube again so Clippy can also read how much of each clip people watch.</p>
         <ul class="findings" id="resultsList"></ul>
         <button type="button" class="ghost small-btn" id="resultsRefresh" data-i18n="results.refresh">Read the numbers now</button>
+      </section>
+      <section class="watches" aria-labelledby="picksTitle">
+        <h3 id="picksTitle" data-i18n="picks.title">Daily picks</h3>
+        <p class="hint" data-i18n="picks.hint">Every day the most watched streamer moments of a game become clips, each with a time to post it.</p>
+        <ul class="account-list" id="picksList"></ul>
+        <details class="watch-add" id="picksAdd">
+          <summary data-i18n="picks.add">Start daily picks</summary>
+          <div class="post-options">
+            <div>
+              <label for="picksGame" data-i18n="picks.game">Game</label>
+              <select id="picksGame"></select>
+            </div>
+            <div>
+              <label for="picksN" data-i18n="picks.n">Clips a day</label>
+              <input class="field" id="picksN" type="number" min="1" max="5" value="3">
+            </div>
+            <div>
+              <label for="picksAt" data-i18n="picks.at">Pick them at</label>
+              <input class="field" id="picksAt" type="time" value="09:00">
+            </div>
+          </div>
+          <label for="picksTimes" data-i18n="picks.times">Posting times in New York, best first</label>
+          <input class="field" id="picksTimes" maxlength="80" autocomplete="off" placeholder="19:00, 15:00, 12:00"
+            aria-describedby="picksTimesHint">
+          <p class="hint" id="picksTimesHint" data-i18n="picks.timesHint">The most watched moment gets the first time. Each pick shows the time in your own time zone too.</p>
+          <div class="dialog-btns">
+            <button type="button" class="primary" id="picksSave" data-i18n="picks.save">Start</button>
+          </div>
+        </details>
       </section>
       <section class="watches" aria-labelledby="watchesTitle">
         <h3 id="watchesTitle" data-i18n="watch.title">Watched channels</h3>

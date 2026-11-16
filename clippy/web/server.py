@@ -19,7 +19,7 @@ from fastapi.staticfiles import StaticFiles
 from starlette.middleware.gzip import GZipMiddleware
 from pydantic import BaseModel, Field, StringConstraints
 
-from .. import i18n, streamers
+from .. import categories, i18n, streamers
 from ..editing.assets import LIMITS
 from ..tools import ClippyError, log
 from ..download import sweep_partials
@@ -38,6 +38,7 @@ from .lan import Lan, is_loopback
 from .security import SecurityMiddleware
 from . import results
 from .kit import StyleKit
+from .daily import Daily, daily_settings, present_daily
 from .watch import EVERY_MINUTES, Watcher, present_watch, watch_settings
 
 STATIC = Path(__file__).resolve().parent / "static"
@@ -108,6 +109,14 @@ class WatchPatch(BaseModel):
     enabled: bool
 
 
+class NewDaily(BaseModel):
+    game: str = Field(min_length=2, max_length=40)
+    n: int = Field(default=3, ge=1, le=5)
+    at: str = Field(default="09:00", max_length=5)
+    times: str = Field(default="", max_length=80)
+    now: bool = True
+
+
 class KitPatch(BaseModel):
     font: str = Field(default="", max_length=40)
     highlight: str = Field(default="", max_length=20)
@@ -130,6 +139,7 @@ def create_app(storage: Storage | None = None, db_path: Path | None = None, runn
     runner = runner or Runner(db, hub, storage, presenter, library, start=start_worker)
     chats = ChatService(db, hub, runner, storage, presenter, library, llm_factory or create_llm)
     watcher = Watcher(db, runner, hub)
+    watcher.daily = Daily(db, runner, hub)
     chats.watcher = watcher
     if start_worker:
         watcher.start()
@@ -450,6 +460,41 @@ def create_app(storage: Storage | None = None, db_path: Path | None = None, runn
         if not db.delete_watch(watch_id):
             raise HTTPException(404, "No such watch")
         watcher.changed()
+        return {"ok": True}
+
+    @app.get("/api/daily")
+    def list_daily():
+        return {"daily": [present_daily(db, presenter, d) for d in db.list_daily()],
+                "games": [{"key": g.key, "name": g.name} for g in categories.GAMES]}
+
+    @app.post("/api/daily")
+    def add_daily(body: NewDaily):
+        try:
+            d = watcher.daily.add(body.game, daily_settings(body.n, body.at, body.times), body.now)
+        except ClippyError as exc:
+            raise HTTPException(400, error_detail(exc)) from None
+        return present_daily(db, presenter, d)
+
+    @app.patch("/api/daily/{daily_id}")
+    def toggle_daily(daily_id: int, body: WatchPatch):
+        if db.get_daily(daily_id) is None:
+            raise HTTPException(404, "No such daily pick")
+        d = db.update_daily(daily_id, enabled=int(body.enabled))
+        watcher.daily.changed()
+        return present_daily(db, presenter, d)
+
+    @app.post("/api/daily/{daily_id}/run")
+    def run_daily(daily_id: int):
+        d = db.get_daily(daily_id)
+        if d is None:
+            raise HTTPException(404, "No such daily pick")
+        return {"new": watcher.daily.run(d)}
+
+    @app.delete("/api/daily/{daily_id}")
+    def delete_daily(daily_id: int):
+        if not db.delete_daily(daily_id):
+            raise HTTPException(404, "No such daily pick")
+        watcher.daily.changed()
         return {"ok": True}
 
     @app.get("/api/events")
