@@ -70,7 +70,18 @@ Instagram limits how many posts an account can publish through the API in 24 hou
 
 ## TikTok
 
-1. On [TikTok for Developers](https://developers.tiktok.com/) create an app and choose **Desktop** as its platform.
+1. On [TikTok for Developers](https://developers.tiktok.com/) create an app. Under **Basic information**:
+
+   | Field | Value |
+   | --- | --- |
+   | App icon | a 1024 × 1024 px PNG or JPG |
+   | Category, Description | for example *Photo & Video* and *Cuts my long videos into short clips and posts them to my TikTok drafts.* |
+   | Terms of Service URL | `https://hajdu-patrik.github.io/clippy/terms.html` |
+   | Privacy Policy URL | `https://hajdu-patrik.github.io/clippy/privacy.html` |
+   | Platforms, Web/Desktop URL | **Desktop**, `https://hajdu-patrik.github.io/clippy/` (the redirect URI goes into Login Kit, not here) |
+
+   Without a review, use the app's **Sandbox** (the switch at the top of the app page): create one, do steps 2-4 there,
+   add your TikTok account under **Target users**, and take the keys from the Sandbox's **Credentials**.
 2. Add the products **Login Kit** and **Content Posting API**. Turn on **Direct Post** in the Content Posting API if you
    want the "posted, visible only to me" mode.
 3. In Login Kit add the redirect URI (with your `CLIPPY_PORT` if you changed it):
@@ -95,7 +106,7 @@ TikTok allows two modes:
 | **To drafts** (default) | The video arrives in the TikTok app as a notification; you finish and post it there (sound, cover, text). |
 | **Posted, visible only to me** | Posted at once as private. Until TikTok reviews your app, this is the only Direct Post it allows. |
 
-Your app works for your own account before TikTok's review; making posts public straight from Clippy needs the
+The Sandbox works for its target users before TikTok's review; making posts public straight from Clippy needs the
 review (TikTok calls it an audit).
 
 ## Planned and automatic posts
