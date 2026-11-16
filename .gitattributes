@@ -4,3 +4,7 @@
 *.ps1 text eol=crlf
 *.svg text eol=lf
 *.onnx binary
+*.mp4 binary
+*.gif binary
+*.jpg binary
+*.png binary

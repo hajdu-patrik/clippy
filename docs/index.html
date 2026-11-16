@@ -55,7 +55,12 @@
         "downloadUrl": "https://github.com/hajdu-patrik/clippy",
         "codeRepository": "https://github.com/hajdu-patrik/clippy",
         "image": "https://hajdu-patrik.github.io/clippy/assets/og.png",
-        "screenshot": "https://hajdu-patrik.github.io/clippy/assets/og.png",
+        "screenshot": "https://hajdu-patrik.github.io/clippy/assets/demo-poster.jpg",
+        "video": {"@type": "VideoObject", "name": "Clippy in one minute",
+          "description": "A video link goes into the chat, Clippy makes three captioned vertical clips, then edits one on request.",
+          "contentUrl": "https://hajdu-patrik.github.io/clippy/assets/demo.mp4",
+          "thumbnailUrl": "https://hajdu-patrik.github.io/clippy/assets/demo-poster.jpg",
+          "uploadDate": "2026-11-16", "duration": "PT1M1S"},
         "featureList": [
           "Finds the moments with the strongest hooks with a local LLM (Qwen3-14B via Ollama)",
           "Vertical 9:16 reframing with shot detection, face tracking and active-speaker camera",
@@ -97,10 +102,10 @@
     * { box-sizing: border-box; }
     body { margin: 0; background: var(--bg); color: var(--text); font: 17px/1.6 var(--font); }
     main { max-width: 920px; margin: 0 auto; padding: 0 20px 64px; }
-    header { display: flex; align-items: center; gap: 12px; padding: 28px 0 8px; }
+    header { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 28px 0 8px; }
     header img { width: 44px; height: 44px; }
     header strong { font-size: 22px; letter-spacing: -0.02em; }
-    header nav { margin-left: auto; display: flex; gap: 18px; font-size: 15px; }
+    header nav { margin-left: auto; display: flex; flex-wrap: wrap; gap: 4px 18px; font-size: 15px; }
     a { color: var(--wine-light); }
     h1 { font-size: clamp(32px, 6vw, 52px); line-height: 1.08; letter-spacing: -0.03em; margin: 48px 0 16px; text-wrap: balance; }
     h2 { font-size: 26px; letter-spacing: -0.02em; margin: 56px 0 12px; }
@@ -115,6 +120,9 @@
     details { border-bottom: 1px solid var(--border); padding: 12px 0; }
     summary { cursor: pointer; font-weight: 600; }
     footer { color: var(--muted); font-size: 14px; margin-top: 64px; }
+    .demo { display: block; width: 100%; height: auto; margin: 36px 0 8px; border: 1px solid var(--border);
+      border-radius: 14px; background: #000; }
+    .note { color: var(--muted); font-size: 14px; margin: 0; }
   </style>
 </head>
 <body>
@@ -132,6 +140,11 @@
     call to action. Then edit them by just asking. Nothing is uploaded and there is no subscription.</p>
   <a class="cta" href="https://github.com/hajdu-patrik/clippy">Get Clippy on GitHub</a>
   <a class="cta ghost" href="https://github.com/hajdu-patrik/clippy#quick-start">Quick start</a>
+
+  <video id="demo" class="demo" src="assets/demo.mp4" poster="assets/demo-poster.jpg" controls playsinline
+    preload="metadata" width="1920" height="1080"
+    aria-label="One-minute demo: a video link goes into the chat, Clippy makes three captioned vertical clips, then edits one on request"></video>
+  <p class="note">The demo clips are made from a public-domain NASA video. The long wait is sped up and marked.</p>
 
   <h2 id="features">What it does</h2>
   <ul class="features">

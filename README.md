@@ -11,6 +11,12 @@
 ![Platform](https://img.shields.io/badge/Platform-Windows_10%2F11-0078D6?style=flat&logo=windows&logoColor=white)
 ![License](https://img.shields.io/badge/License-MIT-yellow?style=flat)
 
+[![Clippy in one minute: paste a link, get vertical clips with captions, edit them by asking in the chat](docs/assets/demo.gif)](https://hajdu-patrik.github.io/clippy/assets/demo.mp4)
+
+**[Watch the one-minute demo with sound](https://hajdu-patrik.github.io/clippy/assets/demo.mp4)**: a link goes in,
+three captioned clips come out, then one is edited from the chat. The clips are made from a public-domain NASA video;
+the long wait is sped up and marked.
+
 **Clippy** turns a video, podcast or stream (YouTube, TikTok, Instagram, Twitch, Kick, Facebook…) into vertical **9:16 clips**: on your own machine, for
 free. Paste a link into a ChatGPT-style chat and it:
 
