@@ -92,9 +92,9 @@ def post_times(times: list[str], count: int, now: float) -> list[float]:
     return out
 
 
-def choose(moments: list, seen: set[str], count: int) -> list:
-    """The most viewed new moments, one per streamer."""
-    out, streamers = [], set()
+def choose(moments: list, seen: set[str], count: int, taken: set[str] = frozenset()) -> list:
+    """The most viewed new moments, one per streamer (and none of the streamers in `taken`)."""
+    out, streamers = [], {s.lower() for s in taken}
     for m in moments:
         if m.vid in seen or m.streamer.lower() in streamers:
             continue
@@ -142,7 +142,8 @@ class Daily:
         return self.db.get_daily(d["id"])
 
     def run(self, d: dict) -> int:
-        """Today's picks: the most viewed new moments of the last day, one per streamer, each its own chat."""
+        """Today's picks: the most viewed new moments of the last day, one per streamer, each its own chat. Run again
+        on the same day, it only fills the places of today's picks that are gone, at their free times."""
         with self._lock:
             d = self.db.get_daily(d["id"]) or d
             game, settings, now = categories.game(d["game"]), d["settings"] or {}, self.clock()
@@ -151,15 +152,20 @@ class Daily:
                 return 0
             times = settings.get("times") or list(DEFAULT_TIMES)
             seen = list(d["seen"] or [])
-            picked = choose(self.finder(game, "en"), set(seen), min(int(settings.get("n") or DEFAULT_N), len(times)))
-            dues = post_times(times, len(picked), now)
+            today = todays(self.db, d, now)
+            used = {p.get("slot") or eastern_clock(p["due"]) for p in today}
+            free = [slot for slot in times if slot not in used]
+            want = min(int(settings.get("n") or DEFAULT_N), len(times)) - len(today)
+            picked = (choose(self.finder(game, "en"), set(seen), min(want, len(free)), {p["streamer"] for p in today})
+                      if want > 0 and free else [])
+            dues = post_times(free, len(picked), now)
             made = []
-            for i, (m, due) in enumerate(zip(picked, dues), 1):
-                chat = self.start_chat(game, m, due, i, len(picked))
+            for i, (m, due, slot) in enumerate(zip(picked, dues, free), len(today) + 1):
+                chat = self.start_chat(game, m, due, i, len(today) + len(picked))
                 if chat is not None:
-                    made.append({"chat_id": chat["id"], "due": due, "streamer": m.streamer, "platform": m.platform,
-                                 "views": m.views, "url": m.url, "title": m.title, "run": now})
-            problem = {} if made else tx("error.daily_nothing", game=game.name)
+                    made.append({"chat_id": chat["id"], "due": due, "slot": slot, "streamer": m.streamer,
+                                 "platform": m.platform, "views": m.views, "url": m.url, "title": m.title, "run": now})
+            problem = {} if made or want <= 0 else tx("error.daily_nothing", game=game.name)
             self.db.update_daily(d["id"], ran=now, problem=problem, seen=([m.vid for m in picked] + seen)[:SEEN_KEEP],
                                  picks=(made + list(d["picks"] or []))[:PICKS_KEEP])
             log(f"[daily] {game.name}: {len(made)} pick(s)")
@@ -187,13 +193,22 @@ class Daily:
         self.hub.publish(None, {"type": "daily"})
 
 
+def same_day(a: float, b: float) -> bool:
+    return datetime.fromtimestamp(a).date() == datetime.fromtimestamp(b).date()
+
+
+def todays(db, d: dict, now: float) -> list[dict]:
+    """The picks made on `now`'s day whose chat is still there."""
+    return [p for p in d["picks"] or [] if same_day(p["run"], now) and db.get_chat(p["chat_id"])]
+
+
 def present_daily(db, presenter, d: dict) -> dict:
-    """A daily pick with its newest run's clips: the time to post, the streamer and, once made, the post text."""
+    """A daily pick with the clips of its newest day: the time to post, the streamer and, once made, the post text."""
     game = categories.game(d["game"])
     picks = [p for p in d["picks"] or [] if db.get_chat(p["chat_id"])]
     newest = max((p["run"] for p in picks), default=0)
     shown = []
-    for p in sorted((p for p in picks if p["run"] == newest), key=lambda p: p["due"]):
+    for p in sorted((p for p in picks if same_day(p["run"], newest)), key=lambda p: p["due"]):
         row = next(iter(db.current_clips(p["chat_id"])), None)
         clip = presenter.present(row) if row else None
         last = (db.list_messages(p["chat_id"]) or [{}])[-1]

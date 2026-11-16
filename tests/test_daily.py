@@ -180,6 +180,26 @@ def test_the_daily_run_comes_once_a_day_at_its_time(env):
     assert present_daily(picks.db, picks.runner.presenter, d)["picks"] == []
 
 
+def test_picking_again_the_same_day_fills_only_the_places_that_are_gone(env):
+    picks, found, now = env
+    found.append(moment("e", "n3on", 500))
+    d = picks.add("gta-vi", daily_settings())
+    assert picks.run(d) == 0 and picks.db.get_daily(d["id"])["problem"] == {}
+    gone = d["picks"][1]
+    picks.db.delete_chat(gone["chat_id"])
+    now[0] += 600
+    assert picks.run(d) == 1
+    d = picks.db.get_daily(d["id"])
+    assert d["picks"][0]["streamer"] == "n3on" and d["picks"][0]["slot"] == gone["slot"] == "15:00"
+    shown = present_daily(picks.db, picks.runner.presenter, d)
+    assert sorted(p["streamer"] for p in shown["picks"]) == ["jynxzi", "kaicenat", "n3on"]
+    found.append(moment("f", "ibai", 400))
+    now[0] += 86400
+    picks.run(d)
+    shown = present_daily(picks.db, picks.runner.presenter, picks.db.get_daily(d["id"]))
+    assert sorted(p["streamer"] for p in shown["picks"]) == ["ibai", "kaicenat"]
+
+
 def test_asking_again_changes_the_same_daily_pick(env):
     picks, found, now = env
     first = picks.add("gta-vi", daily_settings(n=1), now=False)

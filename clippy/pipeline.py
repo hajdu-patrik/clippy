@@ -6,6 +6,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import re
 import shutil
 from concurrent.futures import Future, ThreadPoolExecutor, wait
 from contextlib import contextmanager
@@ -18,7 +19,7 @@ from .analysis import ClipAnalysis, analyze
 from .captions import CaptionStyle
 from .concurrency import GPU, SOURCE, GuardedLLM
 from .download import Remote, cached_video, fetch, fetch_audio, fetch_chat, fetch_video, is_url, probe
-from .highlights import Clip, PickCache, find_highlights
+from .highlights import LANG_NAMES, Clip, PickCache, find_highlights, write_texts
 from .settings import URL, Settings, site_of
 from .llm import create_llm
 from .render import RenderSettings, prepare_fonts, render_clip
@@ -294,13 +295,27 @@ class Project:
                                 signals=reactions, lessons=lessons, speakers=self.speaker_turns)
         if not clips and short and o.whole:
             log("[hook] the picker found nothing: the whole moment becomes the clip")
-            clips = [Clip(0.0, min(duration, o.max_len), 50.0, title=self.title[:70], reason="the whole moment")]
+            wishes = o.instructions if instructions is None else instructions
+            clips = [self.whole_moment(llm, duration, o, re.findall(r"#\w+", wishes or "")[:5])]
         if not clips:
             raise ClippyError(key="error.no_suitable_clip")
         if short:
             clips[0].start, clips[0].end = 0.0, min(duration, o.max_len)
             clips[0].hook = clips[0].alt_hook = ""
         return clips[:1] if short else clips
+
+    def whole_moment(self, llm, duration: float, o: Options, hashtags: list[str]) -> Clip:
+        """All of a short source as the clip, with its title, description and question written from what is said and
+        the hashtags the request named."""
+        clip = Clip(0.0, min(duration, o.max_len), 50.0, title=self.title[:70], reason="the whole moment",
+                    hashtags=hashtags)
+        spoken = (self.transcript or {}).get("language") or ""
+        if self.words and llm.backend != "none":
+            try:
+                write_texts(llm, [clip], self.words, self.title, LANG_NAMES.get(o.captions or spoken, "English"))
+            except ClippyError as exc:
+                log(f"[hook] texts of the whole moment skipped: {exc}")
+        return clip
 
     def reactions(self, duration: float) -> signals.Signals | None:
         """The video's reactions: its sound always, the stream chat when the site keeps it, the picture when the video

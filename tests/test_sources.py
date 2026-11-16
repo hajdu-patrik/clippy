@@ -93,8 +93,21 @@ def test_a_whole_moment_stays_one_clip_even_when_the_picker_finds_nothing(monkey
     [clip] = proj.select(n=1)
     assert seen["n"] == 1 and seen["max_len"] == 35.0 and (clip.start, clip.end) == (0.0, 35.0)
     monkeypatch.setattr(pipeline, "find_highlights", lambda *a, **k: [])
-    [kept] = proj.select(n=1)
+    monkeypatch.setattr(pipeline, "create_llm", lambda *a: type("L", (), {"describe": lambda self: "fake",
+                                                                          "backend": "ollama"})())
+    written = []
+
+    def fake_texts(llm, clips, words, title, text_language, signals=None):
+        written.append(text_language)
+        clips[0].description, clips[0].question = "Kai cannot believe it.", "Would you?"
+        return 1
+
+    monkeypatch.setattr(pipeline, "write_texts", fake_texts)
+    proj.transcript["language"] = "en"
+    [kept] = proj.select(n=1, instructions="Credit @kaicenat and use the hashtags #GTA6 #GTAVI.")
     assert (kept.start, kept.end, kept.title, kept.hook) == (0.0, 35.0, "A TikTok", "")
+    assert written == ["English"] and kept.description == "Kai cannot believe it."
+    assert kept.hashtags == ["#GTA6", "#GTAVI"]
     proj.opts = pipeline.Options(min_len=20, max_len=45)
     with pytest.raises(ClippyError) as caught:
         proj.select(n=1)
