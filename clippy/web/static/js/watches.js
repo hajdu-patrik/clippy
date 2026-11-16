@@ -115,5 +115,4 @@ export function bindWatches() {
   onLive((event) => {
     if (event.type === "watches" && $("#settingsDialog").open) loadWatches();
   });
-  document.addEventListener("clippy:lang", renderWatches);
 }

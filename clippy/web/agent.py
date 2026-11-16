@@ -171,7 +171,7 @@ def _coerce(key: str, value):
         v = str(value).strip().lower()
         if v in ("auto", ""):
             return None
-        if v not in i18n.SUPPORTED:
+        if v not in i18n.CAPTION_LANGUAGES:
             raise ValueError(f"unsupported language: {value}")
         return v
     if kind == "str":
@@ -231,15 +231,14 @@ class ActionValidator:
     """Turns the LLM's proposal into safe actions. The LLM also sees transcript text from the video, so anything
     destructive or outward-reaching must be backed by the user's own message, not just by the model."""
 
-    def __init__(self, numbers: set[int], chat: dict, message: str, lang: str = "en",
-                 attachments: tuple[str, ...] = ()):
-        self.numbers, self.chat, self.message, self.lang = numbers, chat, message or "", lang
+    def __init__(self, numbers: set[int], chat: dict, message: str, attachments: tuple[str, ...] = ()):
+        self.numbers, self.chat, self.message = numbers, chat, message or ""
         self.attachments = tuple(attachments)
         self.urls = URL_RE.findall(self.message)
         self.notes: list[str] = []
 
     def note(self, key: str, **params) -> None:
-        self.notes.append(i18n.t(self.lang, key, **params))
+        self.notes.append(i18n.t(key, **params))
 
     def validate(self, raw_actions) -> list[dict]:
         if isinstance(raw_actions, dict):
@@ -468,9 +467,7 @@ def run_agent(llm, chat: dict, clips: list[dict], history: list[dict], message: 
     """-> {"reply", "actions", "notes"}; never raises for LLM problems."""
     turns = [f"{'User' if m['role'] == 'user' else 'Assistant'}: {m['content'][:400]}"
              for m in history[-10:] if m.get("kind") in ("text", "error") and m.get("content")]
-    lang = i18n.detect(message)
-    reply_rule = ("Write \"reply\" in Hungarian (magyarul)." if lang == "hu"
-                  else "Write \"reply\" in the same language as the new user message.")
+    reply_rule = "Write \"reply\" in English, whatever language the user writes in."
     attached = ("\nATTACHED TO THIS MESSAGE: " + ", ".join(f"{a['name']} ({a['kind']})" for a in attachments)
                 + ", usable in edits (music, logo, intro / outro, LUT)") if attachments else ""
     prompt = (f"STATE:\n{build_state(chat, clips, excerpt, lessons)}\n\nCONVERSATION SO FAR:\n" + ("\n".join(turns) or "(empty)")
@@ -483,23 +480,23 @@ def run_agent(llm, chat: dict, clips: list[dict], history: list[dict], message: 
             reply, raw_actions = str(out.get("reply", "")).strip(), out.get("actions", [])
     except Exception as exc:
         if not fast:
-            return {"reply": i18n.t(lang, "error.llm_unreachable", error=exc), "actions": [], "notes": [], "lang": lang}
-    validator = ActionValidator({c["number"] for c in clips}, chat, message, lang, tuple(a["id"] for a in attachments))
+            return {"reply": i18n.t("error.llm_unreachable", error=exc), "actions": [], "notes": []}
+    validator = ActionValidator({c["number"] for c in clips}, chat, message, tuple(a["id"] for a in attachments))
     actions = validator.validate(raw_actions)
     if fast and not any(a["type"] == fast["type"] for a in actions):
         actions = [a for a in actions if a["type"] not in ("generate", "watch", "latest_stream", "daily")]
         actions.insert(0, fast)
         if fast["type"] == "daily":
-            reply = i18n.t(lang, "reply.daily", n=fast["n"], game=categories.game(fast["game"]).name)
+            reply = i18n.t("reply.daily", n=fast["n"], game=categories.game(fast["game"]).name)
         elif fast["type"] == "latest_stream":
-            reply = i18n.t(lang, "reply.latest_search", streamer=fast["streamer"])
+            reply = i18n.t("reply.latest_search", streamer=fast["streamer"])
         else:
-            reply = reply or (i18n.t(lang, "reply.watch") if fast["type"] == "watch"
-                              else i18n.t(lang, "reply.generate", n=fast["n"]))
+            reply = reply or (i18n.t("reply.watch") if fast["type"] == "watch"
+                              else i18n.t("reply.generate", n=fast["n"]))
     rerouted = texts_first(message, actions)
     if rerouted != actions:
-        reply = i18n.t(lang, "reply.texts")
+        reply = i18n.t("reply.texts")
     actions = presets.apply(message, rerouted)
     if not reply:
-        reply = i18n.t(lang, "reply.ok" if actions else "reply.unclear")
-    return {"reply": reply, "actions": actions, "notes": validator.notes, "lang": lang}
+        reply = i18n.t("reply.ok" if actions else "reply.unclear")
+    return {"reply": reply, "actions": actions, "notes": validator.notes}

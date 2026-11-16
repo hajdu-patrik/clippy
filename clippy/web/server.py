@@ -278,9 +278,7 @@ def create_app(storage: Storage | None = None, db_path: Path | None = None, runn
 
     @app.get("/api/i18n")
     def catalog():
-        web = {lang: {k: v for k, v in texts.items() if k.split(".")[0] not in ("cli", "cmd", "flag", "help")}
-               for lang, texts in i18n.CATALOG.items()}
-        return {**web, "default": i18n.saved_language()}
+        return {k: v for k, v in i18n.CATALOG.items() if k.split(".")[0] not in ("cli", "cmd", "flag", "help")}
 
     @app.get("/api/chats")
     def list_chats():
@@ -365,7 +363,7 @@ def create_app(storage: Storage | None = None, db_path: Path | None = None, runn
     kit = StyleKit(storage)
 
     @app.post("/api/dictate")
-    async def dictate(request: Request, lang: str = Query(default="", max_length=5)):
+    async def dictate(request: Request):
         """Voice input: a short recording in, its words out (the small Whisper model on the CPU)."""
         from ..dictation import dictate as words_of
 
@@ -379,7 +377,7 @@ def create_app(storage: Storage | None = None, db_path: Path | None = None, runn
                         raise HTTPException(413, "Recording too long")
                     out.write(chunk)
             try:
-                return {"text": await run_in_threadpool(words_of, path, lang or None)}
+                return {"text": await run_in_threadpool(words_of, path)}
             except ClippyError as exc:
                 raise HTTPException(400, error_detail(exc)) from None
 

@@ -30,7 +30,6 @@ export function fmtEta(seconds) {
 }
 
 function ordinal(n) {
-  if (document.documentElement.lang === "hu") return String(n);
   const suffix = n % 10 === 1 && n % 100 !== 11 ? "st" : n % 10 === 2 && n % 100 !== 12 ? "nd"
     : n % 10 === 3 && n % 100 !== 13 ? "rd" : "th";
   return `${n}${suffix}`;

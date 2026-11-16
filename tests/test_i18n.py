@@ -1,37 +1,24 @@
 from clippy import i18n
 from clippy.cli import build_parser
+from clippy.text import looks_hungarian
 from clippy.tools import ClippyError
 from clippy.transcribe import detect_language
-
-WEB_GROUPS = ("job", "done", "detail", "error", "note", "reply", "chat", "edit", "change", "what", "asset", "hooktype", "risk",
-              "post", "daily")
-
-
-def test_every_web_and_server_text_exists_in_both_languages():
-    for lang in i18n.SUPPORTED:
-        other = "hu" if lang == "en" else "en"
-        missing = [k for k in i18n.CATALOG[lang] if k.split(".")[0] in WEB_GROUPS + ("cli",)
-                   and k not in i18n.CATALOG[other]]
-        assert not missing, (lang, missing)
-
-
-def test_detects_the_message_language():
-    assert i18n.detect("Csinálj még 3 klipet a vicces részekből") == "hu"
-    assert i18n.detect("a 2. klip legyen rövidebb") == "hu"
-    assert i18n.detect("make the second clip shorter") == "en"
-
 
 def test_errors_carry_a_key_and_an_english_message():
     err = ClippyError(key="error.no_clip", clip=4)
     assert str(err) == "There is no clip #4." and err.params == {"clip": 4}
-    assert i18n.t("hu", err.key, **err.params) == "Nincs 4. klip."
+    assert i18n.t(err.key, **err.params) == "There is no clip #4." and i18n.t("no.such.key") == "no.such.key"
     assert str(ClippyError("plain")) == "plain" and ClippyError("plain").key is None
 
 
-def test_cli_help_follows_the_language():
-    hu = {a.dest: a.help for a in build_parser("hu")._actions}
-    en = {a.dest: a.help for a in build_parser("en")._actions}
-    assert hu["clips"].startswith("hány klip") and en["clips"].startswith("how many clips")
+def test_cli_help_comes_from_the_parser():
+    helps = {a.dest: a.help for a in build_parser()._actions}
+    assert helps["clips"].startswith("how many clips")
+
+
+def test_hungarian_post_texts_are_recognised():
+    assert looks_hungarian("Csinálj még 3 klipet a vicces részekből") and looks_hungarian("Tedd alá a zenét halkan")
+    assert not looks_hungarian("add music under it quietly") and not looks_hungarian("Café scene please")
 
 
 def test_transcription_keeps_the_video_language_unless_unsure():
@@ -51,14 +38,6 @@ def test_transcription_keeps_the_video_language_unless_unsure():
             raise RuntimeError("no speech")
 
     assert detect_language(Broken(), None) == "en"
-
-
-def test_saved_language_round_trip(tmp_path, monkeypatch):
-    monkeypatch.setattr(i18n, "SETTINGS", tmp_path / "settings.json")
-    monkeypatch.delenv("CLIPPY_LANG", raising=False)
-    assert i18n.saved_language() is None
-    i18n.save_language("HU")
-    assert i18n.saved_language() == "hu" and i18n.system_language() == "hu"
 
 
 def test_translated_captions_keep_the_line_timing():
@@ -98,8 +77,3 @@ def test_caption_language_is_an_allowed_chat_option():
     assert "captions" in agent.RENDER_KEYS
     assert agent.clean_options({"hook": "English hook please"})[0] == {}
     assert agent.clean_options({"hook": "igen", "punch": "false"})[0] == {"hook": True, "punch": False}
-
-
-def test_short_edit_requests_are_detected_too():
-    assert i18n.detect("Tedd alá a zenét halkan") == "hu" and i18n.detect("rakd fel a logót") == "hu"
-    assert i18n.detect("add music under it quietly") == "en" and i18n.detect("Café scene please") == "en"

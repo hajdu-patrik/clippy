@@ -14,7 +14,6 @@ clippy restart --force  :: now, even while jobs run (they start again after the 
 clippy pair           :: one-time pairing link + QR code   (--reset: forget every device)
 clippy clip <link>    :: make clips from the command line (clippy clip -h: every option)
 clippy install        :: set up the command and tab completion (PATH, PowerShell profile, Clink)
-clippy lang hu|en     :: language of the CLI and the web app's default
 ```
 
 Bare `clippy` shows the banner, the live status and the command list.
@@ -22,11 +21,6 @@ Bare `clippy` shows the banner, the live status and the command list.
 `clippy st<Tab>` → `start` / `status`, `clippy clip --layout <Tab>` → `auto face center blur stream`.
 The completion scripts are generated from one command spec (`clippy/shell.py`), so they never drift from the
 help text.
-
-## Language
-
-`clippy lang hu` or `clippy lang en` sets the language of the help, the status line, `clippy clip -h` and the
-tab completion descriptions, and the web app's default. `CLIPPY_LANG=hu|en` overrides it for one terminal.
 
 ## Clipping: `clippy clip`
 

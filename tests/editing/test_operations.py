@@ -10,8 +10,8 @@ from clippy.editing.timeref import At, Edge, Span, Word, corrected
 from clippy.tools import ClippyError
 
 
-def texts(changes, lang="en"):
-    return [c.text(lang) for c in changes]
+def texts(changes):
+    return [c.text() for c in changes]
 
 
 def test_add_and_edit_text(timeline, ctx):
@@ -23,7 +23,7 @@ def test_add_and_edit_text(timeline, ctx):
     assert texts(changes) == ["Added text “Part 2 tomorrow”"]
     tl, changes = EditText(layer="text-1", text="Holnap jön", size=90).apply(tl, ctx)
     assert tl.layer("text-1").text == "Holnap jön" and tl.layer("text-1").style.size == 90
-    assert texts(changes, "hu") == ["Módosítva: „Holnap jön” szöveg"]
+    assert texts(changes) == ["Changed text “Holnap jön”"]
 
 
 def test_hook_and_cta_replace_their_role_layers(timeline, ctx):
@@ -57,7 +57,7 @@ def test_colour_and_lut_share_one_colour_layer(timeline, ctx):
     tl, changes = ApplyLut(asset="cc22dd", strength=0.5).apply(tl, ctx)
     color = tl.layer("color")
     assert len(tl.layers_of("color")) == 1 and color.adjust.contrast == 1.15 and color.lut == "cc22dd"
-    assert texts(changes, "hu") == ["Hozzáadva: warm.cube színhangulat"]
+    assert texts(changes) == ["Added colour look warm.cube"]
 
 
 def test_music_levels_and_speech_volume(timeline, ctx):
@@ -115,7 +115,7 @@ def test_trim_camera_and_bumpers(timeline, ctx):
 def test_remove_layer_describes_what_went(timeline, ctx):
     tl, changes = RemoveLayer(layer="hook").apply(timeline, ctx)
     assert tl.text_with_role("hook") is None
-    assert texts(changes, "hu") == ["Eltávolítva: „Elvesztettem magam – miért?” nyitó felirat"]
+    assert texts(changes) == ["Removed opening text “Elvesztettem magam – miért?”"]
     with pytest.raises(ClippyError):
         RemoveLayer(layer="nothing").apply(timeline, ctx)
 
@@ -126,7 +126,7 @@ def test_a_misheard_word_is_fixed_in_the_captions(timeline, ctx, words):
     tl, _ = FixCaption(find="Megállítani", replace="leállítani").apply(tl, ctx)
     fixes = tl.layer("captions").fixes
     assert [(f.find, f.replace) for f in fixes] == [("pénzt keresni", "Pénzt"), ("Megállítani", "leállítani")]
-    assert texts(changes, "hu") == ["Módosítva: felirat: „megállítani” → „meg állítani”"]
+    assert texts(changes) == ["Changed captions: “megállítani” → “meg állítani”"]
     fixed = corrected(words, fixes)
     assert [w["word"] for w in fixed][:5] == ["Senki", "nem", "tud", "leállítani.", "Pénzt"]
     assert (fixed[4]["start"], fixed[4]["end"]) == (5.0, 6.0) and len(fixed) == len(words) - 1

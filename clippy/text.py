@@ -45,6 +45,19 @@ _STRAIGHT_QUOTES = re.compile(r'"([^"\n]{1,200})"')
 _ENGLISH_QUOTES = re.compile(r"“([^”\n]{1,200})”")
 
 
+HU_HINT = re.compile(
+    r"[őűŐŰ]|\b(és|hogy|nem|igen|kérek|kérlek|csinálj|legyen|még|klipet|klipek|klip|ezt|azt|mert|vagy|"
+    r"legyenek|szeretném|szeretnék|töröld|vágd|rövidebb|hosszabb|melyik|miért|hány|tedd|rakd|vedd|"
+    r"zene|zenét|szöveg|szöveget|felirat|feliratot|kép|képet|színek|vége|elején|végén|alá|fel|le)\b",
+    re.IGNORECASE)
+HU_LETTERS = re.compile(r"[áéíóöúüÁÉÍÓÖÚÜ]")
+
+
+def looks_hungarian(text: str) -> bool:
+    """A post text written in Hungarian (it then gets the Hungarian call to comment and follow lines)."""
+    return bool(HU_HINT.search(text or "")) or len(HU_LETTERS.findall(text or "")) >= 2
+
+
 def hu_quotes(text: str) -> str:
     """Hungarian quotation marks: „…” instead of "…" or “…”."""
     return _ENGLISH_QUOTES.sub(r"„\1”", _STRAIGHT_QUOTES.sub(r"„\1”", text or ""))

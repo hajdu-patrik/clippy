@@ -47,7 +47,7 @@ def tx(key: str, **params) -> dict:
 
 
 def english(tx: dict) -> str:
-    return t("en", tx["key"], **tx["params"])
+    return t(tx["key"], **tx["params"])
 
 
 def job_text(kind: str, payload: dict) -> dict:
@@ -326,7 +326,7 @@ class JobContext:
                                   **(self.job.payload.get("fixes") or {})})
 
     def note(self, key: str, **params) -> None:
-        self.say(t("en", key, **params), data={"t": tx(key, **params)})
+        self.say(t(key, **params), data={"t": tx(key, **params)})
 
     def project(self, source: str, opts: Options) -> Project:
         return self.runner.project_for(self.job.chat_id, source, opts)
@@ -416,7 +416,7 @@ class JobHandler(ABC):
         for i, row in enumerate(rows, 1):
             log(f"[render] style kit {i}/{len(rows)}  #{row['number']}")
             try:
-                outcome = ctx.runner.edit_service(proj).apply(proj, ctx.chat, row, ops, t("en", "kit.applied"))
+                outcome = ctx.runner.edit_service(proj).apply(proj, ctx.chat, row, ops, t("kit.applied"))
             except ClippyError as exc:
                 ctx.note("note.kit_failed", clip=row["number"], error=short_error(exc))
                 continue
@@ -596,7 +596,7 @@ class EditJob(JobHandler):
             return 0
         if outcome.notice or outcome.errors:
             key, params = (outcome.notice, {}) if outcome.notice else ("edit.failed", {"detail": outcome.errors[0]})
-            ctx.say(t("en", key, **params), data={"t": tx(key, **params), "reply": outcome.reply})
+            ctx.say(t(key, **params), data={"t": tx(key, **params), "reply": outcome.reply})
             return 0
         if outcome.version is None:
             if outcome.reply:

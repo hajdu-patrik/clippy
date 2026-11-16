@@ -14,8 +14,8 @@ from clippy.editing.timeref import At, Span, Word
 from clippy.tools import ClippyError
 
 
-def texts(changes, lang="en"):
-    return [c.text(lang) for c in changes]
+def texts(changes):
+    return [c.text() for c in changes]
 
 
 def test_speed_map_places_every_moment_on_the_sped_up_clip():
@@ -30,7 +30,7 @@ def test_set_speed_replaces_overlapping_parts_and_resets(timeline, ctx):
     tl, changes = SetSpeed(factor=0.5, span=Span(start=At(at=2), end=At(at=4))).apply(timeline, ctx)
     tl, _ = SetSpeed(factor=2, span=Span(start=At(at=3), end=At(at=6))).apply(tl, ctx)
     assert [(r.span.start, r.span.end, r.factor) for r in tl.speed] == [(3, 6, 2)]
-    assert texts(changes, "hu") == ["Módosítva: sebesség ×0.5"]
+    assert texts(changes) == ["Changed speed ×0.5"]
     tl, _ = SetSpeed(factor=1.5).apply(tl, ctx)
     tl, _ = SetSpeed(factor=1).apply(tl, ctx)
     assert tl.speed == ()
@@ -43,7 +43,7 @@ def test_format_effects_and_cut_transitions(timeline, ctx):
     assert tl.size == (1920, 1080) and texts(changes) == ["Changed format 16:9"]
     tl, changes = AddEffect(effect="zoom", span=Span(start=Word(word="pénzt"))).apply(tl, ctx)
     assert tl.layer("effect-1").span == TimeRange(start=5.0, end=5.8)
-    assert texts(changes, "hu") == ["Hozzáadva: ráközelítés"]
+    assert texts(changes) == ["Added punch-in zoom"]
     with pytest.raises(ClippyError) as missing:
         AddEffect(effect="flash").apply(tl, ctx)
     assert missing.value.key == "edit.needs_moment"
@@ -58,7 +58,7 @@ def test_stickers_sounds_and_broll(timeline, ctx, monkeypatch):
     tl, changes = AddSticker(emoji="🔥", position="top-left", motion="bounce").apply(timeline, ctx)
     assert tl.layer("sticker-1").motion == "bounce" and texts(changes) == ["Added sticker 🔥"]
     tl, changes = AddSound(sound="whoosh", at=Word(word="pénzt")).apply(tl, ctx)
-    assert tl.layer("sound-1").at == 5.0 and texts(changes, "hu") == ["Hozzáadva: suhanás hang"]
+    assert tl.layer("sound-1").at == 5.0 and texts(changes) == ["Added whoosh sound"]
     tl, changes = AddSound(asset="a1b2c3", at=At(at=1)).apply(tl, ctx)
     assert tl.layer("sound-2").asset == "a1b2c3" and texts(changes) == ["Added sound effect summer.mp3"]
     with pytest.raises(ClippyError) as both:
@@ -81,7 +81,7 @@ def test_joining_other_clips_of_the_chat(timeline, ctx):
     tl, _ = JoinClip(clip=4).apply(tl, ctx)
     tl, _ = JoinClip(clip=2).apply(tl, ctx)
     assert [(j.clip, j.version, j.transition.kind) for j in tl.joins] == [(4, 1, "fade"), (2, 3, "fade")]
-    assert texts(changes, "hu") == ["Hozzáadva: a(z) 2. klip a végére"]
+    assert texts(changes) == ["Added clip #2 at the end"]
     for bad, key in ((1, "edit.self_join"), (9, "edit.no_clip")):
         with pytest.raises(ClippyError) as err:
             JoinClip(clip=bad).apply(tl, ctx)

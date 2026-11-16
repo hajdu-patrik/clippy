@@ -24,6 +24,7 @@ from .settings import URL, Settings, site_of
 from .llm import create_llm
 from .render import RenderSettings, prepare_fonts, render_clip
 from .storage import Storage
+from .text import looks_hungarian
 from .tools import (ClippyError, ThreadContext, atomic_write_text, current_stop, fmt_ts, log, move_atomic, probe_media,
                     read_json, report_span, write_json)
 from .translate import CaptionTranslator
@@ -96,6 +97,9 @@ class Options:
 
 
 LINK_LINES = {"YouTube": "post.youtube", "Instagram": "post.instagram", "TikTok": "post.tiktok"}
+AUDIENCE_HU = {"post.comments": "Írd meg kommentben 👇", "post.original": "🎥 Eredeti videó: {url}",
+               "post.subscribe": "⭐ Iratkozz fel további {topic} klipekért: {url}",
+               "post.subscribe_plain": "⭐ Iratkozz fel további klipekért: {url}", "post.full_video": "A teljes videó: {url}"}
 
 
 def link_lines(links, topic: str, tr) -> list[str]:
@@ -117,10 +121,11 @@ def link_lines(links, topic: str, tr) -> list[str]:
 def post_text(clip: Clip, source: str, info: dict, links: list[str] | tuple = ()) -> str:
     """Ready to paste: the post caption (the teaser, the comment question, the original video, the creator's own
     profiles, hashtags), then the title, the pinned comment and the notes."""
-    lang = i18n.detect(f"{clip.title} {clip.description} {clip.hook}")
+    hungarian = looks_hungarian(f"{clip.title} {clip.description} {clip.hook}")
 
     def tr(key: str, **params) -> str:
-        return i18n.t(lang, key, **params)
+        return (AUDIENCE_HU[key].format(**params) if hungarian and key in AUDIENCE_HU
+                else i18n.t(key, **params))
 
     question = f"{clip.question} {tr('post.comments')}" if clip.question else ""
     blocks = (clip.description or clip.title, question, tr("post.original", url=source) if source else "",

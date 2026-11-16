@@ -56,11 +56,8 @@ def logo() -> str:
     return "\n".join(f"{_rgb(*_GRADIENT[i])}{row}{N}" for i, row in enumerate(rows))
 
 
-LANG = i18n.system_language()
-
-
 def tr(key: str, **params) -> str:
-    return i18n.t(LANG, key, **params)
+    return i18n.t(key, **params)
 
 
 def say(msg: str) -> None:
@@ -317,7 +314,7 @@ def status_line() -> str:
         return f"{D}○{N} {tr('cli.status_off')}  {D}·{N}  {tr('cli.status_start')}: {B}clippy start{N}"
     if st.get("busy"):
         current = st["current"]
-        label = i18n.t(LANG, current["label_t"]["key"], **current["label_t"]["params"]) if current.get("label_t") \
+        label = i18n.t(current["label_t"]["key"], **current["label_t"]["params"]) if current.get("label_t") \
             else current["label"]
         queued = tr("cli.status_queued", n=len(st["queue"])) if st.get("queue") else ""
         others = len(st.get("running") or []) - 1
@@ -356,19 +353,6 @@ def status() -> int:
     return 0 if running() else 1
 
 
-def set_language(code: str) -> int:
-    global LANG
-    if code.lower() not in i18n.SUPPORTED:
-        print(tr("cli.lang_usage"))
-        return 2
-    LANG = i18n.save_language(code)
-    say(f"{G}{tr('cli.lang_set')}{N}")
-    from .shell import install
-
-    install(say=lambda msg: None)
-    return 0
-
-
 def banner() -> None:
     print()
     print(logo())
@@ -379,11 +363,11 @@ def banner() -> None:
     print()
     print(f"{BOLD}{tr('cli.commands')}:{N}")
     for name in COMMANDS:
-        print(f"  {B}{name:<9}{N} {command_doc(name, LANG)}")
+        print(f"  {B}{name:<9}{N} {command_doc(name)}")
     print()
     print(f"{BOLD}{tr('cli.options')}:{N}")
-    for name in ("start", "down", "lang"):
-        for flag, doc, _ in flags_of(name, LANG):
+    for name in ("start", "down"):
+        for flag, doc, _ in flags_of(name):
             print(f"  {B}{flag:<14}{N} {name}: {doc}")
     print(f"  {B}{'clip -h':<14}{N} {tr('cli.clip_options')}")
     print()
@@ -428,8 +412,6 @@ def main(argv: list[str] | None = None) -> int:
             return start()
         open_browser()
         return 0
-    if cmd == "lang":
-        return set_language(args[1] if len(args) > 1 else "")
     if cmd in ("logs", "log"):
         _tail(60)
         return 0

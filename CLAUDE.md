@@ -1,8 +1,8 @@
 # Working in this repository
 
 Clippy: a local AI clipper, long video in, vertical 9:16 clips out, with a chat web app and a `clippy` command (see
-README.md). Code, comments-free modules, docs and commit messages are English; the product itself speaks Hungarian and
-English. No personal data, machine names, account details or absolute user paths in the repository: per-user state
+README.md). Code, comments-free modules, docs, commit messages and the product itself are English; a video keeps its
+own language for its transcript, captions and post texts. No personal data, machine names, account details or absolute user paths in the repository: per-user state
 belongs in `data/` (ignored) and `.env` (ignored).
 
 ## Answering
@@ -16,9 +16,8 @@ belongs in `data/` (ignored) and `.env` (ignored).
   Commands, flags and their help live in `clippy/shell.py` (`COMMANDS`) and `clippy/cli.py` (`build_parser`); the
   PowerShell and Clink completion scripts are generated from them by `clippy install`.
 - No comments in code; one-line docstrings where the intent is not obvious. No dead code (`pyflakes`, `vulture`).
-- Every user-facing text exists in Hungarian and English: server and CLI texts in `clippy/i18n.py` (`CATALOG`), UI texts
-  in `clippy/web/static/js/i18n.js`. The server sends `{key, params}`; errors raise `ClippyError(key=..., **params)`.
-  `tests/test_i18n.py` fails when a key is missing in one language.
+- User-facing texts live in catalogues: server and CLI texts in `clippy/i18n.py` (`CATALOG`), UI texts in
+  `clippy/web/static/js/i18n.js`. The server sends `{key, params}`; errors raise `ClippyError(key=..., **params)`.
 - Long-running steps report progress with `tools.report(fraction)` inside `tools.report_span(lo, hi)`; the web job runner
   turns it into the live progress card (`clippy/web/jobs.py`, `Progress`).
 - Paths come from `clippy/storage.py` only. Deleting a chat must remove every file of it.

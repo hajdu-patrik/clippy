@@ -1,6 +1,6 @@
 import { api } from "./api.js";
 import { showCopyDialog } from "./cards.js";
-import { getLang as lang, t, tx } from "./i18n.js";
+import { t, tx } from "./i18n.js";
 import { onLive } from "./live.js";
 import { $, copyText, esc, toast } from "./util.js";
 
@@ -9,17 +9,17 @@ let games = [];
 
 function clock(due) {
   const at = new Date(due * 1000);
-  const time = at.toLocaleTimeString(lang(), { hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
+  const time = at.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
   const today = new Date();
   const tomorrow = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
   if (at.toDateString() === today.toDateString()) return t("picks.today", { time });
   if (at.toDateString() === tomorrow.toDateString()) return t("picks.tomorrow", { time });
-  return `${at.toLocaleDateString(lang(), { month: "short", day: "numeric" })} ${time}`;
+  return `${at.toLocaleDateString(undefined, { month: "short", day: "numeric" })} ${time}`;
 }
 
 function pickRow(p) {
   const head = p.clip_title || p.title || p.streamer;
-  const views = t("picks.views", { n: Number(p.views || 0).toLocaleString(lang()) });
+  const views = t("picks.views", { n: Number(p.views || 0).toLocaleString(undefined) });
   return `<li class="account pick" data-chat="${p.chat_id}">
     <div class="pick-time"><b>${esc(clock(p.due))}</b><span>${esc(t("picks.ny", { time: p.ny }))}</span></div>
     <div class="pick-body"><b>${esc(head)}</b>
@@ -129,5 +129,4 @@ export function bindPicks() {
   onLive((event) => {
     if ((event.type === "daily" || event.type === "clip") && $("#settingsDialog").open) loadPicks();
   });
-  document.addEventListener("clippy:lang", render);
 }

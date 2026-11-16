@@ -93,7 +93,6 @@ export function bindComposer() {
   $("#composer").addEventListener("submit", (e) => { e.preventDefault(); send(); });
   $("#input").addEventListener("input", autoGrow);
   NARROW.addEventListener("change", fitPlaceholder);
-  document.addEventListener("clippy:lang", fitPlaceholder);
   fitPlaceholder();
   if (TOUCH.matches) $("#input").setAttribute("enterkeyhint", "enter");
   $("#input").addEventListener("keydown", (e) => {

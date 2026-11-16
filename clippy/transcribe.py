@@ -8,7 +8,7 @@ import sys
 from contextlib import nullcontext
 from pathlib import Path
 
-from .i18n import DEFAULT, SUPPORTED, language_name
+from .i18n import CAPTION_LANGUAGES, DEFAULT, language_name
 from .tools import decode_audio, log, read_json, report, write_json
 
 TRANSCRIBE_VERSION = "v2"
@@ -74,8 +74,8 @@ def detect_language(model, audio) -> str:
         log(f"[transcribe] language detection failed ({type(exc).__name__}), assuming English")
         return DEFAULT
     best = max(probs, key=probs.get) if probs else DEFAULT
-    if best not in SUPPORTED and probs.get(best, 0.0) < SURE:
-        best = max(SUPPORTED, key=lambda code: probs.get(code, 0.0))
+    if best not in CAPTION_LANGUAGES and probs.get(best, 0.0) < SURE:
+        best = max(CAPTION_LANGUAGES, key=lambda code: probs.get(code, 0.0))
     log(f"[transcribe] language: {language_name(best)} ({probs.get(best, 0):.2f})")
     return best
 

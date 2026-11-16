@@ -15,7 +15,7 @@ from .storage import Storage
 from .tools import ROOT, ClippyError, fmt_ts, log, slugify, write_json
 
 
-def build_parser(lang: str | None = None) -> argparse.ArgumentParser:
+def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
         prog="clippy clip",
         description="Vertical (9:16) clips from a long video or podcast: LLM hook selection, speaker tracking, "
@@ -62,13 +62,12 @@ def build_parser(lang: str | None = None) -> argparse.ArgumentParser:
     p.add_argument("--only-select", action="store_true", help="only pick the clips (clips.json), edit it, then render")
     p.add_argument("--from-json", default=None, help="render from an (edited) clips.json")
     p.add_argument("--version", action="version", version=f"clippy {__version__}")
-    lang = lang or i18n.system_language()
-    p.description = i18n.lookup(lang, "help.description") or p.description
-    p._positionals.title = i18n.lookup(lang, "help.positionals") or p._positionals.title
-    p._optionals.title = i18n.lookup(lang, "help.optionals") or p._optionals.title
+    p.description = i18n.lookup("help.description") or p.description
+    p._positionals.title = i18n.lookup("help.positionals") or p._positionals.title
+    p._optionals.title = i18n.lookup("help.optionals") or p._optionals.title
     for action in p._actions:
         if action.dest not in ("help", "version"):
-            action.help = i18n.lookup(lang, f"help.{action.dest}") or action.help
+            action.help = i18n.lookup(f"help.{action.dest}") or action.help
     return p
 
 

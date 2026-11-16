@@ -374,17 +374,6 @@ kbd { font: 11px var(--mono); color: var(--faint); border: 1px solid var(--borde
 }
 .progress.done .stage b { color: var(--ok); }
 .progress.error .stage b { color: var(--danger); }
-.lang-switch { position: relative; display: inline-grid; grid-template-columns: 1fr 1fr; padding: 3px; border-radius: 10px;
-  background: var(--bg-elev); border: 1px solid var(--border); flex: 0 0 auto; }
-.lang-switch::before { content: ""; position: absolute; top: 3px; bottom: 3px; left: 3px; width: calc(50% - 3px);
-  border-radius: 7px; background: var(--accent); transition: transform .3s var(--ease); }
-.lang-switch[data-active="en"]::before { transform: translateX(100%); }
-.lang-switch button { position: relative; min-width: 34px; min-height: 28px; padding: 0 8px; border: 0; border-radius: 7px;
-  background: transparent; color: var(--muted); font: 700 12px/1 var(--font-display); letter-spacing: .05em;
-  transition: color .2s; }
-.lang-switch button:hover { color: var(--text); }
-.lang-switch button[aria-checked="true"] { color: var(--accent-ink); }
-@media (pointer: coarse) { .lang-switch button { min-height: 38px; min-width: 42px; } }
 
 .attach-btn { flex: 0 0 auto; align-self: flex-end; margin-left: -8px; }
 .attachments { max-width: 840px; margin: 0 auto 8px; display: flex; flex-wrap: wrap; gap: 8px; }

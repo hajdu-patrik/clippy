@@ -7,7 +7,7 @@
 ![Whisper](https://img.shields.io/badge/Speech-faster--whisper_large--v3-412991?style=flat)
 ![Ollama](https://img.shields.io/badge/LLM-Qwen3_14B_via_Ollama-000000?style=flat&logo=ollama&logoColor=white)
 ![FFmpeg](https://img.shields.io/badge/Video-FFmpeg_NVENC-007808?style=flat&logo=ffmpeg&logoColor=white)
-![Languages](https://img.shields.io/badge/Languages-Hungarian_%7C_English-9E1D3E?style=flat)
+![Captions](https://img.shields.io/badge/Captions-the_video's_own_language-9E1D3E?style=flat)
 ![Platform](https://img.shields.io/badge/Platform-Windows_10%2F11-0078D6?style=flat&logo=windows&logoColor=white)
 ![License](https://img.shields.io/badge/License-MIT-yellow?style=flat)
 
@@ -27,7 +27,7 @@ free. Paste a link into a ChatGPT-style chat and it:
 * **masters the sound** for phones (voice EQ, compressor, two-pass −14 LUFS),
 * and nothing else: a new clip is the moment itself. Everything more (opening text, CTA, music, effects, stickers,
   sound effects, speed, another format, B-roll, joined clips) you **ask for in the chat** (*"start clip 2 two
-  seconds earlier and put the opening text on it"*), in **Hungarian or English**.
+  seconds earlier and put the opening text on it"*).
 
 No subscription and no upload: fast on an NVIDIA RTX GPU, and it also runs on the CPU.
 
@@ -69,7 +69,6 @@ Open a new terminal, then:
 | `clippy down` | stop it completely (running renders too) and free the GPU; `--all` stops Ollama as well |
 | `clippy status` | is it running, what is it doing, how much VRAM the model holds |
 | `clippy clip <link>` | make clips from the command line (`clippy clip -h` lists every option) |
-| `clippy lang hu` / `en` | language of the command line and the web app's default |
 | `clippy restart --lan` · `clippy pair` | use it from a phone or tablet on the same Wi-Fi (see below) |
 | `clippy restart` · `open` · `logs` · `install` | the rest; bare `clippy` shows the banner and the full list |
 
@@ -87,7 +86,7 @@ Tab completion works in PowerShell and in cmd through [Clink](https://chrisant99
 ## How it works
 
 ```
-link ─► yt-dlp (≤4K SDR + Opus) ─► Demucs voice isolation ─► Whisper large-v3 (hotwords, hu/en) ─► MMS_FA word alignment
+link ─► yt-dlp (≤4K SDR + Opus) ─► Demucs voice isolation ─► Whisper large-v3 (hotwords, the video's own language) ─► MMS_FA word alignment
      ─► reactions (loud moments, laughter, action, stream chat) ─► Qwen3 hook scoring + global re-rank ─► tight edit (dead air / fillers out, on the audio envelope and frame grid)
      ─► shot detection + YuNet faces + active speaker ─► virtual camera (spring follow, punch-ins)
      ─► sub-pixel Lanczos 9:16 + ASS captions ─► BT.709 NVENC p7 + voice EQ, compressor, two-pass −14 LUFS
@@ -96,7 +95,7 @@ link ─► yt-dlp (≤4K SDR + Opus) ─► Demucs voice isolation ─► Whisp
 | Surface | What you get |
 | --- | --- |
 | **Web app** (`clippy start`, http://127.0.0.1:7860) | chats on the left, the conversation in the middle; finished clips appear as playable cards with download, copy text and edit |
-| **Chat agent** | understands requests in Hungarian and English and turns them into jobs: generate, more clips, edit clips (with attached images, music, video or LUTs), delete |
+| **Chat agent** | understands requests in plain words and turns them into jobs: generate, more clips, edit clips (with attached images, music, video or LUTs), delete |
 | **Live progress** | queue position, a step bar (download, voice, transcript, timing, picking, render), percentage, detail (*Reading part 3 of 8*, *Clip 2 of 4*) and a self-calibrating time-left estimate |
 | **Command line** | `clippy clip` runs the same pipeline without the browser; `--only-select` + `--from-json` let you edit the plan by hand |
 
@@ -109,8 +108,7 @@ a Hungarian one Hungarian, a Spanish stream Spanish (any language Whisper knows;
 Hungarian or English, which Whisper sometimes mistakes for Finnish). The language you write to the chat in never
 changes that. Ask for another language only when you want it (*"magyar felirattal"*, *"English captions on clip
 5"*, `--captions hu`): captions are then translated into Hungarian or English line by line and kept in sync with
-the speech. The chat understands and
-answers in both, and every label of the web app and the CLI exists in both (`HU` / `EN` switch, `clippy lang`).
+the speech. The app, the chat replies and the command line are in English.
 
 ## Ready-made prompts
 
@@ -134,7 +132,7 @@ rewrites every clip's post text.
 
 ## Editing in the chat
 
-Ask for a change in your own words, in Hungarian or English, and attach what it needs with the paperclip button,
+Ask for a change in your own words and attach what it needs with the paperclip button,
 drag and drop or paste: images, music, video and `.cube` LUTs (each file is checked by its content, images are
 re-encoded, sizes are capped):
 
@@ -243,7 +241,6 @@ do better than your usual. The clear patterns steer the picker for the next vide
 | `CLIPPY_PORT` | `7860` | web app port |
 | `CLIPPY_LAN` | - | `1`: phones and tablets on the same Wi-Fi can use it after pairing (`clippy pair`) |
 | `CLIPPY_BROWSER` | Opera GX, else Edge / Chrome / default | browser to open the UI in |
-| `CLIPPY_LANG` | `clippy lang`, else the OS | `hu` or `en` for one terminal |
 | `CLIPPY_COOKIES_FROM_BROWSER` | - | `firefox` (or another browser) when a site only shows a video to signed-in users (Instagram, Vimeo, Reddit…); Chrome's cookies cannot be read on Windows |
 | `CLIPPY_COOKIES_FILE` | - | a `cookies.txt` (Netscape format) exported from any signed-in browser with an extension; Clippy only reads it, each download uses a private copy. Keep it in `data/` (ignored), it is as good as your login |
 | `CLIPPY_YOUTUBE_CLIENT_ID`, `CLIPPY_YOUTUBE_CLIENT_SECRET` | - | your Google "Desktop app" OAuth client, for posting to YouTube ([docs/publishing.md](docs/publishing.md)) |
@@ -301,8 +298,8 @@ Conventions: [CLAUDE.md](CLAUDE.md). Release history: [CHANGELOG.md](CHANGELOG.m
   captions use the system's fonts (DejaVu or Liberation on Linux).
 * The camera follows the active speaker by mouth motion; the voices are told apart only for picking (who says
   what), by a light voice print that labels speakers only when their voices clearly differ.
-* The interface, the chat and caption translation are Hungarian and English; videos in other languages are
-  transcribed and captioned in their own language, and words in non-Latin scripts keep Whisper's timing.
+* The interface is in English. Videos are transcribed and captioned in their own language; caption translation
+  works between English and Hungarian, and words in non-Latin scripts keep Whisper's timing.
 * Post and monetise only your own footage, footage you have permission for, or content from an official clipping
   campaign. Downloading may be restricted by a platform's terms of service.
 
@@ -315,8 +312,8 @@ animated captions and a call to action.
 **Is it really free and private?** Yes. MIT license, local models only (faster-whisper, Qwen3-14B through Ollama,
 FFmpeg), no subscription and no upload.
 
-**Which languages?** Hungarian and English: speech, chat, interface and captions, including captions translated from
-one to the other.
+**Which languages?** Every video is transcribed and captioned in its own language. The interface is in English, and
+captions can be translated between English and Hungarian.
 
 **Can I edit a clip after it is made?** Yes, by asking in the chat: music, logos, texts, colours, LUTs, intro / outro,
 cutting parts out, undo. Edits re-render in seconds from a cached base.

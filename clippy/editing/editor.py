@@ -22,8 +22,8 @@ class Issue:
     key: str | None = None
     params: dict = field(default_factory=dict)
 
-    def text(self, lang: str) -> str:
-        return i18n.t(lang, self.key, **self.params) if self.key else self.message
+    def text(self) -> str:
+        return i18n.t(self.key, **self.params) if self.key else self.message
 
     def for_model(self) -> str:
         return f"#{self.index} {self.kind}: {self.message}"

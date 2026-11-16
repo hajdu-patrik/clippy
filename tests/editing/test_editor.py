@@ -19,7 +19,7 @@ def test_a_full_request_becomes_one_new_version(timeline, ctx, catalogue):
     result = Editor().run(timeline, ops, ctx)
     assert result.ok and result.changed and not result.touches_base
     assert result.timeline.version == timeline.version + 1
-    assert [c.text("en") for c in result.changes] == [
+    assert [c.text() for c in result.changes] == [
         "Added music summer.mp3", "Added outro outro.mp4", "Removed opening text “Elvesztettem magam – miért?”"]
 
 
@@ -27,7 +27,7 @@ def test_one_failing_operation_keeps_the_old_timeline_and_reports_why(timeline, 
     ops = plan(catalogue, [{"kind": "add_music", "asset": "a1b2c3"}, {"kind": "edit_text", "layer": "text-7", "size": 40}])
     result = Editor().run(timeline, ops, ctx)
     assert not result.ok and result.timeline == timeline
-    assert result.issues[0].index == 1 and result.issues[0].text("hu") == "Nincs ilyen ezen a klipen: „text-7”."
+    assert result.issues[0].index == 1 and result.issues[0].text() == "There is no “text-7” on this clip."
     assert result.issues[0].for_model().startswith("#1 edit_text:")
 
 

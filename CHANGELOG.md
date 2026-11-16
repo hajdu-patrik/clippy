@@ -88,6 +88,10 @@ change, what changed rather than how; dates are ISO 8601.
   profile / channel / playlist link, no video in the post, no sound, each with what helps.
 
 ### Changed
+- English only: the web app, the chat replies and the command line are in English, and the language switch and
+  `clippy lang` are gone. Videos still keep their own language for the transcript, the captions and the post text
+  (a Hungarian video gets a Hungarian post), and captions can still be translated between English and Hungarian.
+- The demo video has a new, original soundtrack with the clips' own voices kept.
 - Post text in the style creators post: a teaser ending with an emoji, the comment question with "drop it in the
   comments", the original video, a follow line per profile (YouTube, Instagram, TikTok) and hashtags; the title
   for YouTube Shorts is listed under it. Copy text uses the same text as the .txt file, and changing the profile

@@ -1,5 +1,5 @@
 import { api } from "./api.js";
-import { getLang, t, tx } from "./i18n.js";
+import { t, tx } from "./i18n.js";
 import { $, toast } from "./util.js";
 
 let recorder = null;
@@ -52,7 +52,7 @@ async function send(blob) {
   button.disabled = true;
   button.classList.add("busy");
   try {
-    const { text } = await api.dictate(blob, getLang());
+    const { text } = await api.dictate(blob);
     if (!text) {
       toast(t("voice.nothing"));
       return;
@@ -77,5 +77,4 @@ export function bindVoice() {
   }
   setRecording(false);
   button.addEventListener("click", () => (recorder ? stop() : start()));
-  document.addEventListener("clippy:lang", () => setRecording(Boolean(recorder)));
 }

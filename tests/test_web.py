@@ -9,7 +9,6 @@ from clippy.editing.changes import Change
 from clippy.editing.factory import timeline_from_clip
 from clippy.editing.service import EditOutcome, NewVersion
 from clippy.storage import Storage
-from clippy import i18n
 from clippy.web import agent
 from clippy.web.clips import ClipLibrary, ClipPresenter
 from clippy.web.db import DB
@@ -253,16 +252,13 @@ def test_message_size_limit(env):
     assert client.post(f"/api/chats/{cid}/messages", json={"text": "x" * 5000}).status_code == 422
 
 
-def test_reply_language_follows_the_user():
-    assert i18n.detect("Csinálj még 1 klipet a legmegindítóbb részből") == "hu"
-    assert i18n.detect("make 3 more clips") == "en"
-
+def test_replies_are_english_whatever_the_user_writes():
     class Silent:
         def chat_json(self, *a, **k):
             return {"reply": "", "actions": []}
 
     out = agent.run_agent(Silent(), {"title": "t", "source": None}, [], [], "https://youtu.be/abcdefghijk 3 klipet kérek")
-    assert out["reply"].startswith("Letöltöm")
+    assert out["reply"] == "Processing the video and picking 3 clips." and out["actions"][0]["n"] == 3
 
 
 def test_static_files_get_content_hashed_urls_and_long_caching(env):
@@ -350,7 +346,7 @@ def test_phones_get_in_only_through_a_one_time_pairing_link(lan_app, tmp_path):
     path = url.split(":7860", 1)[1]
     preview = TestClient(app, client=("192.168.1.40", 50000), base_url="http://192.168.1.10:7860")
     page = preview.get(path)
-    assert page.status_code == 200 and 'method="post"' in page.text and "Párosítás" in page.text
+    assert page.status_code == 200 and 'method="post"' in page.text and ">Pair</button>" in page.text
     assert "script-src 'self'" in page.headers["content-security-policy"]
     assert page.headers["referrer-policy"] == "same-origin"
     assert phone.post(path, headers={"Origin": "null"}).status_code == 403

@@ -22,13 +22,13 @@ ROOT = Path(__file__).resolve().parent.parent
 
 
 class ClippyError(RuntimeError):
-    """User-facing error. With a catalogue `key` it can be shown in Hungarian or English; the message is English."""
+    """User-facing error. With a catalogue `key` the browser shows the catalogue text; the message is the same."""
 
     def __init__(self, message: str = "", *, key: str | None = None, **params):
         from .i18n import t
 
         self.key, self.params = key, params
-        super().__init__(t("en", key, **params) if key else message)
+        super().__init__(t(key, **params) if key else message)
 
 
 @lru_cache(maxsize=1)

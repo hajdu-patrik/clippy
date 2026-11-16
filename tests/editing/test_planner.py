@@ -35,7 +35,7 @@ def test_valid_plan_is_applied_in_one_call(make_request, ctx):
     plan = EditPlanner(llm).plan(make_request(), ctx)
     assert plan.reply == "Kész." and plan.result.ok and plan.result.timeline.layer("music-1")
     system, _, schema = llm.prompts[0]
-    assert "Hungarian" in system and "- add_music(asset: text" in system
+    assert "in English" in system and "- add_music(asset: text" in system
     assert schema["properties"]["operations"]["maxItems"] == 10
 
 
@@ -90,7 +90,7 @@ def test_service_asks_back_and_undoes_without_rendering(timeline, words, asset_i
     undoing = EditService(DB(), storage, Assets(), EditPlanner(ScriptedLLM(
         {"reply": "Visszaállítottam.", "operations": [{"kind": "undo"}]})))
     outcome = undoing.edit(Project(), chat, {**rows[1], "timeline": timeline.to_json()}, "vond vissza")
-    assert outcome.version.mp4 == "v1.mp4" and outcome.changes[0].text("hu") == "Módosítva: vissza a(z) 1. verzióra"
+    assert outcome.version.mp4 == "v1.mp4" and outcome.changes[0].text() == "Changed back to version 1"
     assert json.loads(outcome.version.timeline)["cut"]["source"]["start"] == 100
 
 

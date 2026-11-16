@@ -7,9 +7,9 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, field
 
-COUNT = re.compile(r"\b(\d{1,2})\s*(?:clips?|db|darab|klip)", re.I)
-LENGTHS = re.compile(r"\b(\d{1,3})\s*[–-]\s*(\d{1,3})\s*(?:másodperc|mp\b|seconds?\b|s\b)", re.I)
-EXTRA = re.compile(r"^[ \t]*(?:Egyéb kérés|Extra wishes)[ \t]*:[ \t]*(\S.*?)[ \t]*$", re.I | re.M)
+COUNT = re.compile(r"\b(\d{1,2})\s*clips?", re.I)
+LENGTHS = re.compile(r"\b(\d{1,3})\s*[–-]\s*(\d{1,3})\s*(?:seconds?\b|s\b)", re.I)
+EXTRA = re.compile(r"^[ \t]*Extra wishes[ \t]*:[ \t]*(\S.*?)[ \t]*$", re.I | re.M)
 CTA = re.compile(r"CTA[^:\n]{0,20}:\s*[„“\"]([^”\"\n]{1,80})[”\"]")
 MAX_INSTRUCTIONS = 900
 

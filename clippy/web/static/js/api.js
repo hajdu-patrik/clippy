@@ -59,8 +59,8 @@ export const api = {
   publish: (id, number, body) =>
     request(`/api/chats/${id}/clips/${number}/publish`, { method: "POST", body: JSON.stringify(body) }),
   cancelScheduled: (id) => request(`/api/scheduled/${id}`, { method: "DELETE" }),
-  dictate: async (blob, lang) => {
-    const res = await fetch(`/api/dictate?lang=${encodeURIComponent(lang)}`, {
+  dictate: async (blob) => {
+    const res = await fetch("/api/dictate", {
       method: "POST", body: blob, headers: { "X-Clippy-Request": "1", "Content-Type": "application/octet-stream" } });
     let body = null;
     try { body = await res.json(); } catch { body = null; }

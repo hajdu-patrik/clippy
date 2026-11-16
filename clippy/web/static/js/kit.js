@@ -75,5 +75,4 @@ export function bindKit() {
     $(`#kit-${slot}-file`).addEventListener("change", (e) => upload(slot, e.target));
     $(`#kit-${slot}-remove`).addEventListener("click", () => remove(slot));
   }
-  document.addEventListener("clippy:lang", render);
 }

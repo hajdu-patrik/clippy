@@ -163,9 +163,9 @@ class ChatService:
                 jobs.extend(self._execute(chat, action))
                 actions.append(action)
             except ClippyError as exc:
-                notes.append(i18n.t(result["lang"], exc.key, **exc.params) if exc.key else str(exc))
-        prefix = i18n.t(result["lang"], "note.prefix")
-        picked = [i18n.t(result["lang"], "reply.latest_found", **a["picked"]) for a in actions
+                notes.append(i18n.t(exc.key, **exc.params) if exc.key else str(exc))
+        prefix = i18n.t("note.prefix")
+        picked = [i18n.t("reply.latest_found", **a["picked"]) for a in actions
                   if a["type"] == "latest_stream"]
         reply = ("\n\n".join([result["reply"], *picked])
                  + (f"\n\n_{prefix}: " + "; ".join(notes) + "_" if notes else ""))

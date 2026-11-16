@@ -29,10 +29,9 @@ def raw(start, end, score, **extra):
             "risks": [], "reason": "jó", **extra}
 
 
-def test_every_hook_type_and_risk_has_a_name_in_both_languages():
-    for lang in i18n.SUPPORTED:
-        for key in [f"hooktype.{k}" for k in playbook.HOOK_KEYS] + [f"risk.{k}" for k in playbook.RISK_KEYS]:
-            assert key in i18n.CATALOG[lang], (lang, key)
+def test_every_hook_type_and_risk_has_a_name():
+    for key in [f"hooktype.{k}" for k in playbook.HOOK_KEYS] + [f"risk.{k}" for k in playbook.RISK_KEYS]:
+        assert key in i18n.CATALOG, key
 
 
 def test_hooks_lose_name_labels_and_wrapping_quotes():
@@ -69,10 +68,10 @@ def test_post_text_is_ready_to_paste_in_the_clip_language():
     caption, notes = text.split("\n---\n")
     assert caption.strip() == ("Miért hagyta abba?\n\nTe abbahagytad volna? Írd meg kommentben 👇\n\n"
                                "🎥 Eredeti videó: https://youtu.be/x\n\n#zene")
-    assert "Cím (YouTube Shorts): Miért hagyta abba?" in notes
-    assert "Kitűzött komment: A teljes videó: https://youtu.be/x" in notes
-    assert "Nyitó felirat ötlet (kérdés): Erről senki nem beszél" in notes and "B nyitó felirat ötlet (A/B teszt): Tíz év hazugság" in notes
-    assert "kiragadva félreérthető" in notes
+    assert "Title (YouTube Shorts): Miért hagyta abba?" in notes
+    assert "Pinned comment: A teljes videó: https://youtu.be/x" in notes
+    assert "Opening text idea (question): Erről senki nem beszél" in notes
+    assert "B opening text idea (A/B test): Tíz év hazugság" in notes and "read out of context" in notes
     english = post_text(Clip(0, 20, 50, hook="Nobody tells you this", title="Why he quit"), "u",
                         {"duration_out": 20, "dead_air_removed": 0})
     assert "Pinned comment: Full video: u" in english and "B opening text" not in english

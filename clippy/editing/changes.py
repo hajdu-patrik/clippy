@@ -27,6 +27,6 @@ class Change(Frozen):
     def removed(cls, subject: str, **params) -> "Change":
         return cls(action="removed", subject=subject, params=params)
 
-    def text(self, lang: str) -> str:
-        what = i18n.t(lang, f"what.{self.subject}", **self.params)
-        return i18n.t(lang, f"change.{self.action}", what=what)
+    def text(self) -> str:
+        what = i18n.t(f"what.{self.subject}", **self.params)
+        return i18n.t(f"change.{self.action}", what=what)

@@ -114,5 +114,4 @@ export function bindAttachments(chatProvider) {
     }
   });
   bindDrop();
-  document.addEventListener("clippy:lang", render);
 }

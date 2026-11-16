@@ -8,7 +8,7 @@ import re
 from dataclasses import dataclass, field
 from difflib import SequenceMatcher
 
-from .. import i18n, playbook
+from .. import playbook
 from ..text import ends_sentence, no_dashes
 from ..tools import ClippyError, log
 from .assets import Asset, describe
@@ -23,7 +23,7 @@ VERBATIM_FIELDS = ("text", "title", "replace", "question")
 SYSTEM_PROMPT = """You are the video editor inside "Clippy". You change ONE vertical short clip by returning edit
 operations; the app validates and renders them. Return ONLY JSON: {"reply": "...", "operations": [...]}.
 
-- "reply": 1-2 friendly sentences in {language} saying what you changed (or asking back).
+- "reply": 1-2 friendly sentences in English saying what you changed (or asking back).
 - "operations": in the order to apply them. Use ONLY layer ids and attachment ids listed in the state.
 - Times are seconds of the clip as the viewer sees it. When the user refers to words or a moment, use a time ref:
   {"type": "word", "word": "pénz"}, {"type": "phrase", "phrase": "senki nem tud"}, {"type": "edge", "edge": "end",
@@ -95,10 +95,6 @@ class EditRequest:
     question: str = ""
     others: tuple[int, ...] = ()
     hook_idea: str = ""
-
-    @property
-    def language(self) -> str:
-        return i18n.detect(self.text)
 
 
 @dataclass
@@ -218,8 +214,7 @@ class EditPlanner:
         }, "required": ["reply", "operations"]}
 
     def plan(self, req: EditRequest, ctx: EditContext) -> PlanResult:
-        system = (SYSTEM_PROMPT.replace("{language}", i18n.NAMES[req.language])
-                  .replace("{operations}", self.catalogue.describe()) + "\n\n" + playbook.editor_rules()
+        system = (SYSTEM_PROMPT.replace("{operations}", self.catalogue.describe()) + "\n\n" + playbook.editor_rules()
                   + "\n" + playbook.DASH_RULE
                   + "\n\n" + EXAMPLES)
         prompt = f"STATE:\n{self.formatter.state(req)}\n\nUSER REQUEST:\n{req.text}"

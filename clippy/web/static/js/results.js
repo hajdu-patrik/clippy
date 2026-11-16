@@ -57,5 +57,4 @@ export function bindResults() {
   onLive((event) => {
     if (event.type === "results" && $("#settingsDialog").open) loadResults();
   });
-  document.addEventListener("clippy:lang", render);
 }

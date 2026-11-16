@@ -22,7 +22,7 @@ COLOURED = "\x1b[0;31mERROR:\x1b[0m [vimeo] 56015672: The web client only works 
 def test_site_errors_become_a_readable_reason(message, key):
     err = explain(message, "vimeo.com")
     assert err.key == key and "\x1b" not in str(err) and "please report" not in str(err)
-    assert i18n.t("hu", err.key, **err.params) != err.key
+    assert i18n.t(err.key, **err.params) != err.key
 
 
 def test_live_streams_profiles_and_posts_without_video_are_refused():

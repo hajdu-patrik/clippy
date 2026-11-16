@@ -2,7 +2,7 @@ import { api } from "./api.js";
 import { openChat } from "./chat.js";
 import { bindComposer } from "./composer.js";
 import { bindDrawer, closeDrawer } from "./drawer.js";
-import { applyStatic, getLang, loadCatalog, setLang } from "./i18n.js";
+import { applyStatic, loadCatalog } from "./i18n.js";
 import { startLive } from "./live.js";
 import { bindSettings, loadSettings, openSettingsFromLink } from "./settings.js";
 import { bindPublish } from "./publish.js";
@@ -14,7 +14,6 @@ import { loadChats, setWorker } from "./sidebar.js";
 import { $, store } from "./util.js";
 
 const THEME_KEY = "clippy-theme";
-const LANG_KEY = "clippy-lang";
 const STATUS_POLL_MS = 4000;
 
 function applyTheme(theme, animate = false) {
@@ -44,30 +43,7 @@ async function refreshStatus() {
   try { setWorker(await api.status()); } catch { return; }
 }
 
-function showLangButton() {
-  const current = getLang();
-  const box = $("#langSwitch");
-  box.dataset.active = current;
-  box.querySelectorAll("[data-lang]").forEach((b) => b.setAttribute("aria-checked", String(b.dataset.lang === current)));
-}
-
 function bindChrome() {
-  $("#langSwitch").addEventListener("click", (e) => {
-    const lang = e.target.closest("[data-lang]")?.dataset.lang;
-    if (lang && lang !== getLang()) setLang(lang);
-  });
-  $("#langSwitch").addEventListener("keydown", (e) => {
-    if (!["ArrowLeft", "ArrowRight"].includes(e.key)) return;
-    e.preventDefault();
-    setLang(getLang() === "hu" ? "en" : "hu");
-    $(`#langSwitch [data-lang="${getLang()}"]`).focus();
-  });
-  document.addEventListener("clippy:lang", async () => {
-    showLangButton();
-    await loadChats();
-    await refreshStatus();
-    route();
-  });
   $("#themeBtn").addEventListener("click", () =>
     applyTheme(document.documentElement.dataset.theme === "dark" ? "light" : "dark", true));
   $("#newChat").addEventListener("click", newChat);
@@ -85,7 +61,6 @@ function bindChrome() {
   window.addEventListener("hashchange", route);
   window.addEventListener("storage", (e) => {
     if (e.key === THEME_KEY && e.newValue && e.newValue !== document.documentElement.dataset.theme) applyTheme(e.newValue, true);
-    if (e.key === LANG_KEY && e.newValue && e.newValue !== getLang()) setLang(e.newValue);
   });
   document.addEventListener("visibilitychange", () => { if (!document.hidden) refreshStatus(); });
   bindDrawer();
@@ -100,7 +75,6 @@ function bindChrome() {
 applyTheme(store.get(THEME_KEY) || (matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark"));
 await loadCatalog(api.i18n);
 applyStatic();
-showLangButton();
 bindChrome();
 bindComposer();
 await loadChats();

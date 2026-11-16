@@ -24,13 +24,13 @@ def _whisper():
         return _model
 
 
-def dictate(audio: Path, language: str | None = None) -> str:
-    """The words of a recording (Hungarian or English; `language` is the interface language as a hint)."""
+def dictate(audio: Path) -> str:
+    """The words of a recording, in whatever language it was spoken."""
     samples = decode_audio(audio)
     if len(samples) > (MAX_SECONDS + 5) * 16000:
         raise ClippyError(key="error.dictation_long", max=MAX_SECONDS)
     try:
-        segments, _ = _whisper().transcribe(samples, language=language if language in ("hu", "en") else None,
+        segments, _ = _whisper().transcribe(samples, language=None,
                                             vad_filter=True, beam_size=5, condition_on_previous_text=False)
         return " ".join(s.text.strip() for s in segments).strip()
     except Exception as exc:

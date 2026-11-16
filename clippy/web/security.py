@@ -54,21 +54,16 @@ PAIR_PAGE_FILES = ("/static/style.css", "/static/brand/mark.svg")
 
 
 def pair_page(code: str) -> str:
-    """The pairing confirmation in both languages; the code goes back with the button's POST."""
-    t = {lang: {k: html.escape(i18n.t(lang, f"lan.page_{k}")) for k in ("title", "text", "button")}
-         for lang in ("hu", "en")}
-    return (f'<!doctype html><html lang="hu" data-theme="dark"><head><meta charset="utf-8">'
+    """The pairing confirmation; the code goes back with the button's POST."""
+    t = {k: html.escape(i18n.t(f"lan.page_{k}")) for k in ("title", "text", "button")}
+    return (f'<!doctype html><html lang="en" data-theme="dark"><head><meta charset="utf-8">'
             f'<meta name="viewport" content="width=device-width, initial-scale=1"><title>Clippy</title>'
             f'<link rel="stylesheet" href="/static/style.css"></head><body class="pair-body"><main class="pair">'
             f'<img src="/static/brand/mark.svg" alt="" width="56" height="56">'
-            f'<h1>{t["hu"]["title"]}</h1><p>{t["hu"]["text"]}</p><p lang="en">{t["en"]["text"]}</p>'
+            f'<h1>{t["title"]}</h1><p>{t["text"]}</p>'
             f'<form method="post" action="/pair?code={html.escape(code)}">'
-            f'<button class="pair-button" type="submit">{t["hu"]["button"]} · {t["en"]["button"]}</button>'
+            f'<button class="pair-button" type="submit">{t["button"]}</button>'
             f'</form></main></body></html>')
-
-
-def _both(key: str) -> str:
-    return "\n\n".join(i18n.t(lang, key) for lang in ("hu", "en"))
 
 
 class SecurityMiddleware:
@@ -102,7 +97,7 @@ class SecurityMiddleware:
                     return await self._pair(scope, headers)(scope, receive, send_with_headers)
                 elif not (scope["method"] == "GET" and scope["path"] in PAIR_PAGE_FILES) and not self.lan.known(
                         cookie_parser(headers.get("cookie", "")).get(COOKIE)):
-                    problem = _both("lan.unpaired")
+                    problem = i18n.t("lan.unpaired")
         if problem:
             return await PlainTextResponse(problem, status_code=403)(scope, receive, send_with_headers)
         await self.app(scope, receive, send_with_headers)
@@ -111,12 +106,12 @@ class SecurityMiddleware:
         """GET shows a button, only its POST uses the code up: link previews of chat apps open links too."""
         code = (parse_qs(scope.get("query_string", b"").decode("latin-1")).get("code") or [""])[0]
         if not PAIR_CODE.fullmatch(code):
-            return PlainTextResponse(_both("lan.bad_code"), status_code=403)
+            return PlainTextResponse(i18n.t("lan.bad_code"), status_code=403)
         if scope["method"] != "POST":
             return HTMLResponse(pair_page(code), headers={"referrer-policy": "same-origin"})
         token = self.lan.pair(code, headers.get("user-agent", ""))
         if token is None:
-            return PlainTextResponse(_both("lan.bad_code"), status_code=403)
+            return PlainTextResponse(i18n.t("lan.bad_code"), status_code=403)
         response = RedirectResponse("/", status_code=303)
         response.set_cookie(COOKIE, token, max_age=COOKIE_AGE, httponly=True, samesite="strict", path="/")
         return response
