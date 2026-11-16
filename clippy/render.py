@@ -114,7 +114,8 @@ def prepare_fonts(folder: Path) -> Path:
                 with atomic_path(folder / src.name) as tmp:
                     shutil.copyfile(src, tmp)
             except OSError as exc:
-                log(f"[render] font {src.name} skipped: {exc}")
+                if not (folder / src.name).exists():
+                    log(f"[render] font {src.name} skipped: {exc}")
     return folder
 
 

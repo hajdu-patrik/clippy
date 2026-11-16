@@ -186,3 +186,31 @@ def test_text_helpers():
     assert ends_clause("well,") and ends_clause("note:") and not ends_clause("and")
     assert clean_text("10 -ben  ,  ok") == "10-ben, ok"
     assert Clip.from_dict({"start": 1, "end": 5, "score": 9, "duration": 4, "extra": 1}).end == 5
+
+
+def test_prepare_fonts_only_reports_a_font_that_is_really_missing(tmp_path, monkeypatch):
+    from clippy import render
+    src = tmp_path / "caption.ttf"
+    src.write_bytes(b"font")
+    folder = tmp_path / "fonts"
+    logged = []
+    monkeypatch.setattr(render, "ROOT", tmp_path)
+    monkeypatch.setattr(render, "system_fonts", lambda: [src])
+    monkeypatch.setattr(render, "log", logged.append)
+
+    def raced(_src, _dst):
+        (folder / "caption.ttf").write_bytes(b"font")
+        raise PermissionError("in use by another render")
+
+    monkeypatch.setattr(render.shutil, "copyfile", raced)
+    assert render.prepare_fonts(folder) == folder
+    assert logged == []
+
+    (folder / "caption.ttf").unlink()
+
+    def failed(_src, _dst):
+        raise PermissionError("denied")
+
+    monkeypatch.setattr(render.shutil, "copyfile", failed)
+    render.prepare_fonts(folder)
+    assert len(logged) == 1 and "caption.ttf skipped" in logged[0]
