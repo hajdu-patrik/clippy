@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Clippy privacy policy</title>
+  <meta name="description" content="How Clippy, a local AI clipper, handles your data and the YouTube, Instagram and TikTok accounts you connect to it.">
+  <link rel="canonical" href="https://hajdu-patrik.github.io/clippy/privacy.html">
+  <meta name="theme-color" content="#18171a">
+  <link rel="icon" href="assets/favicon.ico" sizes="16x16 32x32 48x48">
+  <link rel="icon" type="image/svg+xml" href="assets/mark.svg">
+  <style>
+    :root { --bg: #18171a; --elev: #211f23; --text: #ecebee; --muted: #a9a5ae; --border: #322f35;
+      --wine-light: #eb8da6; --font: "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, Roboto, sans-serif; }
+    @media (prefers-color-scheme: light) {
+      :root { --bg: #f4f3f5; --elev: #ffffff; --text: #1d1b1f; --muted: #5f5a63; --border: #dad6db; --wine-light: #7d1631; }
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--text); font: 17px/1.6 var(--font); }
+    main { max-width: 760px; margin: 0 auto; padding: 0 20px 64px; }
+    header { display: flex; align-items: center; gap: 12px; padding: 28px 0 8px; }
+    header img { width: 44px; height: 44px; }
+    header strong { font-size: 22px; letter-spacing: -0.02em; }
+    header nav { margin-left: auto; display: flex; gap: 18px; font-size: 15px; }
+    a { color: var(--wine-light); overflow-wrap: anywhere; }
+    h1 { font-size: clamp(30px, 5vw, 42px); line-height: 1.1; letter-spacing: -0.03em; margin: 40px 0 8px; }
+    h2 { font-size: 22px; letter-spacing: -0.01em; margin: 40px 0 8px; }
+    .date { color: var(--muted); margin: 0 0 24px; }
+    section + section { border-top: 1px solid var(--border); margin-top: 56px; }
+    footer { color: var(--muted); font-size: 14px; margin-top: 64px; }
+  </style>
+</head>
+<body>
+<main>
+  <header>
+    <img src="assets/mark.svg" alt="" width="44" height="44">
+    <strong>Clippy</strong>
+    <nav aria-label="Main"><a href="./">Home</a><a href="#magyarul">Magyarul</a>
+      <a href="https://github.com/hajdu-patrik/clippy">GitHub</a></nav>
+  </header>
+
+  <section>
+    <h1>Privacy policy</h1>
+    <p class="date">Last updated: 16 November 2026</p>
+
+    <p>Clippy is free, open-source software that you run on your own computer. There is no Clippy server and no Clippy
+      account: the people who make Clippy never receive your videos, your clips or any data from the accounts you
+      connect. This page explains what the app on your computer does with that data.</p>
+
+    <h2>What Clippy accesses</h2>
+    <p>Only when you connect an account in Settings, and only for that account:</p>
+    <ul>
+      <li><b>YouTube</b> (Google OAuth scopes <code>youtube.upload</code>, <code>youtube.readonly</code> and
+        <code>yt-analytics.readonly</code>): it uploads the clips you choose to post with their title and description,
+        reads your channel's name to show which account is connected, and reads the view, like and comment counts and
+        the watch time of the videos it posted.</li>
+      <li><b>Instagram</b>: it publishes the Reels you choose to post and reads the basic profile and the insights of
+        those posts.</li>
+      <li><b>TikTok</b>: it sends the clips you choose to your drafts or posts them, and reads your basic profile.</li>
+    </ul>
+    <p>Clippy does not read your other videos' content, your messages, your comments or your contacts, and it does
+      not post anything you did not ask it to post (by hand, at a time you set, or for a channel you told it to
+      post automatically).</p>
+
+    <h2>Where the data stays</h2>
+    <p>The sign-in tokens and the numbers read back are stored only on your computer, in Clippy's own
+      <code>data</code> folder. They are never sent to the makers of Clippy or to any third party; the only place they
+      go is the platform they belong to (Google, Meta or TikTok), to do what you asked. Clippy has no analytics,
+      tracking or advertising.</p>
+
+    <h2>How to remove it</h2>
+    <ul>
+      <li>Press <b>Disconnect</b> in Clippy's Settings to delete an account's tokens from your computer.</li>
+      <li>Revoke Clippy's access on the platform at any time: for Google, at
+        <a href="https://myaccount.google.com/permissions">myaccount.google.com/permissions</a>; for Instagram and
+        TikTok, in the app's settings under connected apps.</li>
+      <li>Deleting Clippy's <code>data</code> folder removes everything it stored.</li>
+    </ul>
+
+    <h2>Google and YouTube</h2>
+    <p>Clippy uses the YouTube API Services. By connecting a YouTube account you agree to the
+      <a href="https://www.youtube.com/t/terms">YouTube Terms of Service</a>, and Google's handling of your data is
+      covered by the <a href="https://policies.google.com/privacy">Google Privacy Policy</a>. Clippy's use and
+      transfer of information received from Google APIs adheres to the
+      <a href="https://developers.google.com/terms/api-services-user-data-policy">Google API Services User Data
+      Policy</a>, including the Limited Use requirements.</p>
+
+    <h2>Contact</h2>
+    <p>Questions about this policy: open an issue at
+      <a href="https://github.com/hajdu-patrik/clippy/issues">github.com/hajdu-patrik/clippy/issues</a>.</p>
+  </section>
+
+  <section id="magyarul" lang="hu">
+    <h1>Adatvédelmi tájékoztató</h1>
+    <p class="date">Utoljára frissítve: 2026. november 16.</p>
+
+    <p>A Clippy ingyenes, nyílt forráskódú program, amely a saját gépeden fut. Nincs Clippy-szerver és nincs
+      Clippy-fiók: a Clippy készítői soha nem kapják meg a videóidat, a klipjeidet és a csatlakoztatott fiókjaid
+      adatait. Ez az oldal azt írja le, mit csinál ezekkel az adatokkal a gépeden futó program.</p>
+
+    <h2>Mihez fér hozzá a Clippy</h2>
+    <p>Csak ahhoz a fiókhoz, amelyet a Beállításokban csatlakoztatsz:</p>
+    <ul>
+      <li><b>YouTube</b> (a <code>youtube.upload</code>, <code>youtube.readonly</code> és
+        <code>yt-analytics.readonly</code> Google OAuth-hozzáférés): feltölti a kiválasztott klipeket a címükkel és
+        leírásukkal, kiolvassa a csatornád nevét, hogy lásd, melyik fiók van csatlakoztatva, és kiolvassa az általa
+        posztolt videók megtekintéseit, kedveléseit, kommentjeit és nézési idejét.</li>
+      <li><b>Instagram</b>: közzéteszi a kiválasztott Reelseket, és kiolvassa az alapprofilt és ezeknek a posztoknak
+        a statisztikáit.</li>
+      <li><b>TikTok</b>: a kiválasztott klipeket a piszkozataid közé küldi vagy közzéteszi, és kiolvassa az
+        alapprofilodat.</li>
+    </ul>
+    <p>A Clippy nem olvassa a többi videód tartalmát, az üzeneteidet, a kommentjeidet vagy a kapcsolataidat, és nem
+      posztol olyat, amit nem kértél (kézzel, egy általad megadott időpontban vagy egy olyan csatornánál, amelyhez
+      automatikus posztolást állítottál be).</p>
+
+    <h2>Hol maradnak az adatok</h2>
+    <p>A bejelentkezési tokenek és a visszaolvasott számok csak a gépeden, a Clippy saját <code>data</code> mappájában
+      vannak. Nem kerülnek a Clippy készítőihez vagy harmadik félhez; csak oda mennek, ahová tartoznak (Google, Meta
+      vagy TikTok), hogy elvégezzék, amit kértél. A Clippyben nincs analitika, követés vagy hirdetés.</p>
+
+    <h2>Hogyan törölheted</h2>
+    <ul>
+      <li>A Clippy Beállításaiban a <b>Leválasztás</b> gomb törli a fiók tokenjeit a gépedről.</li>
+      <li>A hozzáférést bármikor visszavonhatod a platformon: Google-nél a
+        <a href="https://myaccount.google.com/permissions">myaccount.google.com/permissions</a> oldalon, Instagramon
+        és TikTokon az alkalmazás beállításaiban, a csatlakoztatott alkalmazásoknál.</li>
+      <li>A Clippy <code>data</code> mappájának törlése mindent töröl, amit tárolt.</li>
+    </ul>
+
+    <h2>Google és YouTube</h2>
+    <p>A Clippy a YouTube API-szolgáltatásokat használja. YouTube-fiók csatlakoztatásával elfogadod a
+      <a href="https://www.youtube.com/t/terms">YouTube Általános Szerződési Feltételeit</a>, az adataidat a Google a
+      <a href="https://policies.google.com/privacy">Google Adatvédelmi irányelvei</a> szerint kezeli. A Clippy a
+      Google API-kból kapott adatokat a
+      <a href="https://developers.google.com/terms/api-services-user-data-policy">Google API Services User Data
+      Policy</a> szerint használja és továbbítja, a Limited Use követelményeket is beleértve.</p>
+
+    <h2>Kapcsolat</h2>
+    <p>Kérdés esetén nyiss egy issue-t:
+      <a href="https://github.com/hajdu-patrik/clippy/issues">github.com/hajdu-patrik/clippy/issues</a>.</p>
+  </section>
+
+  <footer>MIT licensed · <a href="./">Clippy</a> ·
+    <a href="https://github.com/hajdu-patrik/clippy">GitHub</a></footer>
+</main>
+</body>
+</html>

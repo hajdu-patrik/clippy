@@ -16,13 +16,24 @@ connect accounts.
 ## YouTube
 
 1. Open the [Google Cloud Console](https://console.cloud.google.com/), create a project, then under
-   **APIs & Services, Library** enable **YouTube Data API v3**.
-2. **Google Auth Platform** (or **OAuth consent screen**): audience **External**, fill in the app name and your
-   email. Under **Data access** add the scopes `youtube.upload`, `youtube.readonly` and `yt-analytics.readonly`
-   (the last one lets Clippy read how much of each clip people watch; enable the **YouTube Analytics API** too).
-3. Under **Audience** press **Publish app**. While the app is in *Testing*, Google ends the sign-in after 7 days and you
-   would have to connect again every week. A published app that is not verified shows a warning page at sign-in;
-   that is expected for an app only you use: choose *Advanced* and continue.
+   **APIs & Services, Library** enable **YouTube Data API v3** and **YouTube Analytics API** (the second one lets
+   Clippy read how much of each clip people watch).
+2. **Google Auth Platform** (or **OAuth consent screen**): audience **External**. On the **Branding** page:
+
+   | Field | Value |
+   | --- | --- |
+   | App name, User support email, Developer contact | a name of your choice and your own email |
+   | App logo | leave it empty: a logo makes a published app need Google's verification |
+   | Application home page | `https://hajdu-patrik.github.io/clippy/` |
+   | Application privacy policy link | `https://hajdu-patrik.github.io/clippy/privacy.html` |
+   | Authorized domains | `hajdu-patrik.github.io` only |
+
+   Google asks for the home page and the privacy policy before it lets the app out of *Testing*. Under **Data
+   access** add the scopes `youtube.upload`, `youtube.readonly` and `yt-analytics.readonly`.
+3. Under **Audience** press **Publish app** and confirm; do not start the verification it offers. While the app is in
+   *Testing*, Google ends the sign-in after 7 days and you would have to connect again every week. A published app
+   that is not verified shows a warning page at sign-in; that is expected for an app only you use: choose *Advanced*
+   and continue.
 4. **Clients, Create client**: application type **Desktop app**. Put its id and secret in `.env`:
 
    ```ini
