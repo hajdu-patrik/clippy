@@ -6,8 +6,8 @@ change, what changed rather than how; dates are ISO 8601.
 ## [Unreleased]
 
 ### Added
-- A one-minute product demo (`docs/assets/demo.mp4`): an animated preview at the top of the README links to it, and
-  the project page plays it under the introduction.
+- A one-minute product demo in 4K (`docs/assets/demo.mp4`, with a 1080p copy): an animated preview at the top of the
+  README links to it, and the project page plays it under the introduction (the 1080p copy on small screens).
 - Every video is transcribed and captioned in its own language (English stays English, Hungarian
   Hungarian, other languages their own); captions change language only when the user asks for it, never because
   of the language they write to the chat in.
@@ -122,6 +122,7 @@ change, what changed rather than how; dates are ISO 8601.
   take about 7 s instead of a full re-render.
 - The separate restyle action is gone; style changes are ordinary edits.
 - Captions keep 120 px from the sides, clear of the platform buttons on the right.
+- Clips rendered side by side no longer log "font skipped" when another render copied the caption font first.
 
 ### Performance
 - Rendering a clip from a 4K source is about 2.7x faster (45 s -> 16 s for a 28 s clip): the stream layout is

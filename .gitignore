@@ -44,7 +44,7 @@ fonts/
 *.part
 !clippy/web/static/brand/*.png
 !docs/assets/*.jpg
-!docs/assets/demo.mp4
+!docs/assets/demo*.mp4
 !docs/assets/*.png
 
 # Generated per machine by `clippy install`
