@@ -165,6 +165,9 @@
     .btn.primary:hover { background: var(--accent-hover); }
     .btn.ghost { color: var(--text); border-color: var(--border); background: var(--bg-elev); }
     .btn.ghost:hover { border-color: var(--accent-text); }
+    .surface { border: 1px solid var(--border); background: var(--bg-elev); border-radius: 14px; }
+    .num::before { content: counter(step); display: inline-grid; place-items: center; width: 32px; height: 32px;
+      border-radius: 50%; background: var(--accent); color: #fff; font: 700 15px/1 var(--display); }
 
     .hero { display: grid; grid-template-columns: 1.05fr .95fr; gap: 56px; align-items: center; padding: 72px 20px 64px; }
     h1 { font: 700 clamp(40px, 6vw, 68px)/1.03 var(--display); letter-spacing: -.035em; margin: 0 0 20px; text-wrap: balance; }
@@ -185,7 +188,7 @@
     .said > img { width: 26px; height: 26px; flex: 0 0 26px; }
     .said > div { min-width: 0; flex: 1; display: grid; gap: 10px; }
     .said p { margin: 0; }
-    .prog { border: 1px solid var(--border); background: var(--bg-elev); border-radius: 14px; padding: 12px 14px; }
+    .prog { padding: 12px 14px; }
     .prog-head { display: flex; align-items: center; gap: 12px; }
     .ring { position: relative; width: 40px; height: 40px; flex: 0 0 40px; }
     .ring svg { width: 40px; height: 40px; transform: rotate(-90deg); }
@@ -208,16 +211,15 @@
     .segnames { display: grid; grid-template-columns: repeat(6, 1fr); gap: 5px; margin-top: 6px; color: var(--muted);
       font-size: 11px; }
     .segnames span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .clip { display: grid; grid-template-columns: 112px 1fr; gap: 12px; border: 1px solid var(--border); background: var(--card);
-      border-radius: 14px; padding: 10px; animation: rise .5s var(--ease) 3s both; }
+    .clip { display: grid; grid-template-columns: 112px 1fr; gap: 12px; padding: 10px; animation: rise .5s var(--ease) 3s both; }
     .clip img { width: 112px; aspect-ratio: 9 / 16; object-fit: cover; border-radius: 10px; }
     .clip h3 { font: 700 15px/1.25 var(--display); margin: 2px 0 6px; }
     .clip p { color: var(--muted); font-size: 13px; margin: 0 0 8px; }
     .facts { display: flex; flex-wrap: wrap; gap: 5px; }
     .facts span { border: 1px solid var(--border); border-radius: 999px; padding: 1px 8px; font-size: 11.5px; color: var(--muted); }
     .facts .hot { color: var(--accent-text); border-color: color-mix(in srgb, var(--accent-text) 40%, var(--border)); }
-    .composer { margin: 8px 16px 16px; display: flex; align-items: center; gap: 10px; border: 1px solid var(--border);
-      border-radius: 18px; background: var(--bg-elev); padding: 8px 8px 8px 16px; color: var(--muted); font-size: 14px; }
+    .composer { margin: 8px 16px 16px; display: flex; align-items: center; gap: 10px; border-radius: 18px;
+      padding: 8px 8px 8px 16px; color: var(--muted); font-size: 14px; }
     .composer span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .composer i { width: 32px; height: 32px; border-radius: 50%; background: var(--accent); flex: 0 0 32px; position: relative; }
     .composer i::before { content: ""; position: absolute; left: 50%; top: 50%; width: 9px; height: 9px;
@@ -229,7 +231,7 @@
 
     section { padding: 72px 0 0; }
     h2 { font: 700 clamp(28px, 4vw, 40px)/1.12 var(--display); letter-spacing: -.03em; margin: 0 0 12px; text-wrap: balance; }
-    .intro { color: var(--muted); font-size: 18px; max-width: 40em; margin: 0 0 32px; }
+    .intro { color: var(--muted); font-size: 18px; margin: 0 0 32px; }
     .demo video { width: 100%; border-radius: 18px; border: 1px solid var(--border); background: #000; box-shadow: var(--shadow); }
     .demo p { color: var(--muted); font-size: 14.5px; margin: 12px 0 0; }
 
@@ -238,30 +240,27 @@
     .steps li:nth-child(even) img { order: 2; }
     .steps img { width: 100%; border-radius: 14px; border: 1px solid var(--border); }
     .steps h3 { font: 700 24px/1.2 var(--display); letter-spacing: -.02em; margin: 0 0 10px; }
-    .steps h3::before { content: counter(step); display: inline-grid; place-items: center; width: 32px; height: 32px;
-      margin-right: 12px; border-radius: 50%; background: var(--accent); color: #fff; font-size: 16px; vertical-align: 3px; }
+    .steps h3::before { margin-right: 12px; vertical-align: 3px; }
     .steps p { color: var(--muted); margin: 0 0 10px; }
     .ask { color: var(--text); background: var(--user); border-radius: 12px 12px 4px 12px; padding: 1px 8px; white-space: nowrap; }
 
-    .rows { display: grid; grid-template-columns: 1fr 1fr; gap: 0 40px; margin: 0; }
+    .rows { --cols: 2; display: grid; grid-template-columns: repeat(var(--cols), minmax(0, 1fr)); gap: 0 40px; margin: 0; }
+    .rows-3 { --cols: 3; margin-top: 36px; }
     .rows div { padding: 18px 0; border-top: 1px solid var(--border); }
     .rows dt { font: 650 17px/1.3 var(--display); margin: 0 0 4px; }
     .rows dd { margin: 0; color: var(--muted); font-size: 15.5px; }
 
     .needs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin: 0 0 32px; }
-    .needs div { border: 1px solid var(--border); background: var(--bg-elev); border-radius: 14px; padding: 14px 16px; }
+    .needs div { padding: 14px 16px; }
     .needs dt { color: var(--accent-text); font-size: 14px; font-weight: 650; margin-bottom: 2px; }
     .needs dd { margin: 0; font-size: 15px; }
-    .tabs { display: inline-flex; gap: 4px; padding: 4px; border: 1px solid var(--border); border-radius: 12px;
-      background: var(--bg-elev); margin: 0 0 22px; }
+    .tabs { display: inline-flex; gap: 4px; padding: 4px; border-radius: 12px; margin: 0 0 22px; }
     .tabs button { border: 0; background: transparent; color: var(--muted); font: 650 14.5px/1 var(--font);
       min-height: 38px; padding: 0 16px; border-radius: 9px; cursor: pointer; }
     .tabs button[aria-selected="true"] { background: var(--accent); color: #fff; }
-    .os ol { list-style: none; counter-reset: s; margin: 0; padding: 0; display: grid; gap: 22px; }
-    .os li { counter-increment: s; display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: 14px; }
+    .os ol { list-style: none; counter-reset: step; margin: 0; padding: 0; display: grid; gap: 22px; }
+    .os li { counter-increment: step; display: grid; grid-template-columns: 32px minmax(0, 1fr); gap: 14px; }
     .os li > div { min-width: 0; }
-    .os li::before { content: counter(s); display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%;
-      border: 1px solid var(--border); color: var(--accent-text); font: 700 15px/1 var(--display); }
     .os p { margin: 4px 0 8px; }
     .os small { color: var(--muted); font-size: 14px; }
     .cmd { position: relative; margin: 0 0 6px; }
@@ -271,12 +270,8 @@
     .cmd button { position: absolute; top: 8px; right: 8px; min-height: 30px; border: 1px solid #3a363d; background: #232025;
       color: #ecebee; border-radius: 8px; padding: 0 12px; font: 600 13px/1 var(--font); cursor: pointer; }
     .cmd button.done { background: var(--wine-600); border-color: var(--wine-600); }
-    .notes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0 32px; margin: 36px 0 0; max-width: 1080px; }
-    .notes div { border-top: 1px solid var(--border); padding: 16px 0 0; }
-    .notes dt { font-weight: 650; margin-bottom: 4px; }
-    .notes dd { margin: 0; color: var(--muted); font-size: 15px; }
 
-    details { border-top: 1px solid var(--border); padding: 16px 0; max-width: 820px; }
+    details { border-top: 1px solid var(--border); padding: 16px 0; }
     details:last-of-type { border-bottom: 1px solid var(--border); }
     summary { cursor: pointer; font: 650 18px/1.35 var(--display); list-style: none; display: flex; gap: 12px; }
     summary::-webkit-details-marker { display: none; }
@@ -285,7 +280,7 @@
     details p { color: var(--muted); margin: 10px 0 0 26px; }
 
     .end { text-align: center; padding: 96px 20px 24px; }
-    .end p { color: var(--muted); margin: 0 auto 24px; max-width: 34em; }
+    .end p { color: var(--muted); margin: 0 0 24px; }
     .end .ctas { justify-content: center; }
     footer { border-top: 1px solid var(--border); margin-top: 72px; padding: 24px 0 40px; color: var(--muted); font-size: 14px; }
     footer .wrap { display: flex; flex-wrap: wrap; gap: 10px 22px; align-items: center; }
@@ -296,12 +291,11 @@
       .steps li { grid-template-columns: 1fr; gap: 18px; }
       .steps li:nth-child(even) img { order: 0; }
       .needs { grid-template-columns: 1fr 1fr; }
-      .notes { grid-template-columns: 1fr; gap: 0; }
-      .notes div { padding-bottom: 16px; }
+      .rows-3 { --cols: 1; }
     }
     @media (max-width: 640px) {
       .bar nav .wide { display: none; }
-      .rows { grid-template-columns: 1fr; }
+      .rows { --cols: 1; }
       .needs { grid-template-columns: 1fr; }
       section { padding-top: 56px; }
       .ctas .btn { flex: 1 1 auto; }
@@ -357,7 +351,7 @@
         <div class="said"><img src="assets/mark.svg" alt="" width="26" height="26">
           <div>
             <p>Downloading the video and picking the 3 best moments.</p>
-            <div class="prog">
+            <div class="prog surface">
               <div class="prog-head">
                 <div class="ring"><svg viewBox="0 0 40 40"><circle class="track" cx="20" cy="20" r="18"/><circle class="fill" cx="20" cy="20" r="18"/></svg><span class="tick">✓</span></div>
                 <div class="prog-title"><b>Done</b> Processing the video, 3 clips<small>Took 6 minutes for a 5-minute video</small></div>
@@ -365,7 +359,7 @@
               <div class="segs"><i></i><i></i><i></i><i></i><i></i><i></i></div>
               <div class="segnames"><span>Download</span><span>Voice</span><span>Transcript</span><span>Timing</span><span>Picking</span><span>Render</span></div>
             </div>
-            <div class="clip">
+            <div class="clip surface">
               <img src="assets/clip-frame.webp" alt="" width="360" height="640">
               <div>
                 <h3>Floating and Fun: What's It Like in Space?</h3>
@@ -376,7 +370,7 @@
           </div>
         </div>
       </div>
-      <div class="composer" aria-hidden="true"><span>Put an opening text on clip 2</span><i></i></div>
+      <div class="composer surface" aria-hidden="true"><span>Put an opening text on clip 2</span><i></i></div>
     </div>
   </div>
 
@@ -394,22 +388,22 @@
     <p class="intro">Everything happens in one chat window on your computer.</p>
     <ol class="steps">
       <li><img src="assets/step-paste.webp" alt="The Clippy chat with a video link typed into the message box" width="1280" height="720" loading="lazy">
-        <div><h3>Paste a link</h3>
+        <div><h3 class="num">Paste a link</h3>
           <p>YouTube, Twitch, Kick, TikTok, Instagram and the other sites yt-dlp supports, or a video file. Say how many
             clips you want, or start from a ready-made prompt for podcasts, gameplay and streams, promos or quick shorts.</p>
           <p>No link at hand? <span class="ask">clip the latest stream of Kai Cenat</span> finds it.</p></div></li>
       <li><img src="assets/step-progress.webp" alt="The live progress card stepping through download, voice, transcript, timing, picking and render" width="1280" height="720" loading="lazy">
-        <div><h3>It finds the best moments</h3>
+        <div><h3 class="num">It finds the best moments</h3>
           <p>Clippy transcribes the video in its own language, reads the reactions (laughter, loud moments, the stream
             chat) and has a local language model rank every candidate moment by its hook.</p>
           <p>A live card shows each step and the time left.</p></div></li>
       <li><img src="assets/step-clips.webp" alt="Finished vertical clips with captions shown as cards in the chat" width="1280" height="720" loading="lazy">
-        <div><h3>You get finished clips</h3>
+        <div><h3 class="num">You get finished clips</h3>
           <p>9:16 with the speaker in frame, or the facecam on top and the game below for streams. Dead air is cut, the
             sound is mastered for phones and the captions follow every word.</p>
           <p>Each clip comes with a title, a description, a comment question, hashtags, a cover and a second title to test.</p></div></li>
       <li><img src="assets/step-edit.webp" alt="A new version of a clip with an opening text, made from a chat request" width="1280" height="720" loading="lazy">
-        <div><h3>Change it by asking</h3>
+        <div><h3 class="num">Change it by asking</h3>
           <p><span class="ask">put an opening text on clip 3</span> or <span class="ask">make it 16:9</span>: every
             change is a new version you can undo, rendered in seconds.</p>
           <p>Post to your own YouTube, Instagram and TikTok, right away or at a set time.</p></div></li>
@@ -437,13 +431,13 @@
     <h2>Install Clippy</h2>
     <p class="intro">About fifteen minutes, most of it downloading. Every tool it needs is free.</p>
     <dl class="needs">
-      <div><dt>System</dt><dd>Windows 10 or 11, macOS or Linux</dd></div>
-      <div><dt>Graphics card</dt><dd>NVIDIA, 12-16 GB VRAM recommended; the CPU works too</dd></div>
-      <div><dt>Disk</dt><dd>About 25 GB for the AI models and the cache</dd></div>
-      <div><dt>Tools</dt><dd>Python 3.12, Ollama, Git, Node.js</dd></div>
+      <div class="surface"><dt>System</dt><dd>Windows 10 or 11, macOS or Linux</dd></div>
+      <div class="surface"><dt>Graphics card</dt><dd>NVIDIA, 12-16 GB VRAM recommended; the CPU works too</dd></div>
+      <div class="surface"><dt>Disk</dt><dd>About 25 GB for the AI models and the cache</dd></div>
+      <div class="surface"><dt>Tools</dt><dd>Python 3.12, Ollama, Git, Node.js</dd></div>
     </dl>
 
-    <div class="tabs" role="tablist" aria-label="Operating system">
+    <div class="tabs surface" role="tablist" aria-label="Operating system">
       <button type="button" role="tab" id="tab-win" aria-controls="os-win" aria-selected="true">Windows</button>
       <button type="button" role="tab" id="tab-mac" aria-controls="os-mac" aria-selected="false" tabindex="-1">macOS</button>
       <button type="button" role="tab" id="tab-linux" aria-controls="os-linux" aria-selected="false" tabindex="-1">Linux</button>
@@ -451,55 +445,55 @@
 
     <div class="os" id="os-win" role="tabpanel" aria-labelledby="tab-win" tabindex="0">
       <ol>
-        <li><div><p><b>Install the free tools</b> in PowerShell or Terminal:</p>
+        <li class="num"><div><p><b>Install the free tools</b> in PowerShell or Terminal:</p>
           <div class="cmd"><pre><code>winget install Python.Python.3.12
 winget install Ollama.Ollama
 winget install Git.Git
 winget install OpenJS.NodeJS.LTS</code></pre></div>
           <small>Then close the terminal and open a new one.</small></div></li>
-        <li><div><p><b>Get Clippy</b>, or <a href="https://github.com/hajdu-patrik/clippy/archive/refs/heads/main.zip">download the ZIP</a> and unpack it:</p>
+        <li class="num"><div><p><b>Get Clippy</b>, or <a href="https://github.com/hajdu-patrik/clippy/archive/refs/heads/main.zip">download the ZIP</a> and unpack it:</p>
           <div class="cmd"><pre><code>git clone https://github.com/hajdu-patrik/clippy.git
 cd clippy</code></pre></div></div></li>
-        <li><div><p><b>Run the installer.</b> It sets up Python, the GPU packages when an NVIDIA card is present, the AI model and the <code>clippy</code> command:</p>
+        <li class="num"><div><p><b>Run the installer.</b> It sets up Python, the GPU packages when an NVIDIA card is present, the AI model and the <code>clippy</code> command:</p>
           <div class="cmd"><pre><code>powershell -ExecutionPolicy Bypass -File install.ps1</code></pre></div>
           <small>The first run downloads the language model (about 12 GB). You can run it again any time.</small></div></li>
-        <li><div><p><b>Start Clippy</b> in a new terminal. The app opens in your browser at http://127.0.0.1:7860.</p>
+        <li class="num"><div><p><b>Start Clippy</b> in a new terminal. The app opens in your browser at http://127.0.0.1:7860.</p>
           <div class="cmd"><pre><code>clippy start</code></pre></div></div></li>
       </ol>
     </div>
 
     <div class="os" id="os-mac" role="tabpanel" aria-labelledby="tab-mac" tabindex="0" hidden>
       <ol>
-        <li><div><p><b>Install the free tools</b> with <a href="https://brew.sh/">Homebrew</a>, then open the Ollama app once:</p>
+        <li class="num"><div><p><b>Install the free tools</b> with <a href="https://brew.sh/">Homebrew</a>, then open the Ollama app once:</p>
           <div class="cmd"><pre><code>brew install python@3.12 git node
 brew install --cask ollama</code></pre></div></div></li>
-        <li><div><p><b>Get Clippy:</b></p>
+        <li class="num"><div><p><b>Get Clippy:</b></p>
           <div class="cmd"><pre><code>git clone https://github.com/hajdu-patrik/clippy.git
 cd clippy</code></pre></div></div></li>
-        <li><div><p><b>Run the installer:</b></p>
+        <li class="num"><div><p><b>Run the installer:</b></p>
           <div class="cmd"><pre><code>sh install.sh</code></pre></div>
           <small>Macs encode video on the CPU, and a hosted language model is the faster choice there (see below).</small></div></li>
-        <li><div><p><b>Start Clippy</b> in a new terminal:</p>
+        <li class="num"><div><p><b>Start Clippy</b> in a new terminal:</p>
           <div class="cmd"><pre><code>clippy start</code></pre></div></div></li>
       </ol>
     </div>
 
     <div class="os" id="os-linux" role="tabpanel" aria-labelledby="tab-linux" tabindex="0" hidden>
       <ol>
-        <li><div><p><b>Install the free tools</b> (Ubuntu and Debian shown):</p>
+        <li class="num"><div><p><b>Install the free tools</b> (Ubuntu and Debian shown):</p>
           <div class="cmd"><pre><code>sudo apt install python3.12 python3.12-venv git nodejs
 curl -fsSL https://ollama.com/install.sh | sh</code></pre></div></div></li>
-        <li><div><p><b>Get Clippy:</b></p>
+        <li class="num"><div><p><b>Get Clippy:</b></p>
           <div class="cmd"><pre><code>git clone https://github.com/hajdu-patrik/clippy.git
 cd clippy</code></pre></div></div></li>
-        <li><div><p><b>Run the installer:</b></p>
+        <li class="num"><div><p><b>Run the installer:</b></p>
           <div class="cmd"><pre><code>sh install.sh</code></pre></div></div></li>
-        <li><div><p><b>Start Clippy</b> in a new terminal:</p>
+        <li class="num"><div><p><b>Start Clippy</b> in a new terminal:</p>
           <div class="cmd"><pre><code>clippy start</code></pre></div></div></li>
       </ol>
     </div>
 
-    <dl class="notes">
+    <dl class="rows rows-3">
       <div><dt>No strong graphics card</dt><dd>Use a free hosted language model: get a key at <a href="https://console.groq.com/keys">Groq</a> or <a href="https://aistudio.google.com/apikey">Google AI Studio</a> and paste it into the matching block of the <code>.env</code> file. Videos stay on your computer; only transcript text goes to the model.</dd></div>
       <div><dt>On your phone</dt><dd>Run <code>clippy restart --lan</code> and scan the QR code with a phone on the same Wi-Fi.</dd></div>
       <div><dt>Updating</dt><dd>Run <code>git pull</code> in the Clippy folder, then the installer again.</dd></div>
