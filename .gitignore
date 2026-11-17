@@ -10,7 +10,14 @@ dist/
 .mypy_cache/
 .ruff_cache/
 .coverage
+coverage.xml
 htmlcov/
+.tox/
+
+# Node, deploy and other tool caches
+node_modules/
+.vercel/
+.cache/
 
 # Secrets and local settings
 .env
