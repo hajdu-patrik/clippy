@@ -34,8 +34,8 @@ clippy clip gameplay.mp4 --layout blur --no-tighten --audio natural  :: gameplay
 
 Finished clips go to the video library, `<CLIPPY_LIBRARY>\<video title>\` (`--out` picks another library):
 - `clip_01_....mp4`: the finished 1080×1920 video, ready to post
-- `clip_01_....jpg`: cover image with the hook text
-- `clip_01_....txt`: title, hashtags, hook, timestamps, length, score and the reasoning
+- `clip_01_....jpg`: cover image with the clip's title
+- `clip_01_....txt`: post text, title, B title, opening text idea, timestamps, length, score and the reasoning
 
 The plan (`clips.json`) and `render_report.json` are kept in `data\projects\<video title>\`.
 To pick first and render later, after editing by hand:
@@ -56,7 +56,7 @@ Every stage is cached, so re-runs are fast.
 | `--min 20 --max 60` | clip length in seconds before the tight edit (20-45 s is a good start; TikTok Creator Rewards needs 60+) |
 | `--wish "..."` | what kind of moments to pick, e.g. "the funniest parts" |
 | `--lang hu` | spoken language (default: detected, the video's own language) |
-| `--captions en` | language of the captions and the hook; a different one than the spoken language is translated |
+| `--captions en` | language of the captions and the opening text; one different from the spoken language is translated |
 | `--vocab "DESH, Young Fly"` | names and slang to spell right; the video title is added automatically |
 | `--whisper large-v3-turbo` | faster transcription (default: `auto` = large-v3 on the GPU) |
 | `--llm ollama/openai/none` | hook picker (also settable in `.env`) |

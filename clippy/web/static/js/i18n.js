@@ -269,7 +269,7 @@ const UI = {
   "stage.edit": "Editing",
   "stage.render": "Render",
   "card.aria": "Clip {n}, version {v}",
-  "card.silence": "−{s} s silence",
+  "card.silence": "−{s} s dead air",
   "card.score": "score {s}",
   "card.why": "Why this one?",
   "card.download": "Download",

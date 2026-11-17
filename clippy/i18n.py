@@ -178,7 +178,7 @@ CATALOG: dict[str, str] = {
     "what.effect_blur": "blur",
     "what.effect_vignette": "vignette",
     "what.effect": "effect",
-    "cli.tagline": "a free, local AI clipper: YouTube / podcasts → TikTok, Shorts, Reels",
+    "cli.tagline": "a free, open-source AI clipper: long videos in, viral clips out",
     "cli.welcome": "Welcome to",
     "cli.running": "Running",
     "cli.not_running": "Clippy is not running.",
