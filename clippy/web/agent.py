@@ -213,7 +213,8 @@ RECENT_WORDS = re.compile(r"\b(legujabb\w*|legutobbi\w*|legutolso\w*|utolso\w*|f
 STREAM_WORDS = re.compile(r"\b(stream\w*|vod\w*|adas\w*|elo|live\w*|kozvetites\w*|broadcast\w*)\b")
 LANGUAGE_REQUEST = re.compile(r"\b(felirat\w*|subtitle\w*|captions?|fordít\w*|fordit\w*|translat\w*|nyelv\w*|"
                               r"language|magyarul|angolul|in english|in hungarian)", re.I)
-COUNT_RE = re.compile(r"\b(\d{1,2})\s*(?:clips?|db|darab|klip|rész)", re.I)
+COUNT_RE = re.compile(r"\b(\d{1,2})\s*(?!(?:s|sec\w*|second\w*|min\w*|perc\w*|másodperc\w*|mp)\b)"
+                      r"(?:[^\s\d]+\s+){0,2}?(?:clips?|db|darab|klip|rész|shorts?\b|reels?\b)", re.I)
 NEAR = 30
 DAILY_WORDS = re.compile(r"\b(minden ?nap\w*|naponta|napi|every ?day|daily|each day|a day|per day)\b")
 CLIP_WORDS = re.compile(r"\b(klip\w*|clip\w*|short\w*|reel\w*|tiktok\w*|video\w*)")

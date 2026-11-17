@@ -135,6 +135,18 @@ def test_the_same_link_again_retries_when_the_chat_has_no_clips_yet():
     assert fast_path("https://vm.tiktok.com/ZN85PJR9T/", chat, has_clips=True) is None
 
 
+def test_the_clip_count_is_read_with_words_between_the_number_and_clips():
+    from clippy.web.agent import fast_path
+
+    url = "https://example.com/v.mp4"
+    assert fast_path(f"Make 3 short clips from this: {url}", {})["n"] == 3
+    assert fast_path(f"{url} 4 funny vertical clips", {})["n"] == 4
+    assert fast_path(f"{url} csinálj 2 vicces klipet", {})["n"] == 2
+    assert fast_path(f"{url} 6 shorts", {})["n"] == 6
+    assert fast_path(f"{url} 30 second clips", {})["n"] == 5
+    assert fast_path(f"{url} 2 minute clips", {})["n"] == 5
+
+
 def test_a_video_without_sound_stops_with_a_clear_reason(monkeypatch, tmp_path):
     from clippy import pipeline
 
