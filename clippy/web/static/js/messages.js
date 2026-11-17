@@ -73,7 +73,14 @@ async function onUndo(event) {
   }
 }
 
+const PLACEHOLDERS = { user: "pending-user", assistant: "typing" };
+
 function slotFor(m) {
+  const held = document.getElementById(PLACEHOLDERS[m.role]);
+  if (held) {
+    held.id = `m${m.id}`;
+    return held;
+  }
   const el = document.createElement("div");
   el.id = `m${m.id}`;
   const list = $("#messages");
@@ -95,16 +102,13 @@ export function upsertMessage(m) {
   const previous = state.messages.get(m.id);
   state.messages.set(m.id, m);
   let el = document.getElementById(`m${m.id}`);
-  if (!el) {
-    if (m.role === "user") document.getElementById("pending-user")?.remove();
-    el = slotFor(m);
-  }
+  if (!el) el = slotFor(m);
   const grid = el.querySelector(".clips");
   const isProgress = m.kind === "progress" || m.kind === "error";
   if (previous?.kind === "clips" && m.kind === "clips" && grid) {
     appendCards(grid, m.data?.clip_ids || []);
   } else if (!(isProgress && previous && patchProgress(m, previous))) {
-    el.className = `msg ${m.role}`;
+    el.classList.add("msg", m.role);
     el.innerHTML = renderMessage(m);
     if (isProgress) patchProgress(m, m);
   }
@@ -148,7 +152,7 @@ export function showTyping() {
   const started = Date.now();
   const label = typing.querySelector(".think-text");
   const timer = setInterval(() => {
-    if (!typing.isConnected) { clearInterval(timer); return; }
+    if (typing.id !== "typing" || !typing.isConnected) { clearInterval(timer); return; }
     const s = Math.round((Date.now() - started) / 1000);
     label.textContent = t(s < 4 ? "thread.thinking" : s < 20 ? "thread.thinkingSec" : "thread.thinkingLong", { s });
   }, 1000);

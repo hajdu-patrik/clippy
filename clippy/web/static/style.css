@@ -135,7 +135,8 @@ kbd { font: 11px var(--mono); color: var(--faint); border: 1px solid var(--borde
 .topbar .sub { color: var(--muted); font-size: 12px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .thread { flex: 1; overflow-y: auto; overscroll-behavior: contain; scroll-padding-bottom: 24px; }
 .messages { max-width: 880px; margin: 0 auto; padding: 26px var(--gutter) 40px; display: flex; flex-direction: column; gap: 22px; }
-.messages.entering > * { animation: fade-in .3s var(--ease) both; }
+.messages.entering { animation: fade-in .3s var(--ease) both; }
+.msg.still { animation: none; }
 
 .empty { max-width: 640px; margin: 11vh auto 0; text-align: center; padding: 0 var(--gutter); animation: rise .5s var(--ease) both; }
 .empty-logo { width: 68px; height: 68px; margin: 0 auto 18px; display: block;

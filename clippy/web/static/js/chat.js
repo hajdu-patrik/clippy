@@ -101,6 +101,7 @@ export async function openChat(id) {
   const list = $("#messages");
   list.classList.add("entering");
   data.messages.forEach(upsertMessage);
+  for (const el of list.children) el.classList.add("still");
   setTimeout(() => list.classList.remove("entering"), 400);
   showEmpty(!data.messages.length);
   setWorker(data.status);
