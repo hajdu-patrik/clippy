@@ -1,0 +1,26 @@
+name: Vercel deployment
+
+on:
+  status:
+
+permissions:
+  deployments: write
+
+jobs:
+  record:
+    if: github.event.context == 'Vercel' && github.event.state == 'success' && contains(github.event.branches.*.name, 'main')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Record the Vercel deployment on GitHub
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ github.event.sha }}
+          LOG: ${{ github.event.target_url }}
+        run: |
+          id=$(jq -n --arg sha "$SHA" '{ref: $sha, environment: "Production", description: "Vercel",
+            auto_merge: false, production_environment: true, required_contexts: []}' \
+            | gh api "repos/$REPO/deployments" -X POST --input - --jq .id)
+          jq -n --arg log "$LOG" '{state: "success", environment_url: "https://clippyai.vercel.app",
+            log_url: $log, auto_inactive: true}' \
+            | gh api "repos/$REPO/deployments/$id/statuses" -X POST --input - > /dev/null
