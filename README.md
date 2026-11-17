@@ -11,9 +11,9 @@
 ![Platform](https://img.shields.io/badge/Platform-Windows_%7C_macOS_%7C_Linux-0078D6?style=flat)
 ![License](https://img.shields.io/badge/License-MIT-yellow?style=flat)
 
-[![Clippy in one minute: paste a link, get vertical clips with captions, edit them by asking in the chat](docs/assets/demo.gif)](https://hajdu-patrik.github.io/clippy/assets/demo.mp4)
+[![Clippy in one minute: paste a link, get vertical clips with captions, edit them by asking in the chat](docs/assets/demo.gif)](https://clippyai.vercel.app/assets/demo.mp4)
 
-**[Watch the one-minute demo in 4K with sound](https://hajdu-patrik.github.io/clippy/assets/demo.mp4)**: a link goes in,
+**[Watch the one-minute demo in 4K with sound](https://clippyai.vercel.app/assets/demo.mp4)**: a link goes in,
 three captioned clips come out, then one is edited from the chat. The clips are made from a public-domain NASA video;
 the long wait is sped up and marked.
 
@@ -321,7 +321,7 @@ cutting parts out, undo. Edits re-render in seconds from a cached base.
 **What hardware?** Windows 10/11, macOS or Linux with Python 3.12; an NVIDIA GPU with 12-16 GB VRAM is recommended, the
 CPU works too.
 
-Project page: [hajdu-patrik.github.io/clippy](https://hajdu-patrik.github.io/clippy/) · machine-readable summary:
+Project page: [clippyai.vercel.app](https://clippyai.vercel.app/) · machine-readable summary:
 [llms.txt](docs/llms.txt).
 
 ## License

@@ -18,7 +18,7 @@ Key facts:
 
 ## Docs
 
-- [Project page with demo video and install guide](https://hajdu-patrik.github.io/clippy/)
+- [Project page with demo video and install guide](https://clippyai.vercel.app/)
 - [README](https://github.com/hajdu-patrik/clippy/blob/main/README.md): overview, quick start, configuration
 - [Command line](https://github.com/hajdu-patrik/clippy/blob/main/docs/cli.md): every command and option
 - [Posting](https://github.com/hajdu-patrik/clippy/blob/main/docs/publishing.md): connecting YouTube, Instagram and TikTok
@@ -27,6 +27,6 @@ Key facts:
 
 ## Optional
 
-- [Demo video (4K, one minute)](https://hajdu-patrik.github.io/clippy/assets/demo.mp4)
+- [Demo video (4K, one minute)](https://clippyai.vercel.app/assets/demo.mp4)
 - [Changelog](https://github.com/hajdu-patrik/clippy/blob/main/CHANGELOG.md)
 - [License (MIT)](https://github.com/hajdu-patrik/clippy/blob/main/LICENSE.md)

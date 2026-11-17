@@ -22,4 +22,4 @@ Allow: /
 User-agent: Applebot-Extended
 Allow: /
 
-Sitemap: https://hajdu-patrik.github.io/clippy/sitemap.xml
+Sitemap: https://clippyai.vercel.app/sitemap.xml

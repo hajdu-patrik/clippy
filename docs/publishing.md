@@ -24,9 +24,9 @@ connect accounts.
    | --- | --- |
    | App name, User support email, Developer contact | a name of your choice and your own email |
    | App logo | leave it empty: a logo makes a published app need Google's verification |
-   | Application home page | `https://hajdu-patrik.github.io/clippy/` |
-   | Application privacy policy link | `https://hajdu-patrik.github.io/clippy/privacy.html` |
-   | Authorized domains | `hajdu-patrik.github.io` only |
+   | Application home page | `https://clippyai.vercel.app/` |
+   | Application privacy policy link | `https://clippyai.vercel.app/privacy.html` |
+   | Authorized domains | `clippyai.vercel.app` only |
 
    Google asks for the home page and the privacy policy before it lets the app out of *Testing*. Under **Data
    access** add the scopes `youtube.upload`, `youtube.readonly` and `yt-analytics.readonly`.
@@ -76,9 +76,9 @@ Instagram limits how many posts an account can publish through the API in 24 hou
    | --- | --- |
    | App icon | a 1024 × 1024 px PNG or JPG |
    | Category, Description | for example *Photo & Video* and *Cuts my long videos into short clips and posts them to my TikTok drafts.* |
-   | Terms of Service URL | `https://hajdu-patrik.github.io/clippy/terms.html` |
-   | Privacy Policy URL | `https://hajdu-patrik.github.io/clippy/privacy.html` |
-   | Platforms, Web/Desktop URL | **Desktop**, `https://hajdu-patrik.github.io/clippy/` (the redirect URI goes into Login Kit, not here) |
+   | Terms of Service URL | `https://clippyai.vercel.app/terms.html` |
+   | Privacy Policy URL | `https://clippyai.vercel.app/privacy.html` |
+   | Platforms, Web/Desktop URL | **Desktop**, `https://clippyai.vercel.app/` (the redirect URI goes into Login Kit, not here) |
 
    Without a review, use the app's **Sandbox** (the switch at the top of the app page): create one, do steps 2-4 there,
    add your TikTok account under **Target users**, and take the keys from the Sandbox's **Credentials**.
