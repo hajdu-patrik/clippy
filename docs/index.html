@@ -14,7 +14,7 @@
   <link rel="icon" href="assets/favicon.ico" sizes="16x16 32x32 48x48">
   <link rel="icon" type="image/svg+xml" href="assets/mark.svg">
   <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
-  <link rel="preload" as="image" href="assets/clip-frame.webp" type="image/webp">
+  <link rel="preload" as="image" href="assets/clip-frame.webp" type="image/webp" fetchpriority="high">
 
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="Clippy">
@@ -114,206 +114,7 @@
     ]
   }
   </script>
-  <style>
-    :root {
-      --wine-900: #3d0a17; --wine-700: #7d1631; --wine-600: #9e1d3e; --wine-500: #bf2c52; --wine-300: #eb8da6;
-      --bg: #18171a; --bg-elev: #211f23; --side: #121113; --text: #ecebee; --muted: #9d99a2; --border: #322f35;
-      --user: #2b282e; --card: #1f1d21; --code: #121113; --ok: #4fc58f;
-      --accent: var(--wine-600); --accent-hover: var(--wine-500); --accent-text: var(--wine-300);
-      --accent-soft: color-mix(in srgb, var(--wine-500) 16%, transparent);
-      --shadow: 0 24px 60px rgba(0, 0, 0, .45); --radius: 16px;
-      --ease: cubic-bezier(.2, .8, .2, 1);
-      --font: "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, Roboto, sans-serif;
-      --display: "Segoe UI Variable Display", "Segoe UI", system-ui, -apple-system, Roboto, sans-serif;
-      --mono: "Cascadia Mono", Consolas, ui-monospace, SFMono-Regular, Menlo, monospace;
-    }
-    @media (prefers-color-scheme: light) {
-      :root {
-        --bg: #f4f3f5; --bg-elev: #ffffff; --side: #e9e7ea; --text: #1d1b1f; --muted: #67626b; --border: #dad6db;
-        --user: #e7e4e8; --card: #ffffff; --accent: var(--wine-700); --accent-hover: var(--wine-600);
-        --accent-text: var(--wine-700); --accent-soft: color-mix(in srgb, var(--wine-600) 10%, transparent);
-        --shadow: 0 24px 60px rgba(40, 10, 20, .14);
-      }
-    }
-    *, *::before, *::after { box-sizing: border-box; }
-    html { scroll-behavior: smooth; scroll-padding-top: 80px; -webkit-text-size-adjust: 100%; }
-    body { margin: 0; background: var(--bg); color: var(--text); font: 17px/1.6 var(--font); -webkit-font-smoothing: antialiased; }
-    img, video { display: block; max-width: 100%; height: auto; }
-    a { color: var(--accent-text); text-underline-offset: 3px; }
-    :focus-visible { outline: 2px solid var(--accent-text); outline-offset: 3px; border-radius: 6px; }
-    code { font: .9em var(--mono); background: var(--side); border: 1px solid var(--border); border-radius: 6px; padding: 1px 6px; }
-    .skip { position: absolute; left: 16px; top: -48px; background: var(--accent); color: #fff; padding: 10px 16px;
-      border-radius: 10px; z-index: 20; text-decoration: none; }
-    .skip:focus { top: 12px; }
-    .wrap { width: min(1120px, 100%); margin: 0 auto; padding: 0 20px; }
-
-    .bar { position: sticky; top: 0; z-index: 10; background: color-mix(in srgb, var(--side) 88%, transparent);
-      backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); }
-    .bar .wrap { display: flex; align-items: center; gap: 16px; min-height: 60px; }
-    .brand { display: flex; align-items: center; gap: 10px; color: var(--text); text-decoration: none;
-      font: 700 20px/1 var(--display); letter-spacing: -.02em; }
-    .brand img { width: 30px; height: 30px; }
-    .bar nav { margin-left: auto; display: flex; align-items: center; gap: 6px; font-size: 15px; }
-    .bar nav a { color: var(--muted); text-decoration: none; padding: 8px 10px; border-radius: 10px; }
-    .bar nav a:hover { color: var(--text); background: var(--bg-elev); }
-    .bar nav .gh { color: var(--text); border: 1px solid var(--border); }
-
-    .btn { display: inline-flex; align-items: center; justify-content: center; min-height: 46px; padding: 0 22px;
-      border-radius: 999px; font: 650 16px/1 var(--font); text-decoration: none; border: 1px solid transparent;
-      transition: background .2s var(--ease); }
-    .btn.primary { background: var(--accent); color: #fff; }
-    .btn.primary:hover { background: var(--accent-hover); }
-    .btn.ghost { color: var(--text); border-color: var(--border); background: var(--bg-elev); }
-    .btn.ghost:hover { border-color: var(--accent-text); }
-    .surface { border: 1px solid var(--border); background: var(--bg-elev); border-radius: 14px; }
-    .num::before { content: counter(step); display: inline-grid; place-items: center; width: 32px; height: 32px;
-      border-radius: 50%; background: var(--accent); color: #fff; font: 700 15px/1 var(--display); }
-
-    .hero { display: grid; grid-template-columns: 1.05fr .95fr; gap: 56px; align-items: center; padding: 72px 20px 64px; }
-    h1 { font: 700 clamp(40px, 6vw, 68px)/1.03 var(--display); letter-spacing: -.035em; margin: 0 0 20px; text-wrap: balance; }
-    .lead { font-size: clamp(17px, 1.9vw, 19.5px); color: var(--muted); margin: 0 0 28px; max-width: 34em; text-wrap: pretty; }
-    .ctas { display: flex; flex-wrap: wrap; gap: 12px; }
-    .fine { color: var(--muted); font-size: 14.5px; margin: 18px 0 0; }
-
-    .window { background: var(--bg); border: 1px solid var(--border); border-radius: 22px; box-shadow: var(--shadow);
-      overflow: hidden; }
-    .window-top { display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-bottom: 1px solid var(--border);
-      background: var(--side); font: 650 14px/1.2 var(--display); }
-    .window-top img { width: 22px; height: 22px; }
-    .window-top span { color: var(--muted); font: 400 12.5px/1.2 var(--font); margin-left: auto; }
-    .thread { padding: 18px 16px 8px; display: grid; gap: 14px; font-size: 14.5px; }
-    .bubble { justify-self: end; background: var(--user); border-radius: 18px 18px 6px 18px; padding: 9px 14px;
-      max-width: 88%; overflow-wrap: anywhere; }
-    .said { display: flex; gap: 10px; align-items: flex-start; }
-    .said > img { width: 26px; height: 26px; flex: 0 0 26px; }
-    .said > div { min-width: 0; flex: 1; display: grid; gap: 10px; }
-    .said p { margin: 0; }
-    .prog { padding: 12px 14px; }
-    .prog-head { display: flex; align-items: center; gap: 12px; }
-    .ring { position: relative; width: 40px; height: 40px; flex: 0 0 40px; }
-    .ring svg { width: 40px; height: 40px; transform: rotate(-90deg); }
-    .ring circle { fill: none; stroke-width: 4; }
-    .ring .track { stroke: var(--border); }
-    .ring .fill { stroke: var(--accent-text); stroke-linecap: round; stroke-dasharray: 113.1; stroke-dashoffset: 0;
-      animation: ring 2.6s var(--ease) .3s both; }
-    .ring .tick { position: absolute; inset: 0; display: grid; place-items: center; color: var(--ok); font-weight: 700;
-      animation: show .3s ease 2.9s both; }
-    .prog-title { min-width: 0; }
-    .prog-title b { color: var(--accent-text); font-weight: 650; }
-    .prog-title small { display: block; color: var(--muted); font-size: 12.5px; }
-    .segs { display: grid; grid-template-columns: repeat(6, 1fr); gap: 5px; margin-top: 12px; }
-    .segs i { height: 4px; border-radius: 4px; background: var(--border); position: relative; overflow: hidden; }
-    .segs i::after { content: ""; position: absolute; inset: 0; background: var(--accent-text); transform-origin: left;
-      animation: fillx .42s var(--ease) both; }
-    .segs i:nth-child(1)::after { animation-delay: .3s; } .segs i:nth-child(2)::after { animation-delay: .72s; }
-    .segs i:nth-child(3)::after { animation-delay: 1.14s; } .segs i:nth-child(4)::after { animation-delay: 1.56s; }
-    .segs i:nth-child(5)::after { animation-delay: 1.98s; } .segs i:nth-child(6)::after { animation-delay: 2.4s; }
-    .segnames { display: grid; grid-template-columns: repeat(6, 1fr); gap: 5px; margin-top: 6px; color: var(--muted);
-      font-size: 11px; }
-    .segnames span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .clip { display: grid; grid-template-columns: 112px 1fr; gap: 12px; padding: 10px; animation: rise .5s var(--ease) 3s both; }
-    .clip img { width: 112px; aspect-ratio: 9 / 16; object-fit: cover; border-radius: 10px; }
-    .clip h3 { font: 700 15px/1.25 var(--display); margin: 2px 0 6px; }
-    .clip p { color: var(--muted); font-size: 13px; margin: 0 0 8px; }
-    .facts { display: flex; flex-wrap: wrap; gap: 5px; }
-    .facts span { border: 1px solid var(--border); border-radius: 999px; padding: 1px 8px; font-size: 11.5px; color: var(--muted); }
-    .facts .hot { color: var(--accent-text); border-color: color-mix(in srgb, var(--accent-text) 40%, var(--border)); }
-    .composer { margin: 8px 16px 16px; display: flex; align-items: center; gap: 10px; border-radius: 18px;
-      padding: 8px 8px 8px 16px; color: var(--muted); font-size: 14px; }
-    .composer span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .composer i { width: 32px; height: 32px; border-radius: 50%; background: var(--accent); flex: 0 0 32px; position: relative; }
-    .composer i::before { content: ""; position: absolute; left: 50%; top: 50%; width: 9px; height: 9px;
-      border-left: 2px solid #fff; border-top: 2px solid #fff; transform: translate(-50%, -25%) rotate(45deg); }
-    @keyframes ring { from { stroke-dashoffset: 113.1; } }
-    @keyframes fillx { from { transform: scaleX(0); } }
-    @keyframes show { from { opacity: 0; } }
-    @keyframes rise { from { opacity: 0; transform: translateY(10px); } }
-
-    section { padding: 72px 0 0; }
-    h2 { font: 700 clamp(28px, 4vw, 40px)/1.12 var(--display); letter-spacing: -.03em; margin: 0 0 12px; text-wrap: balance; }
-    .intro { color: var(--muted); font-size: 18px; margin: 0 0 32px; }
-    .demo video { width: 100%; border-radius: 18px; border: 1px solid var(--border); background: #000; box-shadow: var(--shadow); }
-    .demo p { color: var(--muted); font-size: 14.5px; margin: 12px 0 0; }
-
-    .steps { list-style: none; counter-reset: step; margin: 0; padding: 0; display: grid; gap: 48px; }
-    .steps li { counter-increment: step; display: grid; grid-template-columns: 1.3fr 1fr; gap: 40px; align-items: center; }
-    .steps li:nth-child(even) img { order: 2; }
-    .steps img { width: 100%; border-radius: 14px; border: 1px solid var(--border); }
-    .steps h3 { font: 700 24px/1.2 var(--display); letter-spacing: -.02em; margin: 0 0 10px; }
-    .steps h3::before { margin-right: 12px; vertical-align: 3px; }
-    .steps p { color: var(--muted); margin: 0 0 10px; }
-    .ask { color: var(--text); background: var(--user); border-radius: 12px 12px 4px 12px; padding: 1px 8px; white-space: nowrap; }
-
-    .rows { --cols: 2; display: grid; grid-template-columns: repeat(var(--cols), minmax(0, 1fr)); gap: 0 40px; margin: 0; }
-    .rows-3 { --cols: 3; margin-top: 36px; }
-    .rows div { padding: 18px 0; border-top: 1px solid var(--border); }
-    .rows dt { font: 650 17px/1.3 var(--display); margin: 0 0 4px; }
-    .rows dd { margin: 0; color: var(--muted); font-size: 15.5px; }
-
-    .needs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin: 0 0 32px; }
-    .needs div { padding: 14px 16px; }
-    .needs dt { color: var(--accent-text); font-size: 14px; font-weight: 650; margin-bottom: 2px; }
-    .needs dd { margin: 0; font-size: 15px; }
-    .tabs { display: inline-flex; gap: 4px; padding: 4px; border-radius: 12px; margin: 0 0 22px; }
-    .tabs button { border: 0; background: transparent; color: var(--muted); font: 650 14.5px/1 var(--font);
-      min-height: 38px; padding: 0 16px; border-radius: 9px; cursor: pointer; }
-    .tabs button[aria-selected="true"] { background: var(--accent); color: #fff; }
-    .os ol { list-style: none; counter-reset: step; margin: 0; padding: 0; display: grid; gap: 22px; }
-    .os li { counter-increment: step; display: grid; grid-template-columns: 32px minmax(0, 1fr); gap: 14px; }
-    .os li > div { min-width: 0; }
-    .os p { margin: 4px 0 8px; }
-    .os small { color: var(--muted); font-size: 14px; }
-    .cmd { position: relative; margin: 0 0 6px; }
-    .cmd pre { margin: 0; background: var(--code); color: #ecebee; border: 1px solid #2c2930; border-radius: 12px;
-      padding: 14px 84px 14px 16px; overflow-x: auto; font: 14px/1.65 var(--mono); }
-    .cmd pre code { background: none; border: 0; padding: 0; font: inherit; color: inherit; }
-    .cmd button { position: absolute; top: 8px; right: 8px; min-height: 30px; border: 1px solid #3a363d; background: #232025;
-      color: #ecebee; border-radius: 8px; padding: 0 12px; font: 600 13px/1 var(--font); cursor: pointer; }
-    .cmd button.done { background: var(--wine-600); border-color: var(--wine-600); }
-
-    details { border-top: 1px solid var(--border); padding: 16px 0; }
-    details:last-of-type { border-bottom: 1px solid var(--border); }
-    summary { cursor: pointer; font: 650 18px/1.35 var(--display); list-style: none; display: flex; gap: 12px; }
-    summary::-webkit-details-marker { display: none; }
-    summary::before { content: "+"; color: var(--accent-text); font-weight: 700; width: 14px; flex: 0 0 14px; }
-    details[open] summary::before { content: "\2212"; }
-    details p { color: var(--muted); margin: 10px 0 0 26px; }
-
-    .end { text-align: center; padding: 96px 20px 24px; }
-    .end p { color: var(--muted); margin: 0 0 24px; }
-    .end .ctas { justify-content: center; }
-    footer { border-top: 1px solid var(--border); margin-top: 72px; padding: 24px 0 40px; color: var(--muted); font-size: 14px; }
-    footer .wrap { display: flex; flex-wrap: wrap; gap: 10px 22px; align-items: center; }
-    footer span { margin-right: auto; }
-
-    @media (max-width: 960px) {
-      .hero { grid-template-columns: 1fr; gap: 40px; padding-top: 48px; }
-      .steps li { grid-template-columns: 1fr; gap: 18px; }
-      .steps li:nth-child(even) img { order: 0; }
-      .needs { grid-template-columns: 1fr 1fr; }
-      .rows-3 { --cols: 1; }
-    }
-    @media (max-width: 640px) {
-      .bar nav .wide { display: none; }
-      .rows { --cols: 1; }
-      .needs { grid-template-columns: 1fr; }
-      section { padding-top: 56px; }
-      .ctas .btn { flex: 1 1 auto; }
-      .cmd pre { padding: 46px 14px 14px; }
-    }
-    @media (max-width: 380px) {
-      body { font-size: 16px; }
-      .wrap, .hero { padding-left: 14px; padding-right: 14px; }
-      .clip { grid-template-columns: 84px 1fr; }
-      .clip img { width: 84px; }
-      .segnames { display: none; }
-      .os li { grid-template-columns: minmax(0, 1fr); gap: 8px; }
-    }
-    @media (prefers-reduced-motion: reduce) {
-      html { scroll-behavior: auto; }
-      *, *::before, *::after { animation: none !important; transition: none !important; }
-    }
-  </style>
+  <link rel="stylesheet" href="assets/site.css?v=230ed9d232">
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
@@ -360,7 +161,7 @@
               <div class="segnames"><span>Download</span><span>Voice</span><span>Transcript</span><span>Timing</span><span>Picking</span><span>Render</span></div>
             </div>
             <div class="clip surface">
-              <img src="assets/clip-frame.webp" alt="" width="360" height="640">
+              <img src="assets/clip-frame.webp" alt="" width="360" height="640" fetchpriority="high" decoding="async">
               <div>
                 <h3>Tasting Dehydrated Beef in Space</h3>
                 <p>An astronaut shows how the crew cooks and eats dehydrated meals on the ISS.</p>
@@ -376,33 +177,33 @@
 
   <section id="demo" class="wrap demo">
     <h2>See it work in one minute</h2>
-    <video poster="assets/demo-poster.jpg" controls playsinline preload="metadata" width="3840" height="2160"
+    <video poster="assets/demo-poster.webp" controls playsinline preload="none" width="1920" height="1080"
       aria-label="One-minute demo: a video link goes into the chat, Clippy makes three captioned vertical clips, then edits one on request">
-      <source src="assets/demo.mp4" type="video/mp4">
+      <source src="assets/demo-1080.mp4" type="video/mp4">
     </video>
-    <p>Recorded in the real app, in 4K. The clips come from a public-domain NASA video; the long wait is sped up and marked.</p>
+    <p>Recorded in the real app. The clips come from a public-domain NASA video; the long wait is sped up and marked. <a class="hq" href="assets/demo.mp4">Watch it in 4K</a>.</p>
   </section>
 
   <section id="how" class="wrap">
     <h2>How it works</h2>
     <p class="intro">Everything happens in one chat window on your computer.</p>
     <ol class="steps">
-      <li><img src="assets/step-paste.webp" alt="The Clippy chat with a video link typed into the message box" width="1280" height="720" loading="lazy">
+      <li><img src="assets/step-paste.webp" srcset="assets/step-paste-640.webp 640w, assets/step-paste.webp 1280w" sizes="(max-width: 960px) 100vw, 620px" alt="The Clippy chat with a video link typed into the message box" width="1280" height="720" loading="lazy" decoding="async">
         <div><h3 class="num">Paste a link</h3>
           <p>YouTube, Twitch, Kick, TikTok, Instagram and the other sites yt-dlp supports, or a video file. Say how many
             clips you want, or start from a ready-made prompt for podcasts, gameplay and streams, promos or quick shorts.</p>
           <p>No link at hand? <span class="ask">clip the latest stream of Kai Cenat</span> finds it.</p></div></li>
-      <li><img src="assets/step-progress.webp" alt="The live progress card stepping through download, voice, transcript, timing, picking and render" width="1280" height="720" loading="lazy">
+      <li><img src="assets/step-progress.webp" srcset="assets/step-progress-640.webp 640w, assets/step-progress.webp 1280w" sizes="(max-width: 960px) 100vw, 620px" alt="The live progress card stepping through download, voice, transcript, timing, picking and render" width="1280" height="720" loading="lazy" decoding="async">
         <div><h3 class="num">It finds the best moments</h3>
           <p>Clippy transcribes the video in its own language, reads the reactions (laughter, loud moments, the stream
             chat) and has a local language model rank every candidate moment by its hook.</p>
           <p>A live card shows each step and the time left.</p></div></li>
-      <li><img src="assets/step-clips.webp" alt="Finished vertical clips with captions shown as cards in the chat" width="1280" height="720" loading="lazy">
+      <li><img src="assets/step-clips.webp" srcset="assets/step-clips-640.webp 640w, assets/step-clips.webp 1280w" sizes="(max-width: 960px) 100vw, 620px" alt="Finished vertical clips with captions shown as cards in the chat" width="1280" height="720" loading="lazy" decoding="async">
         <div><h3 class="num">You get finished clips</h3>
           <p>9:16 with the speaker in frame, or the facecam on top and the game below for streams. Dead air is cut, the
             sound is mastered for phones and the captions follow every word.</p>
           <p>Each clip comes with a title, a description, a comment question, hashtags, a cover and a second title to test.</p></div></li>
-      <li><img src="assets/step-edit.webp" alt="A new version of a clip with an opening text, made from a chat request" width="1280" height="720" loading="lazy">
+      <li><img src="assets/step-edit.webp" srcset="assets/step-edit-640.webp 640w, assets/step-edit.webp 1280w" sizes="(max-width: 960px) 100vw, 620px" alt="A new version of a clip with an opening text, made from a chat request" width="1280" height="720" loading="lazy" decoding="async">
         <div><h3 class="num">Change it by asking</h3>
           <p><span class="ask">put an opening text on clip 3</span> or <span class="ask">make it 16:9</span>: every
             change is a new version you can undo, rendered in seconds.</p>
@@ -525,6 +326,6 @@ cd clippy</code></pre></div></div></li>
     <a href="https://github.com/hajdu-patrik/clippy/blob/main/CHANGELOG.md">Changelog</a><a href="llms.txt">llms.txt</a>
   </div>
 </footer>
-<script src="assets/site.js" defer></script>
+<script src="assets/site.js?v=6db800daef" defer></script>
 </body>
 </html>

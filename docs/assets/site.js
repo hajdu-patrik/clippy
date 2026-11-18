@@ -69,3 +69,26 @@ function visitorSystem() {
 
 for (const list of document.querySelectorAll('[role="tablist"]')) new Tabs(list).selectById(visitorSystem());
 for (const block of document.querySelectorAll(".cmd")) new CopyButton(block);
+
+class Reveal {
+  static SELECTOR = "main section > h2, main section > .intro, .steps > li, .demo video, .rows > div, #faq details";
+
+  constructor(root) {
+    const nodes = [...root.querySelectorAll(Reveal.SELECTOR)];
+    if (!("IntersectionObserver" in window) || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    document.documentElement.classList.add("js");
+    const observer = new IntersectionObserver((entries) => {
+      for (const entry of entries) {
+        if (!entry.isIntersecting) continue;
+        entry.target.classList.add("seen");
+        observer.unobserve(entry.target);
+      }
+    }, { rootMargin: "0px 0px -8% 0px" });
+    for (const node of nodes) {
+      node.classList.add("reveal");
+      observer.observe(node);
+    }
+  }
+}
+
+new Reveal(document);
