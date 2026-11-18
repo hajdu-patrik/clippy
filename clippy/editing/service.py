@@ -135,6 +135,7 @@ class EditService:
         if target is None:
             return EditOutcome(number, reply, notice="edit.nothing_to_undo")
         timeline = target.get("timeline") or self.repo.of(target).to_json()
-        version = NewVersion(dict(target["clip"]), dict(target.get("info") or {}), target["mp4"], target["jpg"],
+        info = {**(target.get("info") or {}), "restores": target["version"]}
+        version = NewVersion(dict(target["clip"]), info, target["mp4"], target["jpg"],
                              target["txt"], timeline)
         return EditOutcome(number, reply, (Change.changed("version", version=target["version"]),), version=version)

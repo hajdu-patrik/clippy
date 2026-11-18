@@ -63,3 +63,19 @@ def test_repository_builds_missing_timelines_and_finds_the_undo_target(timeline)
     assert built.version == 4 and built.layer("captions").highlight == "red" and built.text_with_role("cta")
     assert repo.of({**row, "timeline": timeline.to_json()}) == timeline
     assert repo.undo_target(1, 1) == {"version": 2}
+
+
+def test_undoing_twice_steps_back_twice():
+    rows = [{"version": 1}, {"version": 2}, {"version": 3}]
+
+    class DB:
+        def clip_versions(self, chat_id, number):
+            return rows
+
+    repo = TimelineRepository(DB())
+    rows.append({"version": 4, "info": {"restores": 2}})
+    assert repo.undo_target(1, 1) == {"version": 1}
+    rows.append({"version": 5, "info": {"restores": 1}})
+    assert repo.undo_target(1, 1) is None
+    rows.append({"version": 6, "info": {}})
+    assert repo.undo_target(1, 1) == {"version": 1}
