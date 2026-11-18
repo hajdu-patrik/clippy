@@ -259,7 +259,7 @@ chat (removed with the chat, together with any cache no other chat uses), comman
 ## Guides
 
 * **[docs/cli.md](docs/cli.md)**: every command and `clippy clip` option, with examples.
-* **[docs/publishing.md](docs/publishing.md)**: connecting YouTube, Instagram and TikTok to post clips from the app.
+* **[docs/publishing.md](docs/publishing.md)**: connecting YouTube, Instagram, Facebook, TikTok, X, Twitch and Kick (posting on the first five).
 * **[docs/playbook.md](docs/playbook.md)**: what works on TikTok, Shorts and Reels (hooks, length, captions, CTA,
   posting, rights) and where Clippy applies it.
 * **[docs/quality.md](docs/quality.md)**: what each stage does for the picture, the sound and the captions, and how hooks are scored.

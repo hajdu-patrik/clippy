@@ -21,7 +21,7 @@ Key facts:
 - [Project page with demo video and install guide](https://clippyai.vercel.app/)
 - [README](https://github.com/hajdu-patrik/clippy/blob/main/README.md): overview, quick start, configuration
 - [Command line](https://github.com/hajdu-patrik/clippy/blob/main/docs/cli.md): every command and option
-- [Posting](https://github.com/hajdu-patrik/clippy/blob/main/docs/publishing.md): connecting YouTube, Instagram and TikTok
+- [Posting](https://github.com/hajdu-patrik/clippy/blob/main/docs/publishing.md): connecting YouTube, Instagram, Facebook, TikTok, X, Twitch and Kick
 - [Output quality](https://github.com/hajdu-patrik/clippy/blob/main/docs/quality.md): what each stage does, hook scoring
 - [Local LLM](https://github.com/hajdu-patrik/clippy/blob/main/docs/local-llm.md): Qwen3-14B tuning for a 16 GB GPU
 
