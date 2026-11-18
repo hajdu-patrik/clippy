@@ -5,8 +5,6 @@ straight away but only visible to the user, which is all TikTok allows before it
 
 from __future__ import annotations
 
-import time
-
 from ..tools import ClippyError, report
 from . import (TIMEOUT, UPLOAD_TIMEOUT, PostResult, PostText, Reader, Tokens, Upload, bearer, check_length, checked)
 from .base import OAuthPlatform
@@ -20,7 +18,6 @@ SINGLE_LIMIT = 64 * 1024 * 1024
 CHUNK = 10 * 1024 * 1024
 LONGEST = 600
 CAPTION = 2200
-POLL_SECONDS, POLL_TRIES = 5, 120
 DONE = {"draft": {"SEND_TO_USER_INBOX", "PUBLISH_COMPLETE"}, "private": {"PUBLISH_COMPLETE"}}
 
 
@@ -36,9 +33,6 @@ class TikTok(OAuthPlatform):
     env = ("CLIPPY_TIKTOK_CLIENT_KEY", "CLIPPY_TIKTOK_CLIENT_SECRET")
     auth_endpoint, token_url, scopes, scope_env = AUTH, f"{API}/oauth/token/", SCOPES, "CLIPPY_TIKTOK_SCOPES"
     id_param, challenge, lifetime = "client_key", staticmethod(hex_challenge), 86400
-
-    def __init__(self, sleep=time.sleep):
-        self.sleep = sleep
 
     def tokens_of(self, data: dict, now: float) -> Tokens:
         tokens = super().tokens_of(data, now)
@@ -86,13 +80,12 @@ class TikTok(OAuthPlatform):
         return PostResult(url="", remote_id=str(publish_id), state=mode)
 
     def _wait(self, http, tokens: Tokens, publish_id: str, done: set[str]) -> None:
-        for _ in range(POLL_TRIES):
+        def finished() -> bool:
             state = self._call(http, tokens, "/post/publish/status/fetch/", {"publish_id": publish_id})
             status = state.get("status")
-            if status in done:
-                return
             if status == "FAILED":
                 raise ClippyError(key="error.platform_rejected", platform=self.label,
                                   detail=str(state.get("fail_reason") or status)[:200])
-            self.sleep(POLL_SECONDS)
-        raise ClippyError(key="error.platform_slow", platform=self.label)
+            return status in done
+
+        self.wait_for(finished)

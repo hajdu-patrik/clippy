@@ -18,20 +18,27 @@ DAYS_AHEAD = 60
 MIN_AHEAD = 60.0
 
 
-def clean_slots(text) -> list[str]:
-    """Daily times like "18:00, 21:30" (also 18.00), sorted, at most 8."""
+def parse_slots(text) -> list[str]:
+    """Times of day like "18:00, 21:30" (also 18.00) as HH:MM, in the order given, each once, at most 8."""
     parts = text if isinstance(text, list) else re.split(r"[,;\s]+", str(text or ""))
-    out = set()
+    out: list[str] = []
     for part in (str(p).strip() for p in parts):
         if not part:
             continue
         found = SLOT.match(part)
         if not found:
             raise ClippyError(key="error.bad_slot", slot=part[:12])
-        out.add(f"{int(found.group(1)):02d}:{found.group(2)}")
+        slot = f"{int(found.group(1)):02d}:{found.group(2)}"
+        if slot not in out:
+            out.append(slot)
     if len(out) > MAX_SLOTS:
         raise ClippyError(key="error.too_many_slots", max=MAX_SLOTS)
-    return sorted(out)
+    return out
+
+
+def clean_slots(text) -> list[str]:
+    """Daily posting times, sorted."""
+    return sorted(parse_slots(text))
 
 
 def next_slots(slots: list[str], count: int, taken: set[float], now: float) -> list[float]:

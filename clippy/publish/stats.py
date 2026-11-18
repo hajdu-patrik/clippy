@@ -8,10 +8,10 @@ from dataclasses import asdict, dataclass
 
 from ..tools import ClippyError
 from . import TIMEOUT, Tokens, bearer, checked
+from .instagram import GRAPH as INSTAGRAM_GRAPH
+from .youtube import API as YOUTUBE_API
 
-YOUTUBE_API = "https://www.googleapis.com/youtube/v3"
 YOUTUBE_ANALYTICS = "https://youtubeanalytics.googleapis.com/v2/reports"
-INSTAGRAM_GRAPH = "https://graph.instagram.com/v26.0"
 INSTAGRAM_METRICS = ("views", "reach", "likes", "comments", "shares", "saved", "ig_reels_avg_watch_time")
 BATCH = 50
 

@@ -4,11 +4,10 @@ from __future__ import annotations
 
 import base64
 import os
-import time
 
 from ..tools import ClippyError, report
 from . import TIMEOUT, UPLOAD_TIMEOUT, PostResult, PostText, Tokens, Upload, bearer, check_length, checked
-from .base import OAuthPlatform
+from .base import POLL_TRIES, OAuthPlatform
 
 AUTH = "https://x.com/i/oauth2/authorize"
 API = "https://api.x.com/2"
@@ -16,7 +15,6 @@ SCOPES = "tweet.read tweet.write users.read media.write offline.access"
 CHUNK = 4 * 1024 * 1024
 LONGEST = 1200
 TEXT = 280
-POLL_TRIES = 120
 
 
 def fit(text: str, limit: int = TEXT) -> str:
@@ -37,9 +35,6 @@ class X(OAuthPlatform):
     name, label = "x", "X"
     env = ("CLIPPY_X_CLIENT_ID",)
     auth_endpoint, token_url, scopes, lifetime = AUTH, f"{API}/oauth2/token", SCOPES, 7200
-
-    def __init__(self, sleep=time.sleep):
-        self.sleep = sleep
 
     def client_auth(self) -> tuple[dict, dict]:
         """A public (native app) client sends its id; a confidential one with a secret signs in with Basic auth."""

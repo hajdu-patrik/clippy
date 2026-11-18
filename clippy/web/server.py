@@ -12,9 +12,10 @@ import time
 from pathlib import Path
 from typing import Annotated, Literal
 
+import requests
 from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.concurrency import run_in_threadpool
-from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse, StreamingResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.gzip import GZipMiddleware
 from pydantic import BaseModel, Field, StringConstraints
@@ -32,6 +33,7 @@ from .chats import ChatService, NotFound
 from .clips import ClipLibrary, ClipPresenter, rewrite_post_texts
 from .db import DB
 from .hub import Hub
+from .handlers import problem_of
 from .jobs import Runner
 from .media import MediaStore
 from .lan import Lan, is_loopback
@@ -73,6 +75,20 @@ def error_detail(exc: ClippyError) -> dict:
     return {"message": str(exc), "key": exc.key, "params": {k: str(v) for k, v in exc.params.items()}}
 
 
+def is_local(request: Request) -> bool:
+    return is_loopback(request.client.host if request.client else "")
+
+
+async def save_body(request: Request, out, limit: int) -> None:
+    """Streams the request body into `out`; a body over `limit` bytes is refused."""
+    size = 0
+    async for chunk in request.stream():
+        size += len(chunk)
+        if size > limit:
+            raise HTTPException(413, "File too large")
+        out.write(chunk)
+
+
 class ChatPatch(BaseModel):
     title: str = Field(max_length=200)
 
@@ -106,7 +122,7 @@ class NewWatch(BaseModel):
     latest: bool = False
 
 
-class WatchPatch(BaseModel):
+class EnabledPatch(BaseModel):
     enabled: bool
 
 
@@ -158,11 +174,13 @@ def create_app(storage: Storage | None = None, db_path: Path | None = None, runn
     app.mount(f"/static/{build}", StaticFiles(directory=STATIC), name="static-built")
     app.mount("/static", StaticFiles(directory=STATIC), name="static")
 
-    def found(call, *args):
-        try:
-            return call(*args)
-        except NotFound:
-            raise HTTPException(404, "No such chat") from None
+    @app.exception_handler(ClippyError)
+    async def clippy_error(_request: Request, exc: ClippyError):
+        return JSONResponse({"detail": error_detail(exc)}, status_code=400)
+
+    @app.exception_handler(NotFound)
+    async def not_found(_request: Request, _exc: NotFound):
+        return JSONResponse({"detail": "No such chat"}, status_code=404)
 
     @app.get("/")
     def index():
@@ -177,7 +195,7 @@ def create_app(storage: Storage | None = None, db_path: Path | None = None, runn
         return {**runner.status(), "lan": lan is not None}
 
     def lan_from_this_computer(request: Request) -> Lan:
-        if lan is None or not is_loopback(request.client.host if request.client else ""):
+        if lan is None or not is_local(request):
             raise HTTPException(404, "Not found")
         return lan
 
@@ -193,7 +211,7 @@ def create_app(storage: Storage | None = None, db_path: Path | None = None, runn
     accounts, flows, notices = runner.accounts, OAuthFlows(), {}
 
     def from_this_computer(request: Request) -> None:
-        if not is_loopback(request.client.host if request.client else ""):
+        if not is_local(request):
             raise HTTPException(403, error_detail(ClippyError(key="error.accounts_here_only")))
 
     def accounts_changed() -> None:
@@ -204,8 +222,7 @@ def create_app(storage: Storage | None = None, db_path: Path | None = None, runn
 
     @app.get("/api/accounts")
     def get_accounts(request: Request):
-        return {"accounts": accounts.status(), "notices": notices,
-                "here": is_loopback(request.client.host if request.client else "")}
+        return {"accounts": accounts.status(), "notices": notices, "here": is_local(request)}
 
     @app.post("/api/accounts/{platform}/connect")
     def connect_account(platform: Platform, request: Request):
@@ -214,11 +231,8 @@ def create_app(storage: Storage | None = None, db_path: Path | None = None, runn
         target = accounts.platform(platform)
         if not target.oauth:
             raise HTTPException(400, "Paste the token instead")
-        try:
-            state, verifier = flows.start(platform)
-            return {"url": target.auth_url(redirect_uri(request, platform), state, verifier)}
-        except ClippyError as exc:
-            raise HTTPException(400, error_detail(exc)) from None
+        state, verifier = flows.start(platform)
+        return {"url": target.auth_url(redirect_uri(request, platform), state, verifier)}
 
     @app.get("/oauth/{platform}/callback")
     def oauth_callback(platform: Platform, request: Request, code: str = "", state: str = "", error: str = ""):
@@ -234,9 +248,9 @@ def create_app(storage: Storage | None = None, db_path: Path | None = None, runn
                                                           redirect_uri(request, platform), time.time())
             accounts.save(platform, tokens)
         except ClippyError as exc:
-            notices[platform] = {"key": exc.key, "params": {k: str(v) for k, v in exc.params.items()}}
+            notices[platform] = problem_of(exc)
         except Exception as exc:
-            notices[platform] = {"key": "error.platform_network", "params": {"platform": LABELS[platform]}}
+            notices[platform] = problem_of(ClippyError(key="error.platform_network", platform=LABELS[platform]))
             log(f"[publish] sign-in failed: {type(exc).__name__}: {exc}")
         accounts_changed()
         return RedirectResponse("/#settings", status_code=303)
@@ -246,11 +260,8 @@ def create_app(storage: Storage | None = None, db_path: Path | None = None, runn
         from_this_computer(request)
         try:
             tokens = accounts.platform("instagram").connect(accounts.http, body.token, time.time())
-        except ClippyError as exc:
-            raise HTTPException(400, error_detail(exc)) from None
-        except Exception:
-            raise HTTPException(400, error_detail(ClippyError(key="error.platform_network",
-                                                              platform="Instagram"))) from None
+        except (OSError, requests.RequestException):
+            raise ClippyError(key="error.platform_network", platform=LABELS["instagram"]) from None
         accounts.save("instagram", tokens)
         notices.pop("instagram", None)
         accounts_changed()
@@ -270,10 +281,7 @@ def create_app(storage: Storage | None = None, db_path: Path | None = None, runn
 
     @app.put("/api/settings")
     def put_settings(body: SettingsPatch):
-        try:
-            saved = settings.set_profile_links(body.profile_links)
-        except ClippyError as exc:
-            raise HTTPException(400, error_detail(exc)) from None
+        saved = settings.set_profile_links(body.profile_links)
         rewrite_post_texts(db, runner.library, saved["profile_links"])
         hub.publish(None, {"type": "settings", "settings": saved})
         return saved
@@ -292,69 +300,58 @@ def create_app(storage: Storage | None = None, db_path: Path | None = None, runn
 
     @app.patch("/api/chats/{chat_id}")
     def rename_chat(chat_id: int, body: ChatPatch):
-        return found(chats.rename, chat_id, body.title)
+        return chats.rename(chat_id, body.title)
 
     @app.delete("/api/chats/{chat_id}")
     def delete_chat(chat_id: int):
-        found(chats.delete, chat_id)
+        chats.delete(chat_id)
         return {"ok": True}
 
     @app.get("/api/chats/{chat_id}")
     def get_chat(chat_id: int):
-        return found(chats.view, chat_id)
+        return chats.view(chat_id)
 
     @app.post("/api/chats/{chat_id}/messages")
     def post_message(chat_id: int, body: NewMessage):
         if not body.text.strip():
             raise HTTPException(400, "Empty message")
-        return found(chats.post_message, chat_id, body.text.strip(), tuple(body.attachments))
+        return chats.post_message(chat_id, body.text.strip(), tuple(body.attachments))
 
     @app.put("/api/chats/{chat_id}/assets")
     async def upload_asset(chat_id: int, request: Request, name: str = Query(min_length=1, max_length=200)):
-        found(chats.get, chat_id)
+        chats.get(chat_id)
         with tempfile.SpooledTemporaryFile(max_size=SPOOL_BYTES) as spool:
-            size = 0
-            async for chunk in request.stream():
-                size += len(chunk)
-                if size > MAX_UPLOAD:
-                    raise HTTPException(413, "File too large")
-                spool.write(chunk)
+            await save_body(request, spool, MAX_UPLOAD)
             spool.seek(0)
-            try:
-                return await run_in_threadpool(chats.upload, chat_id, name, spool)
-            except ClippyError as exc:
-                raise HTTPException(400, error_detail(exc)) from None
+            return await run_in_threadpool(chats.upload, chat_id, name, spool)
 
     @app.get("/api/chats/{chat_id}/assets")
     def list_assets(chat_id: int):
-        return found(chats.list_assets, chat_id)
+        return chats.list_assets(chat_id)
 
     @app.delete("/api/chats/{chat_id}/assets/{asset_id}")
     def delete_asset(chat_id: int, asset_id: AssetId):
-        if not found(chats.remove_asset, chat_id, asset_id):
+        if not chats.remove_asset(chat_id, asset_id):
             raise HTTPException(404, "No such attachment")
         return {"ok": True}
 
     @app.get("/api/chats/{chat_id}/clips/{number}/timeline")
     def clip_timeline(chat_id: int, number: int):
-        return found(chats.timeline, chat_id, number)
+        return chats.timeline(chat_id, number)
 
     @app.post("/api/chats/{chat_id}/clips/{number}/undo")
     def undo_clip(chat_id: int, number: int):
-        return found(chats.undo, chat_id, number)
+        return chats.undo(chat_id, number)
 
     @app.post("/api/chats/{chat_id}/clips/{number}/publish")
     def publish_clip(chat_id: int, number: int, body: PublishRequest):
         status = accounts.status()
         missing = [p for p in body.platforms if not status[p]["connected"]]
         if missing:
-            raise HTTPException(400, error_detail(ClippyError(key="error.account_missing", platform=LABELS[missing[0]])))
+            raise ClippyError(key="error.account_missing", platform=LABELS[missing[0]])
         options = {"youtube": {"privacy": body.youtube_privacy}, "tiktok": {"mode": body.tiktok_mode},
                    **({"variant": "b"} if body.variant == "b" else {})}
-        try:
-            return found(chats.publish, chat_id, number, list(dict.fromkeys(body.platforms)), options, body.at)
-        except ClippyError as exc:
-            raise HTTPException(400, error_detail(exc)) from None
+        return chats.publish(chat_id, number, list(dict.fromkeys(body.platforms)), options, body.at)
 
     @app.delete("/api/scheduled/{item_id}")
     def cancel_scheduled(item_id: int):
@@ -371,17 +368,9 @@ def create_app(storage: Storage | None = None, db_path: Path | None = None, runn
 
         with tempfile.TemporaryDirectory(prefix="clippy-voice-") as folder:
             path = Path(folder) / "voice.webm"
-            size = 0
             with path.open("wb") as out:
-                async for chunk in request.stream():
-                    size += len(chunk)
-                    if size > DICTATION_BYTES:
-                        raise HTTPException(413, "Recording too long")
-                    out.write(chunk)
-            try:
-                return {"text": await run_in_threadpool(words_of, path)}
-            except ClippyError as exc:
-                raise HTTPException(400, error_detail(exc)) from None
+                await save_body(request, out, DICTATION_BYTES)
+            return {"text": await run_in_threadpool(words_of, path)}
 
     @app.get("/api/kit")
     def get_kit():
@@ -396,17 +385,9 @@ def create_app(storage: Storage | None = None, db_path: Path | None = None, runn
     async def put_kit_file(slot: Literal["logo", "intro", "outro"], request: Request,
                            name: str = Query(min_length=1, max_length=200)):
         with tempfile.SpooledTemporaryFile(max_size=SPOOL_BYTES) as spool:
-            size = 0
-            async for chunk in request.stream():
-                size += len(chunk)
-                if size > MAX_UPLOAD:
-                    raise HTTPException(413, "File too large")
-                spool.write(chunk)
+            await save_body(request, spool, MAX_UPLOAD)
             spool.seek(0)
-            try:
-                await run_in_threadpool(kit.put, slot, name, spool)
-            except ClippyError as exc:
-                raise HTTPException(400, error_detail(exc)) from None
+            await run_in_threadpool(kit.put, slot, name, spool)
         return kit.present()
 
     @app.delete("/api/kit/{slot}")
@@ -433,15 +414,12 @@ def create_app(storage: Storage | None = None, db_path: Path | None = None, runn
 
     @app.post("/api/watches")
     def add_watch(body: NewWatch):
-        try:
-            settings = watch_settings(body.n, body.preset, body.instructions, body.every, body.platforms,
-                                      body.youtube_privacy, body.tiktok_mode, body.slots)
-            return present_watch(watcher.add(body.url, settings, body.latest))
-        except ClippyError as exc:
-            raise HTTPException(400, error_detail(exc)) from None
+        chosen = watch_settings(body.n, body.preset, body.instructions, body.every, body.platforms,
+                                body.youtube_privacy, body.tiktok_mode, body.slots)
+        return present_watch(watcher.add(body.url, chosen, body.latest))
 
     @app.patch("/api/watches/{watch_id}")
-    def toggle_watch(watch_id: int, body: WatchPatch):
+    def toggle_watch(watch_id: int, body: EnabledPatch):
         if db.get_watch(watch_id) is None:
             raise HTTPException(404, "No such watch")
         watch = db.update_watch(watch_id, enabled=int(body.enabled))
@@ -469,14 +447,11 @@ def create_app(storage: Storage | None = None, db_path: Path | None = None, runn
 
     @app.post("/api/daily")
     def add_daily(body: NewDaily):
-        try:
-            d = watcher.daily.add(body.game, daily_settings(body.n, body.at, body.times, body.platforms), body.now)
-        except ClippyError as exc:
-            raise HTTPException(400, error_detail(exc)) from None
+        d = watcher.daily.add(body.game, daily_settings(body.n, body.at, body.times, body.platforms), body.now)
         return present_daily(db, presenter, d)
 
     @app.patch("/api/daily/{daily_id}")
-    def toggle_daily(daily_id: int, body: WatchPatch):
+    def toggle_daily(daily_id: int, body: EnabledPatch):
         if db.get_daily(daily_id) is None:
             raise HTTPException(404, "No such daily pick")
         d = db.update_daily(daily_id, enabled=int(body.enabled))
@@ -521,7 +496,7 @@ def create_app(storage: Storage | None = None, db_path: Path | None = None, runn
 
     @app.get("/media/{chat_id}/assets/{asset_id}")
     def asset_media(chat_id: int, asset_id: AssetId):
-        target = found(chats.asset_file, chat_id, asset_id)
+        target = chats.asset_file(chat_id, asset_id)
         if target is None:
             raise HTTPException(404, "No such file")
         return FileResponse(target)

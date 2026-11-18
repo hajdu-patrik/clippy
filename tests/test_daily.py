@@ -245,7 +245,7 @@ def test_daily_routes(tmp_path, monkeypatch):
 
 
 def test_a_daily_pick_goes_out_at_its_time_unless_it_is_weak():
-    from clippy.web import jobs
+    from clippy.web import handlers
 
     class Runner:
         def __init__(self):
@@ -268,7 +268,7 @@ def test_a_daily_pick_goes_out_at_its_time_unless_it_is_weak():
 
     at = time.time() + 3600
     good = Ctx([{"number": 1, "clip": {"score": 90}}, {"number": 2, "clip": {"score": 30}}])
-    jobs.GenerateJob.post_new(good, 1, {"platforms": ["youtube"], "at": at})
+    handlers.GenerateJob.post_new(good, 1, {"platforms": ["youtube"], "at": at})
     [posted] = good.runner.submitted
     assert posted["clip"] == 1 and posted["options"]["youtube"]["publish_at"] == at
     assert good.notes == ["daily.not_posted"]

@@ -26,6 +26,7 @@ def at(day, hour, minute=0):
 def test_daily_slots_are_read_and_sorted():
     assert schedule.clean_slots("21.30, 9:05 18:00;18:00") == ["09:05", "18:00", "21:30"]
     assert schedule.clean_slots("") == []
+    assert schedule.parse_slots("21.30, 9:05 18:00;18:00") == ["21:30", "09:05", "18:00"]
     for bad in ("25:00", "noon", "18:61"):
         with pytest.raises(ClippyError) as caught:
             schedule.clean_slots(bad)

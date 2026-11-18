@@ -1,4 +1,4 @@
-"""Shared helpers: project paths, ffmpeg (binary, features, probing, audio decoding), JSON, logging."""
+"""Shared helpers: paths, ffmpeg (binary, features, probing, decoding), atomic files, JSON, job logs and progress."""
 
 from __future__ import annotations
 
@@ -19,6 +19,7 @@ from pathlib import Path
 import numpy as np
 
 ROOT = Path(__file__).resolve().parent.parent
+PROBE_TIMEOUT = 60
 
 
 class ClippyError(RuntimeError):
@@ -45,15 +46,17 @@ def ffmpeg_path() -> str:
 
         return imageio_ffmpeg.get_ffmpeg_exe()
     except Exception as exc:
-        raise ClippyError("ffmpeg not found. Install it: pip install imageio-ffmpeg (or winget install Gyan.FFmpeg)") from exc
+        raise ClippyError(key="error.ffmpeg_missing") from exc
 
 
 @lru_cache(maxsize=1)
 def ffmpeg_features() -> dict:
     """Which optional ffmpeg features this build has."""
     ff = ffmpeg_path()
-    filters = subprocess.run([ff, "-hide_banner", "-filters"], capture_output=True, text=True).stdout
-    encoders = subprocess.run([ff, "-hide_banner", "-encoders"], capture_output=True, text=True).stdout
+    filters = subprocess.run([ff, "-hide_banner", "-filters"], capture_output=True, text=True,
+                             timeout=PROBE_TIMEOUT).stdout
+    encoders = subprocess.run([ff, "-hide_banner", "-encoders"], capture_output=True, text=True,
+                              timeout=PROBE_TIMEOUT).stdout
     return {
         "subtitles": bool(re.search(r"\bsubtitles\b", filters)),
         "nvenc": "h264_nvenc" in encoders and _nvenc_works(ff),
@@ -61,36 +64,49 @@ def ffmpeg_features() -> dict:
 
 
 def _nvenc_works(ff: str) -> bool:
-    """h264_nvenc may be listed but unusable (no NVIDIA GPU / old driver)."""
-    probe = subprocess.run(
-        [ff, "-hide_banner", "-loglevel", "error", "-f", "lavfi", "-i", "color=black:s=256x256:d=0.1",
-         "-c:v", "h264_nvenc", "-f", "null", "-"],
-        capture_output=True,
-        text=True,
-    )
+    """h264_nvenc may be listed but unusable (no NVIDIA GPU, an old or hung driver)."""
+    try:
+        probe = subprocess.run(
+            [ff, "-hide_banner", "-loglevel", "error", "-f", "lavfi", "-i", "color=black:s=256x256:d=0.1",
+             "-c:v", "h264_nvenc", "-f", "null", "-"],
+            capture_output=True, text=True, timeout=PROBE_TIMEOUT)
+    except subprocess.TimeoutExpired:
+        return False
     return probe.returncode == 0
+
+
+def _ffmpeg_info(path: Path) -> str:
+    """What `ffmpeg -i` prints about a file: its streams and duration (the bundled build has no ffprobe)."""
+    try:
+        return subprocess.run([ffmpeg_path(), "-hide_banner", "-i", str(path)], capture_output=True, text=True,
+                              encoding="utf-8", errors="replace", timeout=PROBE_TIMEOUT).stderr
+    except subprocess.TimeoutExpired as exc:
+        raise ClippyError(key="error.probe_failed", name=Path(path).name) from exc
+
+
+def _duration(info: str) -> float:
+    found = re.search(r"Duration: (\d+):(\d+):([\d.]+)", info)
+    return int(found.group(1)) * 3600 + int(found.group(2)) * 60 + float(found.group(3)) if found else 0.0
 
 
 @lru_cache(maxsize=16)
 def probe_video(path: Path) -> dict:
-    """Width, height, fps, duration, colour matrix/range and audio channels from `ffmpeg -i` (no ffprobe)."""
-    out = subprocess.run([ffmpeg_path(), "-hide_banner", "-i", str(path)], capture_output=True, text=True,
-                         encoding="utf-8", errors="replace").stderr
+    """Width, height, fps, duration, colour matrix/range and audio channels of a video."""
+    out = _ffmpeg_info(path)
     vline = re.search(r"Stream #\S+.*?Video: (.*)", out)
     if not vline:
-        raise ClippyError(f"No video stream in {path}")
+        raise ClippyError(key="error.no_video_stream", name=Path(path).name)
     line = vline.group(1)
     size = re.search(r"\b(\d{2,5})x(\d{2,5})\b", line)
     if not size:
-        raise ClippyError(f"Cannot read the resolution: {line[:120]}")
+        raise ClippyError(key="error.no_resolution", name=Path(path).name, detail=line[:120])
     w, h = int(size.group(1)), int(size.group(2))
     rot = re.search(r"rotation of (-?\d+)", out) or re.search(r"rotate\s*:\s*(-?\d+)", out)
     if rot and abs(int(float(rot.group(1)))) in (90, 270):
         w, h = h, w
     fps_m = re.search(r"([\d.]+) fps", line) or re.search(r"([\d.]+) tbr", line)
     fps = float(fps_m.group(1)) if fps_m else 30.0
-    dur_m = re.search(r"Duration: (\d+):(\d+):([\d.]+)", out)
-    duration = int(dur_m.group(1)) * 3600 + int(dur_m.group(2)) * 60 + float(dur_m.group(3)) if dur_m else 0.0
+    duration = _duration(out)
     low = line.lower()
     if "bt2020" in low:
         matrix = "bt2020"
@@ -107,17 +123,14 @@ def probe_video(path: Path) -> dict:
 
 
 def probe_media(path: Path) -> dict:
-    """Streams and length of any media file from `ffmpeg -i`: {"video": (w, h) or None, "audio": bool, "duration"}."""
-    out = subprocess.run([ffmpeg_path(), "-hide_banner", "-i", str(path)], capture_output=True, text=True,
-                         encoding="utf-8", errors="replace").stderr
+    """Streams and length of any media file: {"video": (w, h) or None, "audio": bool, "duration"}."""
+    out = _ffmpeg_info(path)
     video = None
     vline = re.search(r"Stream #\S+.*?Video: (.*)", out)
     if vline and not re.search(r"\(attached pic\)", vline.group(1)):
         size = re.search(r"\b(\d{2,5})x(\d{2,5})\b", vline.group(1))
         video = (int(size.group(1)), int(size.group(2))) if size else None
-    dur = re.search(r"Duration: (\d+):(\d+):([\d.]+)", out)
-    duration = int(dur.group(1)) * 3600 + int(dur.group(2)) * 60 + float(dur.group(3)) if dur else 0.0
-    return {"video": video, "audio": bool(re.search(r"Stream #\S+.*?Audio: ", out)), "duration": duration}
+    return {"video": video, "audio": bool(re.search(r"Stream #\S+.*?Audio: ", out)), "duration": _duration(out)}
 
 
 def fps_rational(fps: float) -> tuple[str, float]:
@@ -144,7 +157,8 @@ def decode_audio(path: Path, sr: int = 16000, channels: int = 1, start: float | 
     cmd += ["-i", str(path), "-vn", "-ac", str(channels), "-ar", str(sr), "-f", "f32le", "-"]
     proc = subprocess.run(cmd, capture_output=True)
     if proc.returncode != 0 or not proc.stdout:
-        raise ClippyError(f"Cannot decode the audio of {path}: {proc.stderr.decode(errors='replace')[-300:]}")
+        raise ClippyError(key="error.audio_decode", name=Path(path).name,
+                          detail=proc.stderr.decode(errors="replace")[-300:])
     audio = np.frombuffer(proc.stdout, np.float32).copy()
     return audio if channels == 1 else audio.reshape(-1, channels).T.copy()
 
@@ -228,9 +242,9 @@ def fmt_ts(seconds: float) -> str:
     return f"{h}:{m:02d}:{s:05.2f}" if h else f"{m}:{s:05.2f}"
 
 
-_SINKS: dict[int, object] = {}
-
-
+_SINKS: dict[int, Callable] = {}
+_REPORTERS: dict[int, Callable] = {}
+_SPANS: dict[int, list[tuple[float, float]]] = {}
 _STOPS: dict[int, threading.Event] = {}
 
 
@@ -245,43 +259,21 @@ def current_stop() -> threading.Event | None:
     return _STOPS.get(threading.get_ident())
 
 
+def _notify(callback: Callable, value) -> None:
+    """A failing progress callback never stops the job; its error goes to the server log."""
+    try:
+        callback(value)
+    except Exception as exc:
+        print(f"[progress] callback failed: {type(exc).__name__}: {exc}", file=sys.stderr, flush=True)
+
+
 def log(msg: str) -> None:
     """Print progress; a thread may register a sink (web app jobs) that also receives every line."""
     check_stop()
     print(msg, file=sys.stderr, flush=True)
     sink = _SINKS.get(threading.get_ident())
     if sink is not None:
-        try:
-            sink(msg)
-        except Exception:
-            pass
-
-
-class log_sink:
-    """with log_sink(fn, on_report): ... , route this thread's log() lines (and report() fractions) to callbacks."""
-
-    def __init__(self, fn, on_report=None, stop: threading.Event | None = None):
-        self.fn, self.on_report, self.stop = fn, on_report, stop
-
-    def __enter__(self):
-        self.tid = threading.get_ident()
-        _SINKS[self.tid] = self.fn
-        if self.on_report is not None:
-            _REPORTERS[self.tid] = self.on_report
-        if self.stop is not None:
-            _STOPS[self.tid] = self.stop
-        return self
-
-    def __exit__(self, *exc):
-        _SINKS.pop(self.tid, None)
-        _REPORTERS.pop(self.tid, None)
-        _SPANS.pop(self.tid, None)
-        _STOPS.pop(self.tid, None)
-        return False
-
-
-_REPORTERS: dict[int, object] = {}
-_SPANS: dict[int, list[tuple[float, float]]] = {}
+        _notify(sink, msg)
 
 
 def report(fraction: float) -> None:
@@ -292,39 +284,55 @@ def report(fraction: float) -> None:
     if fn is None:
         return
     lo, hi = (_SPANS.get(tid) or [(0.0, 1.0)])[-1]
-    try:
-        fn(lo + (hi - lo) * min(1.0, max(0.0, float(fraction))))
-    except Exception:
-        pass
+    _notify(fn, lo + (hi - lo) * min(1.0, max(0.0, float(fraction))))
 
 
 @dataclass
 class ThreadContext:
-    """The log sink, progress reporter and span of one thread, to be carried into worker threads."""
+    """The log sink, progress reporter, spans and stop event of one thread, to be carried into worker threads."""
 
     sink: Callable | None = None
     reporter: Callable | None = None
     spans: list[tuple[float, float]] = field(default_factory=list)
     stop: threading.Event | None = None
 
+    def install(self) -> int:
+        """Makes this the calling thread's context; returns the thread's id for `clear`."""
+        tid = threading.get_ident()
+        for registry, value in ((_SINKS, self.sink), (_REPORTERS, self.reporter), (_STOPS, self.stop)):
+            if value is not None:
+                registry[tid] = value
+        _SPANS[tid] = list(self.spans)
+        return tid
+
+    @staticmethod
+    def clear(tid: int) -> None:
+        for registry in (_SINKS, _REPORTERS, _SPANS, _STOPS):
+            registry.pop(tid, None)
+
     def wrap(self, fn: Callable) -> Callable:
         def run(*args, **kwargs):
-            tid = threading.get_ident()
-            if self.sink is not None:
-                _SINKS[tid] = self.sink
-            if self.reporter is not None:
-                _REPORTERS[tid] = self.reporter
-            _SPANS[tid] = list(self.spans)
-            if self.stop is not None:
-                _STOPS[tid] = self.stop
+            tid = self.install()
             try:
                 return fn(*args, **kwargs)
             finally:
-                _SINKS.pop(tid, None)
-                _REPORTERS.pop(tid, None)
-                _SPANS.pop(tid, None)
-                _STOPS.pop(tid, None)
+                self.clear(tid)
         return run
+
+
+class log_sink:
+    """with log_sink(fn, on_report, stop): this thread's log() lines and report() fractions go to the callbacks."""
+
+    def __init__(self, fn, on_report=None, stop: threading.Event | None = None):
+        self.context = ThreadContext(fn, on_report, stop=stop)
+
+    def __enter__(self):
+        self.tid = self.context.install()
+        return self
+
+    def __exit__(self, *exc):
+        ThreadContext.clear(self.tid)
+        return False
 
 
 def thread_context() -> ThreadContext:
@@ -341,7 +349,8 @@ class SharedProgress:
         self._lock = threading.Lock()
 
     def wrap(self, part: int, fn: Callable) -> Callable:
-        return ThreadContext(self.parent.sink, lambda f: self._update(part, f)).wrap(fn)
+        """`fn` run as one part: its lines go to the caller's log, and a stopped job stops it too."""
+        return ThreadContext(self.parent.sink, lambda f: self._update(part, f), stop=self.parent.stop).wrap(fn)
 
     def _update(self, part: int, fraction: float) -> None:
         with self._lock:

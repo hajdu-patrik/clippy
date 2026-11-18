@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import gc
 import hashlib
 import os
 import sys
 from contextlib import nullcontext
+from functools import cache
 from pathlib import Path
 
 from .i18n import CAPTION_LANGUAGES, DEFAULT, language_name
@@ -14,8 +16,9 @@ from .tools import decode_audio, log, read_json, report, write_json
 TRANSCRIBE_VERSION = "v2"
 
 
+@cache
 def _add_cuda_dll_dirs() -> None:
-    """On Windows, ctranslate2 needs cuBLAS/cuDNN DLLs; the nvidia-* pip wheels ship them."""
+    """ctranslate2 on Windows loads cuBLAS / cuDNN from the nvidia-* wheels; added once, so PATH never grows."""
     if sys.platform != "win32":
         return
     try:
@@ -25,9 +28,12 @@ def _add_cuda_dll_dirs() -> None:
     for base in getattr(nvidia, "__path__", []):
         for sub in ("cublas", "cudnn", "cuda_runtime"):
             bin_dir = Path(base) / sub / "bin"
-            if bin_dir.is_dir():
-                os.add_dll_directory(str(bin_dir))
-                os.environ["PATH"] = str(bin_dir) + os.pathsep + os.environ.get("PATH", "")
+            if not bin_dir.is_dir():
+                continue
+            os.add_dll_directory(str(bin_dir))
+            path = os.environ.get("PATH", "")
+            if str(bin_dir) not in path.split(os.pathsep):
+                os.environ["PATH"] = str(bin_dir) + os.pathsep + path
 
 
 def cuda_available() -> bool:
@@ -92,14 +98,13 @@ def transcribe(video: Path, work_dir: Path, model_name: str = "auto",
         log(f"[transcribe] cache: {cache.name}")
         return read_json(cache)
     with gpu():
-        return _transcribe(video, work_dir, cache, model_name, dev, language, vocab, audio_source or sound or src,
-                           audio_source)
+        return _transcribe(cache, model_name, dev, language, vocab, audio_source or sound or src, bool(audio_source))
 
 
-def _transcribe(video: Path, work_dir: Path, cache: Path, model_name: str, dev: str, language: str | None,
-                vocab: str, src: Path, audio_source: Path | None) -> dict:
+def _transcribe(cache: Path, model_name: str, dev: str, language: str | None, vocab: str, src: Path,
+                isolated: bool) -> dict:
     model, used = _load_model(model_name, dev)
-    log(f"[transcribe] {model_name}, {used}{', on the isolated voice track' if audio_source else ''}, starting…")
+    log(f"[transcribe] {model_name}, {used}{', on the isolated voice track' if isolated else ''}, starting…")
     audio = decode_audio(src)
     if language is None:
         language = detect_language(model, audio)
@@ -135,16 +140,13 @@ def _transcribe(video: Path, work_dir: Path, cache: Path, model_name: str, dev: 
     except RuntimeError as exc:
         if used == "cuda" and ("cudnn" in str(exc).lower() or "cublas" in str(exc).lower()):
             log("[transcribe] CUDA library missing, retrying on CPU…")
-            return transcribe(video, work_dir, model_name, language, device="cpu", vocab=vocab,
-                              audio_source=audio_source, sound=src)
+            return _transcribe(cache, model_name, "cpu", language, vocab, src, isolated)
         raise
 
     result = {"language": info.language, "duration": info.duration, "model": model_name, "segments": out_segments}
     write_json(cache, result)
     del model
     if used == "cuda":
-        import gc
-
         gc.collect()
     n_words = sum(len(s["words"]) for s in out_segments)
     log(f"[transcribe] done: {len(out_segments)} segments, {n_words} words, language: {info.language}")

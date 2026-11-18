@@ -4,6 +4,7 @@ allows it, its upload. The sign-in round trip, the token refresh and the clear e
 from __future__ import annotations
 
 import os
+import time
 from dataclasses import replace
 from pathlib import Path
 from urllib.parse import urlencode
@@ -13,6 +14,7 @@ from . import TIMEOUT, PostResult, PostText, Tokens, Upload, checked, env_client
 from .oauth import s256_challenge
 
 REFRESH_WHEN_LEFT = 300
+POLL_SECONDS, POLL_TRIES = 5, 120
 
 
 class Platform:
@@ -24,6 +26,17 @@ class Platform:
     schedules = False
     renews = False
     env: tuple[str, ...] = ()
+
+    def __init__(self, sleep=time.sleep):
+        self.sleep = sleep
+
+    def wait_for(self, finished) -> None:
+        """Asks `finished()` every few seconds until it says yes; a platform that never gets there is too slow."""
+        for _ in range(POLL_TRIES):
+            if finished():
+                return
+            self.sleep(POLL_SECONDS)
+        raise ClippyError(key="error.platform_slow", platform=self.label)
 
     def client(self) -> tuple[str, ...]:
         return env_client(self.label, *self.env)

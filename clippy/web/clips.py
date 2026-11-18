@@ -6,8 +6,10 @@ import shutil
 from pathlib import Path
 
 from ..covers import b_cover
+from ..highlights import Clip
+from ..pipeline import post_text
 from ..storage import Storage
-from ..tools import atomic_path, slugify
+from ..tools import atomic_path, atomic_write_text, slugify
 from . import schedule
 from .media import MediaStore
 
@@ -17,6 +19,11 @@ INFO_KEYS = ("duration_out", "dead_air_removed", "jump_cuts", "shots", "layout_f
 
 def slim_info(info: dict) -> dict:
     return {k: info.get(k) for k in INFO_KEYS}
+
+
+def caption_of(text: str) -> str:
+    """The part of a post text that goes up with the video: what stands before the notes."""
+    return text.split("\n---\n", 1)[0].strip()
 
 
 def present_post(post: dict) -> dict:
@@ -32,13 +39,13 @@ class ClipPresenter:
 
     def present(self, row: dict, current: bool | None = None) -> dict:
         txt = Path(row["txt"]) if row.get("txt") else None
+        second = b_cover(Path(row["jpg"])) if row.get("jpg") else None
         out = {
             "id": row["id"], "number": row["number"], "version": row["version"], "deleted": bool(row["deleted"]),
             "clip": row["clip"], "overrides": row["overrides"], "info": row["info"],
             "mp4": self.media.url_for(row["chat_id"], row.get("mp4")),
             "jpg": self.media.url_for(row["chat_id"], row.get("jpg")),
-            "jpg_b": self.media.url_for(row["chat_id"], str(b_cover(Path(row["jpg"])))) if row.get("jpg") and
-            b_cover(Path(row["jpg"])).is_file() else None,
+            "jpg_b": self.media.url_for(row["chat_id"], str(second)) if second and second.is_file() else None,
             "txt": txt.read_text(encoding="utf-8") if txt and txt.is_file() else "",
             "posts": [present_post(p) for p in self.db.latest_posts(row["chat_id"], row["number"])] if self.db else [],
             "scheduled": [schedule.present(s) for s in self.db.planned(row["chat_id"], row["number"])] if self.db else [],
@@ -50,10 +57,6 @@ class ClipPresenter:
 
 def rewrite_post_texts(db, library: "ClipLibrary", links: list[str]) -> int:
     """Every current clip's post text again (after the profile links changed), with its library copy."""
-    from ..highlights import Clip
-    from ..pipeline import post_text
-    from ..tools import atomic_write_text
-
     done = 0
     for chat in db.list_chats():
         for row in db.current_clips(chat["id"]):

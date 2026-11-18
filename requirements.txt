@@ -1,12 +1,13 @@
 yt-dlp[default,curl-cffi]>=2026.10.26
 faster-whisper>=1.2
-pillow>=11               # colour emoji stickers
+pillow>=11.3             # colour emoji stickers
 opencv-python>=4.10,<5   # 5.x removed the Haar face detector we use
 numpy>=1.26
-requests>=2.31
+requests>=2.32.4
 imageio-ffmpeg>=0.6      # bundled ffmpeg with libass + NVENC, no system install needed
 python-dotenv>=1.0
 pytest>=8
-fastapi>=0.115
+fastapi>=0.121
+starlette>=0.49.1        # Range requests on media files (CVE-2025-62727)
 uvicorn[standard]>=0.30
 segno>=1.6               # QR code for pairing a phone (clippy pair); optional

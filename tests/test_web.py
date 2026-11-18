@@ -139,7 +139,9 @@ def test_full_flow_publishes_to_the_library_and_delete_purges_files(env):
     gallery = next(m for m in data["messages"] if m["kind"] == "clips")
     first = data["clips"][str(gallery["data"]["clip_ids"][0])]
     assert first["mp4"] == f"/media/{cid}/clip_01_v1.mp4"
-    assert client.get(first["mp4"], headers={"Range": "bytes=0-9"}).status_code == 206
+    part = client.get(first["mp4"], headers={"Range": "bytes=0-9"})
+    assert part.status_code == 206 and part.headers["cache-control"] == "private, no-cache"
+    assert runner._stops == {}
     library = storage.library / "Test video"
     assert sorted(p.name for p in library.glob("*.mp4")) == [f"chat{cid}_clip_01_title-0.mp4",
                                                              f"chat{cid}_clip_02_title-1.mp4"]
@@ -484,7 +486,7 @@ def test_profile_links_are_saved_locally_and_checked(env):
 
 
 def test_old_clips_get_new_titles_and_descriptions(env, monkeypatch):
-    from clippy.web import jobs
+    from clippy.web import handlers
 
     client, runner, storage = env
     cid = client.post("/api/chats").json()["id"]
@@ -498,7 +500,7 @@ def test_old_clips_get_new_titles_and_descriptions(env, monkeypatch):
             c.title, c.description = f"Nobody expected #{i}", f"Teaser {i}."
         return len(clips)
 
-    monkeypatch.setattr(jobs, "write_texts", write)
+    monkeypatch.setattr(handlers, "write_texts", write)
     FakeProject.spoken_language = "en"
     out = say(client, cid, "írj címet és leírást a klipeknek", {"reply": "Ok", "actions": [{"type": "texts", "clips": "all"}]})
     assert out["actions"] == [{"type": "texts", "clips": [1, 2]}]

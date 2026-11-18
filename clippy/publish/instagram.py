@@ -4,7 +4,6 @@ The token comes from the app dashboard's "Generate token"; it lasts 60 days and 
 
 from __future__ import annotations
 
-import time
 from dataclasses import replace
 
 from ..tools import ClippyError, report
@@ -19,14 +18,10 @@ LASTS = 60 * 86400
 REFRESH_WHEN_LEFT = 30 * 86400
 LONGEST = 900
 CAPTION = 2200
-POLL_SECONDS, POLL_TRIES = 5, 120
 
 
 class Instagram(Platform):
     name, label, oauth, renews = "instagram", "Instagram", False, True
-
-    def __init__(self, sleep=time.sleep):
-        self.sleep = sleep
 
     def connect(self, http, token: str, now: float) -> Tokens:
         """Checks a pasted token by asking who it belongs to."""
@@ -67,14 +62,13 @@ class Instagram(Platform):
         return PostResult(url=link, remote_id=str(media), state="public")
 
     def _wait(self, http, container: str, auth: dict) -> None:
-        for _ in range(POLL_TRIES):
+        def finished() -> bool:
             state = checked(http.get(f"{GRAPH}/{container}", params={**auth, "fields": "status_code,status"},
                                      timeout=TIMEOUT), self.label)
             code = state.get("status_code")
-            if code == "FINISHED":
-                return
             if code in ("ERROR", "EXPIRED"):
                 raise ClippyError(key="error.platform_rejected", platform=self.label,
                                   detail=str(state.get("status") or code)[:200])
-            self.sleep(POLL_SECONDS)
-        raise ClippyError(key="error.platform_slow", platform=self.label)
+            return code == "FINISHED"
+
+        self.wait_for(finished)

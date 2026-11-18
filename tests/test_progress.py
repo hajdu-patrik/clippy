@@ -3,7 +3,7 @@ import threading
 from clippy.tools import log, log_sink, report, report_span
 from clippy.web.db import DB
 from clippy.web.hub import Hub
-from clippy.web.jobs import STAGES, Progress
+from clippy.web.progress import STAGES, Progress
 
 
 def make(tmp_path, stages=tuple(st.key for st in STAGES)):
@@ -76,7 +76,7 @@ def test_finish_marks_everything_and_errors_flag_the_failed_step(tmp_path):
 
 def test_eta_appears_once_there_is_measurable_progress(tmp_path, monkeypatch):
     clock = [1000.0]
-    monkeypatch.setattr("clippy.web.jobs.time.time", lambda: clock[0])
+    monkeypatch.setattr("clippy.web.progress.time.time", lambda: clock[0])
     p, _ = make(tmp_path, ("transcribe", "render"))
     p.begin()
     assert p.eta is None

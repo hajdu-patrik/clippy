@@ -13,7 +13,8 @@ from clippy.tools import ClippyError
 from clippy.web.clips import ClipLibrary, ClipPresenter
 from clippy.web.db import DB
 from clippy.web.hub import Hub
-from clippy.web.jobs import Runner, post_of
+from clippy.web.handlers import post_of
+from clippy.web.jobs import Runner
 from clippy.web.kit import StyleKit
 from clippy.web.media import MediaStore
 from clippy.web.server import create_app

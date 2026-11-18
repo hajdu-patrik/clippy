@@ -8,6 +8,8 @@ import threading
 import time
 from pathlib import Path
 
+from .texts import NEW_TITLE
+
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS chats (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -149,7 +151,7 @@ class DB:
         with self.lock:
             return _row(self.conn.execute(sql, args).fetchone())
 
-    def create_chat(self, title: str = "New chat") -> dict:
+    def create_chat(self, title: str = NEW_TITLE) -> dict:
         now = time.time()
         cur = self._exec("INSERT INTO chats (title, created, updated) VALUES (?, ?, ?)", (title, now, now))
         return self.get_chat(cur.lastrowid)
@@ -160,16 +162,17 @@ class DB:
     def list_chats(self) -> list[dict]:
         return self._all("SELECT * FROM chats ORDER BY updated DESC")
 
+    def _update(self, table: str, row_id: int, allowed: tuple[str, ...], fields: dict) -> None:
+        """Sets the allowed columns of one row; JSON columns are stored as JSON."""
+        known = {k: v for k, v in fields.items() if k in allowed}
+        if known:
+            sets = ", ".join(f"{k} = ?" for k in known)
+            args = [json.dumps(v, ensure_ascii=False) if k in _JSON_COLS else v for k, v in known.items()]
+            self._exec(f"UPDATE {table} SET {sets} WHERE id = ?", (*args, row_id))
+
     def update_chat(self, chat_id: int, **fields) -> dict | None:
-        allowed = {"title", "source", "video_title", "video_id", "options"}
-        sets, args = [], []
-        for k, v in fields.items():
-            if k in allowed:
-                sets.append(f"{k} = ?")
-                args.append(json.dumps(v, ensure_ascii=False) if k == "options" else v)
-        sets.append("updated = ?")
-        args.append(time.time())
-        self._exec(f"UPDATE chats SET {', '.join(sets)} WHERE id = ?", (*args, chat_id))
+        self._update("chats", chat_id, ("title", "source", "video_title", "video_id", "options", "updated"),
+                     {**fields, "updated": time.time()})
         return self.get_chat(chat_id)
 
     def touch(self, chat_id: int) -> None:
@@ -245,6 +248,9 @@ class DB:
             "ON c.number = m.number AND c.version = m.v WHERE c.chat_id = ? AND c.deleted = 0 ORDER BY c.number",
             (chat_id, chat_id))
 
+    def current_clip(self, chat_id: int, number: int) -> dict | None:
+        return next((c for c in self.current_clips(chat_id) if c["number"] == number), None)
+
     def next_number(self, chat_id: int) -> int:
         r = self._one("SELECT COALESCE(MAX(number), 0) + 1 AS n FROM clips WHERE chat_id = ?", (chat_id,))
         return int(r["n"])
@@ -290,14 +296,7 @@ class DB:
         return self._all("SELECT * FROM watches ORDER BY id")
 
     def update_watch(self, watch_id: int, **fields) -> dict | None:
-        allowed = {"title", "settings", "seen", "enabled", "checked", "problem"}
-        sets, args = [], []
-        for k, v in fields.items():
-            if k in allowed:
-                sets.append(f"{k} = ?")
-                args.append(json.dumps(v, ensure_ascii=False) if k in _JSON_COLS else v)
-        if sets:
-            self._exec(f"UPDATE watches SET {', '.join(sets)} WHERE id = ?", (*args, watch_id))
+        self._update("watches", watch_id, ("title", "settings", "seen", "enabled", "checked", "problem"), fields)
         return self.get_watch(watch_id)
 
     def delete_watch(self, watch_id: int) -> bool:
@@ -315,14 +314,7 @@ class DB:
         return self._all("SELECT * FROM daily ORDER BY id")
 
     def update_daily(self, daily_id: int, **fields) -> dict | None:
-        allowed = {"settings", "seen", "picks", "enabled", "ran", "problem"}
-        sets, args = [], []
-        for k, v in fields.items():
-            if k in allowed:
-                sets.append(f"{k} = ?")
-                args.append(json.dumps(v, ensure_ascii=False) if k in _JSON_COLS else v)
-        if sets:
-            self._exec(f"UPDATE daily SET {', '.join(sets)} WHERE id = ?", (*args, daily_id))
+        self._update("daily", daily_id, ("settings", "seen", "picks", "enabled", "ran", "problem"), fields)
         return self.get_daily(daily_id)
 
     def delete_daily(self, daily_id: int) -> bool:

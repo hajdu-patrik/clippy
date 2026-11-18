@@ -3,7 +3,7 @@ import threading
 import pytest
 
 from clippy.storage import Storage
-from clippy.tools import ClippyError, ThreadContext, log, log_sink, report, thread_context
+from clippy.tools import ClippyError, SharedProgress, ThreadContext, log, log_sink, report, thread_context
 from clippy.web.clips import ClipLibrary, ClipPresenter
 from clippy.web.db import DB
 from clippy.web.hub import Hub
@@ -38,6 +38,25 @@ def test_a_stopped_job_ends_at_its_next_line_also_in_its_worker_threads():
     log("after the job: no stop here")
     assert seen == ["step one"]
     assert ThreadContext().stop is None
+
+
+def test_a_stopped_job_also_stops_the_parts_it_runs_side_by_side():
+    stop, seen, failure = threading.Event(), [], []
+    with log_sink(seen.append, lambda f: None, stop):
+        shared = SharedProgress(1)
+
+        def render():
+            log("rendering")
+            stop.set()
+            try:
+                report(0.5)
+            except ClippyError as exc:
+                failure.append(exc.key)
+
+        thread = threading.Thread(target=shared.wrap(0, render))
+        thread.start()
+        thread.join()
+    assert seen == ["rendering"] and failure == ["error.chat_deleted"]
 
 
 def test_deleting_a_chat_stops_its_jobs(tmp_path):

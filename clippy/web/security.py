@@ -32,11 +32,12 @@ HEADERS = {
 
 
 def cache_policy(path: str, build: str) -> str:
-    """Content-hashed static URLs never change, so they are cached for a year; everything else is revalidated."""
+    """Content-hashed static URLs never change, so they are cached for a year; everything else is revalidated (a
+    clip's cover is rewritten in place when its title changes)."""
     if build and path.startswith(f"/static/{build}/"):
         return "public, max-age=31536000, immutable"
     if path.startswith("/media/"):
-        return "private, max-age=86400"
+        return "private, no-cache"
     if path == "/favicon.ico":
         return "public, max-age=604800"
     if path.startswith("/api/"):

@@ -13,7 +13,8 @@ from clippy.web import jobs
 from clippy.web.clips import ClipLibrary, ClipPresenter
 from clippy.web.db import DB
 from clippy.web.hub import Hub
-from clippy.web.jobs import JobHandler, Runner
+from clippy.web.handlers import JobHandler
+from clippy.web.jobs import Runner
 from clippy.web.media import MediaStore
 
 
@@ -161,7 +162,7 @@ class Gate(JobHandler):
 @pytest.fixture
 def runner(tmp_path, monkeypatch):
     monkeypatch.setitem(jobs.HANDLERS, "gate", Gate())
-    monkeypatch.setattr(jobs, "job_text", lambda kind, payload: {"key": "job.edit", "params": {"clip": 1}})
+    monkeypatch.setattr("clippy.web.handlers.job_text", lambda kind, payload: {"key": "job.edit", "params": {"clip": 1}})
     Gate.events, Gate.log = {}, []
     storage = Storage(tmp_path / "data", tmp_path / "library")
     db = DB(tmp_path / "t.db")

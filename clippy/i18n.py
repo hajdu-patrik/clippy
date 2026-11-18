@@ -72,6 +72,33 @@ CATALOG: dict[str, str] = {
     "error.download_playlist": "This {host} link is a profile, channel or playlist; paste the link of one video.",
     "error.no_sound": "The video from {host} has no sound, and Clippy picks and captions clips by what is said. If the post does have sound, the site may hide it from signed-out visitors: see CLIPPY_COOKIES_FROM_BROWSER in .env.example.",
     "error.llm_unreachable": "The local AI is not reachable right now: {error}",
+    "error.ollama_unreachable": "Ollama is not reachable at {url}. Start the Ollama app and pull the model: "
+                                "ollama pull {model}",
+    "error.ollama_no_model": "Ollama has no model “{model}”. Run: ollama pull {model}",
+    "error.llm_vram": "Not enough VRAM for {model}: {detail}",
+    "error.llm_quota": "The free API quota is used up (429). Wait a bit or switch to Ollama.",
+    "error.llm_api": "LLM API error {status}: {detail}",
+    "error.llm_failed": "The language model did not answer: {detail}",
+    "error.llm_json": "The LLM did not return valid JSON:\n{detail}",
+    "error.llm_none": "No LLM is configured (CLIPPY_LLM_BACKEND=none).",
+    "error.llm_backend": "Unknown LLM backend “{name}” (choose: {choices}).",
+    "error.llm_base_url": "The openai backend needs CLIPPY_LLM_BASE_URL (a Groq, Gemini or OpenRouter URL).",
+    "error.ffmpeg_missing": "ffmpeg is not installed. Install it: pip install imageio-ffmpeg (or winget install "
+                            "Gyan.FFmpeg).",
+    "error.ytdlp_missing": "yt-dlp is not installed: pip install \"yt-dlp[default]\"",
+    "error.probe_failed": "ffmpeg could not read {name} in time.",
+    "error.no_video_stream": "{name} has no video stream.",
+    "error.no_resolution": "The resolution of {name} cannot be read: {detail}",
+    "error.audio_decode": "The sound of {name} cannot be decoded: {detail}",
+    "error.encode_failed": "The video could not be encoded:\n{detail}",
+    "error.finishing_failed": "The edited video could not be rendered (ffmpeg exit {code}):\n{detail}",
+    "error.isolation_extras": "Voice isolation needs the studio extras: pip install -r requirements-ml.txt",
+    "error.ducking_extras": "Music ducking needs voice/music separation (requirements-ml.txt).",
+    "error.stems_failed": "Writing the separated voice and music failed.",
+    "error.ducking_failed": "Lowering the music under the speech failed: {detail}",
+    "error.no_file": "No such file: {path}",
+    "error.no_source": "Give a link or a file (or --from-json clips.json).",
+    "error.facecam_format": "--facecam takes four whole numbers: x,y,w,h",
     "note.prefix": "Note",
     "chat.new": "New chat",
     "chat.processing": "Processing video…",
@@ -185,13 +212,8 @@ CATALOG: dict[str, str] = {
     "cli.already_running": "Clippy is already running: {url}",
     "cli.starting": "Starting Clippy…",
     "cli.started": "Running: {url}   (stop: clippy down)",
-    "cmd.pair": "Pair a phone or tablet: a one-time link and QR code (after start --lan)",
-    "flag.start--lan": "Phones and tablets on the same Wi-Fi too (pairing)",
-    "flag.restart--lan": "Phones and tablets too",
-    "flag.restart--force": "Now, even while jobs run (they start again after the restart)",
     "cli.restart_wait": "Jobs are running; the restart waits until they finish (Ctrl+C: cancel, --force: now)…",
     "cli.restart_cancelled": "Restart cancelled.",
-    "flag.pair--reset": "Forget every paired device",
     "cli.lan_off": "Phone access is off. Start it with: clippy restart --lan (or CLIPPY_LAN=1 in .env)",
     "cli.lan_restart": "It runs without phone access; restart it with: clippy restart --lan",
     "cli.lan_failed": "Could not create a pairing link; see clippy logs",
@@ -287,11 +309,6 @@ CATALOG: dict[str, str] = {
     "error.dictation_failed": "The recording could not be turned into text: {error}",
     "cli.install_unix_path": "Add {path} to your PATH (e.g. in ~/.profile) so the clippy command is found.",
 }
-
-
-def lookup(key: str) -> str | None:
-    """The text of a key, or None (for strings whose text lives in code, like CLI help)."""
-    return CATALOG.get(key)
 
 
 def t(key: str, **params) -> str:

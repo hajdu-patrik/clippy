@@ -5,10 +5,12 @@ from __future__ import annotations
 
 import os
 import shutil
+import signal
 import subprocess
 import sys
 import time
 import webbrowser
+from collections.abc import Callable
 from pathlib import Path
 
 import requests
@@ -25,6 +27,7 @@ PID_FILE = STATE / "server.pid"
 LOG_FILE = STATE / "server.log"
 PORT = int(os.environ.get("CLIPPY_PORT", "7860"))
 URL = f"http://127.0.0.1:{PORT}"
+SYSTEM_TIMEOUT = 30
 
 _COLOR = bool((sys.stdout.isatty() or os.environ.get("FORCE_COLOR")) and not os.environ.get("NO_COLOR"))
 
@@ -72,28 +75,77 @@ def running() -> dict | None:
         return None
 
 
-def _tasklist(pid: int) -> str:
-    return subprocess.run(["tasklist", "/FI", f"PID eq {pid}", "/NH", "/FO", "CSV"], capture_output=True, text=True).stdout
+def _system(argv: list[str]) -> str:
+    """The output of a system tool, or "" when it is missing or hangs."""
+    try:
+        return subprocess.run(argv, capture_output=True, text=True, timeout=SYSTEM_TIMEOUT).stdout
+    except (OSError, subprocess.TimeoutExpired):
+        return ""
 
 
-def _pid_alive(pid: int) -> bool:
-    return f'"{pid}"' in _tasklist(pid)
+class WindowsProcesses:
+    """The server's processes found and stopped with tasklist, netstat and taskkill."""
+
+    @staticmethod
+    def _tasklist(pid: int) -> str:
+        return _system(["tasklist", "/FI", f"PID eq {pid}", "/NH", "/FO", "CSV"])
+
+    def alive(self, pid: int) -> bool:
+        return f'"{pid}"' in self._tasklist(pid)
+
+    def name(self, pid: int) -> str:
+        out = self._tasklist(pid)
+        return out.split(",")[0].strip('"').lower() if out.startswith('"') else ""
+
+    def listening(self, port: int) -> list[int]:
+        pids = set()
+        for line in _system(["netstat", "-ano", "-p", "TCP"]).splitlines():
+            parts = line.split()
+            if len(parts) >= 5 and parts[1].endswith(f":{port}") and parts[3].upper() == "LISTENING":
+                pids.add(int(parts[4]))
+        return sorted(pids)
+
+    def kill_tree(self, pid: int) -> None:
+        _system(["taskkill", "/PID", str(pid), "/T", "/F"])
+
+    def kill_ollama(self) -> None:
+        for image in ("ollama app.exe", "ollama.exe"):
+            _system(["taskkill", "/IM", image, "/F"])
 
 
-def _image_name(pid: int) -> str:
-    out = _tasklist(pid)
-    return out.split(",")[0].strip('"').lower() if out.startswith('"') else ""
+class PosixProcesses:
+    """The same on macOS and Linux: signals, ps, lsof and pkill; the server leads its own process group."""
+
+    def alive(self, pid: int) -> bool:
+        try:
+            os.kill(pid, 0)
+        except ProcessLookupError:
+            return False
+        except PermissionError:
+            return True
+        return True
+
+    def name(self, pid: int) -> str:
+        return Path(_system(["ps", "-p", str(pid), "-o", "comm="]).strip()).name.lower()
+
+    def listening(self, port: int) -> list[int]:
+        out = _system(["lsof", "-nP", f"-iTCP:{port}", "-sTCP:LISTEN", "-t"])
+        return sorted({int(pid) for pid in out.split() if pid.isdigit()})
+
+    def kill_tree(self, pid: int) -> None:
+        try:
+            os.killpg(pid, signal.SIGTERM)
+        except OSError:
+            try:
+                os.kill(pid, signal.SIGTERM)
+            except OSError:
+                pass
+
+    def kill_ollama(self) -> None:
+        _system(["pkill", "-x", "ollama"])
 
 
-def _port_pids() -> list[int]:
-    """PIDs listening on our port (fallback when the pid file is missing, e.g. started by hand)."""
-    out = subprocess.run(["netstat", "-ano", "-p", "TCP"], capture_output=True, text=True).stdout
-    pids = set()
-    for line in out.splitlines():
-        parts = line.split()
-        if len(parts) >= 5 and parts[1].endswith(f":{PORT}") and parts[3].upper() == "LISTENING":
-            pids.add(int(parts[4]))
-    return sorted(pids)
+PROCESSES = WindowsProcesses() if sys.platform == "win32" else PosixProcesses()
 
 
 def _tail(n: int = 40) -> None:
@@ -254,10 +306,10 @@ def start(open_ui: bool = True, lan: bool = False) -> int:
         return 1
     ensure_ollama()
     STATE.mkdir(parents=True, exist_ok=True)
-    log = open(LOG_FILE, "a", encoding="utf-8")
-    log.write(f"\n===== start {time.strftime('%Y-%m-%d %H:%M:%S')} =====\n")
-    log.flush()
-    proc = _spawn_server(log, lan)
+    with open(LOG_FILE, "a", encoding="utf-8") as log:
+        log.write(f"\n===== start {time.strftime('%Y-%m-%d %H:%M:%S')} =====\n")
+        log.flush()
+        proc = _spawn_server(log, lan)
     PID_FILE.write_text(str(proc.pid), encoding="utf-8")
     say(tr("cli.starting"))
     for _ in range(60):
@@ -280,18 +332,18 @@ def down(stop_ollama: bool = False) -> int:
     pids: list[int] = []
     if PID_FILE.exists():
         try:
-            pid = int(PID_FILE.read_text().strip())
-            if _pid_alive(pid):
+            pid = int(PID_FILE.read_text(encoding="utf-8").strip())
+            if PROCESSES.alive(pid):
                 pids.append(pid)
         except ValueError:
             pass
-    for pid in _port_pids():
-        if pid not in pids and _image_name(pid).startswith("python"):
+    for pid in PROCESSES.listening(PORT):
+        if pid not in pids and PROCESSES.name(pid).startswith("python"):
             pids.append(pid)
     if not pids and not running():
         say(tr("cli.not_running"))
     for pid in pids:
-        subprocess.run(["taskkill", "/PID", str(pid), "/T", "/F"], capture_output=True)
+        PROCESSES.kill_tree(pid)
     PID_FILE.unlink(missing_ok=True)
     if pids:
         for _ in range(20):
@@ -302,8 +354,7 @@ def down(stop_ollama: bool = False) -> int:
     for name in unload_all():
         say(tr("cli.vram_freed", models=name))
     if stop_ollama:
-        subprocess.run(["taskkill", "/IM", "ollama app.exe", "/F"], capture_output=True)
-        subprocess.run(["taskkill", "/IM", "ollama.exe", "/F"], capture_output=True)
+        PROCESSES.kill_ollama()
         say(tr("cli.ollama_stopped"))
     return 0
 
@@ -375,47 +426,71 @@ def banner() -> None:
     print()
 
 
+def _restart(args: list[str]) -> int:
+    lan = lan_wanted(args) or bool((running() or {}).get("lan"))
+    if "--force" not in args and not wait_until_idle():
+        return 1
+    down()
+    time.sleep(1)
+    return start(open_ui="--no-browser" not in args, lan=lan)
+
+
+def _open(args: list[str]) -> int:
+    if not running():
+        return start()
+    open_browser()
+    return 0
+
+
+def _logs(args: list[str]) -> int:
+    _tail(60)
+    return 0
+
+
+def _clip(args: list[str]) -> int:
+    from .cli import main as clip_main
+
+    return clip_main(args)
+
+
+def _install(args: list[str]) -> int:
+    from .shell import install
+
+    return install(say=say)
+
+
+def _help(args: list[str]) -> int:
+    banner()
+    return 0
+
+
+ACTIONS: dict[str, Callable[[list[str]], int]] = {
+    "start": lambda args: start(open_ui="--no-browser" not in args, lan=lan_wanted(args)),
+    "down": lambda args: down(stop_ollama="--all" in args),
+    "restart": _restart,
+    "status": lambda args: status(),
+    "open": _open,
+    "pair": lambda args: pair(reset="--reset" in args),
+    "logs": _logs,
+    "clip": _clip,
+    "install": _install,
+    "help": _help,
+}
+ALIASES = {"up": "start", "run": "start", "stop": "down", "kill": "down", "log": "logs", "h": "help"}
+
+
 def main(argv: list[str] | None = None) -> int:
     if sys.platform == "win32":
         os.system("")
         try:
             sys.stdout.reconfigure(encoding="utf-8")
-        except Exception:
+        except (AttributeError, ValueError):
             pass
     args = list(sys.argv[1:] if argv is None else argv)
-    cmd = (args[0].lower() if args else "help").lstrip("-")
-    if cmd == "clip":
-        from .cli import main as clip_main
-
-        return clip_main(args[1:])
-    if cmd == "install":
-        from .shell import install
-
-        return install(say=say)
-    if cmd in ("start", "up", "run"):
-        return start(open_ui="--no-browser" not in args, lan=lan_wanted(args))
-    if cmd in ("down", "stop", "kill"):
-        return down(stop_ollama="--all" in args)
-    if cmd == "restart":
-        lan = lan_wanted(args) or bool((running() or {}).get("lan"))
-        if "--force" not in args and not wait_until_idle():
-            return 1
-        down()
-        time.sleep(1)
-        return start(open_ui="--no-browser" not in args, lan=lan)
-    if cmd == "pair":
-        return pair(reset="--reset" in args)
-    if cmd == "status":
-        return status()
-    if cmd == "open":
-        if not running():
-            return start()
-        open_browser()
-        return 0
-    if cmd in ("logs", "log"):
-        _tail(60)
-        return 0
-    if cmd not in ("help", "h"):
+    name = (args[0].lower() if args else "help").lstrip("-")
+    action = ACTIONS.get(ALIASES.get(name, name))
+    if action is None:
         print(f"{R}{tr('cli.unknown', cmd=args[0])}{N}")
-    banner()
-    return 0 if cmd in ("help", "h") else 2
+        banner()
+        return 2
+    return action(args[1:])

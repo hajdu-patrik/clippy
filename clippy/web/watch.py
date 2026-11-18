@@ -10,7 +10,7 @@ import traceback
 from ..download import latest_uploads, require_public_url
 from ..tools import ClippyError, log
 from . import cover_retry, results, schedule
-from .jobs import english, tx
+from .texts import NEW_TITLE, english, tx
 from .presets import PRESETS
 
 TICK = 30.0
@@ -92,7 +92,7 @@ class Watcher:
         """Planned posts whose time has come start as posting jobs; a clip deleted since then is dropped."""
         started = 0
         for item in self.db.due_posts(self.clock()):
-            alive = any(c["number"] == item["number"] for c in self.db.current_clips(item["chat_id"]))
+            alive = self.db.current_clip(item["chat_id"], item["number"]) is not None
             if not self.db.set_scheduled_state(item["id"], "started" if alive else "dropped"):
                 continue
             if alive:
@@ -110,7 +110,7 @@ class Watcher:
         return done
 
     def refresh_clip(self, chat_id: int, number: int) -> None:
-        row = next((c for c in self.db.current_clips(chat_id) if c["number"] == number), None)
+        row = self.db.current_clip(chat_id, number)
         if row is not None:
             self.hub.publish(chat_id, {"type": "clip", "clip": self.runner.presenter.present(row, current=True)})
 
@@ -154,7 +154,7 @@ class Watcher:
             require_public_url(upload.url)
         except ClippyError:
             return None
-        chat = self.db.create_chat((upload.title or "New chat")[:80])
+        chat = self.db.create_chat((upload.title or NEW_TITLE)[:80])
         note = tx("watch.new_video", channel=w["title"] or w["url"], title=upload.title or upload.url)
         self.db.add_message(chat["id"], "assistant", english(note), data={"t": note})
         self.hub.publish(chat["id"], {"type": "chat", "chat": self.db.get_chat(chat["id"])})

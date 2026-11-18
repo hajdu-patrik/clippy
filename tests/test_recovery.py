@@ -14,6 +14,15 @@ def fail(text: str) -> Exception:
 def test_hopeless_failures_are_not_tried_again():
     assert recovery.diagnose(ClippyError(key="error.not_public", host="x")) is None
     assert recovery.diagnose(ClippyError(key="error.download_login", host="x", detail="")) is None
+    assert recovery.diagnose(ClippyError(key="error.ollama_no_model", model="m")) is None
+    assert recovery.diagnose(ClippyError(key="error.isolation_extras")) is None
+
+
+def test_every_key_the_rules_name_is_in_the_catalogue():
+    from clippy.i18n import CATALOG
+
+    named = set(recovery.FINAL) | {key for rule in recovery.RULES for key in rule.keys}
+    assert named <= set(CATALOG)
 
 
 @pytest.mark.parametrize("text, reason, options", [

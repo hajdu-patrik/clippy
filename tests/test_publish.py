@@ -8,7 +8,7 @@ from fastapi.testclient import TestClient
 from clippy import recovery
 from clippy.highlights import Clip
 from clippy.publish import PostResult, PostText, Tokens, Upload, checked, facebook, instagram, kick, tiktok, twitch, x, youtube
-from clippy.publish.base import Platform
+from clippy.publish.base import POLL_SECONDS, Platform
 from clippy.publish.accounts import AccountStore
 from clippy.publish.registry import ADAPTERS, LABELS, PLATFORMS, POSTING, default_platforms
 from clippy.publish.oauth import OAuthFlows, hex_challenge, s256_challenge
@@ -198,7 +198,7 @@ def test_instagram_container_upload_wait_and_publish(video):
     upload = http.calls[1][2]
     assert upload["headers"]["Authorization"] == "OAuth tok" and upload["headers"]["file_size"] == "10"
     assert upload["sent"] == b"0123456789"
-    assert waits == [instagram.POLL_SECONDS]
+    assert waits == [POLL_SECONDS]
 
 
 def test_instagram_token_is_checked_and_refreshed_well_before_it_runs_out():
@@ -698,7 +698,7 @@ def test_facebook_posts_a_reel_in_three_steps(video):
     assert upload["sent"] == b"0123456789"
     assert finish["data"] == {"upload_phase": "finish", "video_id": "V1", "video_state": "PUBLISHED",
                               "description": POST.caption}
-    assert waits == [facebook.POLL_SECONDS]
+    assert waits == [POLL_SECONDS]
 
 
 def test_facebook_reports_a_failed_reel_and_refuses_a_long_clip(tmp_path, video):

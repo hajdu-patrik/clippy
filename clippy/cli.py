@@ -7,8 +7,9 @@ import sys
 import time
 from pathlib import Path
 
-from . import __version__, i18n
+from . import __version__
 from .captions import COLORS
+from .i18n import CAPTION_LANGUAGES
 from .pipeline import Options, Project
 from .render import LAYOUTS
 from .storage import Storage
@@ -26,8 +27,9 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--min", dest="min_len", type=float, default=20, help="minimum clip length in seconds (default: 20)")
     p.add_argument("--max", dest="max_len", type=float, default=90, help="maximum clip length in seconds; the topic sets the length up to it (default: 90)")
     p.add_argument("--wish", default="", help='what kind of moments to pick, e.g. "the funniest parts"')
-    p.add_argument("--lang", default=None, choices=("hu", "en"), help="spoken language of the video (default: detected; hu or en forces it)")
-    p.add_argument("--captions", default=None, choices=("hu", "en"),
+    p.add_argument("--lang", default=None, choices=CAPTION_LANGUAGES,
+                   help="spoken language of the video (default: detected; hu or en forces it)")
+    p.add_argument("--captions", default=None, choices=CAPTION_LANGUAGES,
                    help="language of captions and opening text (default: the spoken one; another one is translated)")
     p.add_argument("--whisper", default="auto",
                    help="Whisper model: auto (GPU: large-v3, CPU: large-v3-turbo), large-v3, large-v3-turbo, small")
@@ -62,19 +64,24 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--only-select", action="store_true", help="only pick the clips (clips.json), edit it, then render")
     p.add_argument("--from-json", default=None, help="render from an (edited) clips.json")
     p.add_argument("--version", action="version", version=f"clippy {__version__}")
-    p.description = i18n.lookup("help.description") or p.description
-    p._positionals.title = i18n.lookup("help.positionals") or p._positionals.title
-    p._optionals.title = i18n.lookup("help.optionals") or p._optionals.title
-    for action in p._actions:
-        if action.dest not in ("help", "version"):
-            action.help = i18n.lookup(f"help.{action.dest}") or action.help
     return p
 
 
+def facecam_box(text: str | None) -> tuple[int, int, int, int] | None:
+    """The --facecam value as (x, y, w, h) source pixels."""
+    if not text:
+        return None
+    try:
+        box = tuple(int(v) for v in text.split(","))
+    except ValueError:
+        box = ()
+    if len(box) != 4:
+        raise ClippyError(key="error.facecam_format")
+    return box
+
+
 def options_from_args(args) -> Options:
-    facecam = tuple(int(v) for v in args.facecam.split(",")) if args.facecam else None
-    if facecam and len(facecam) != 4:
-        raise ClippyError("--facecam format: x,y,w,h")
+    facecam = facecam_box(args.facecam)
     return Options(
         n=args.clips, min_len=args.min_len, max_len=args.max_len, instructions=args.wish, llm=args.llm,
         model=args.model, lang=args.lang, captions=args.captions, whisper=args.whisper, vocab=args.vocab,
@@ -118,7 +125,7 @@ def _run(args) -> int:
     elif args.source:
         source, clips = args.source, None
     else:
-        raise ClippyError("Give a link or a file (or --from-json clips.json).")
+        raise ClippyError(key="error.no_source")
 
     storage = Storage(library=args.out)
     proj = Project(source, opts, storage).prepare()

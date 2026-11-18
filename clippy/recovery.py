@@ -19,7 +19,9 @@ FINAL = frozenset({
     "error.account_missing", "error.account_expired", "error.platform_not_configured", "error.platform_audit",
     "error.platform_rejected", "error.platform_slow", "error.clip_too_long_for", "error.no_platform",
     "error.unknown_platform", "error.bad_token", "error.platform_rate_limited", "error.posting_unsupported",
-    "error.no_page",
+    "error.no_page", "error.ffmpeg_missing", "error.ytdlp_missing", "error.no_file", "error.no_video_stream",
+    "error.ollama_no_model", "error.llm_none", "error.llm_backend", "error.llm_base_url", "error.isolation_extras",
+    "error.ducking_extras",
 })
 
 
@@ -44,7 +46,8 @@ RULES = (
     Rule("voice", ("demucs", "separation.py"), steps=({"isolate": "off"},)),
     Rule("alignment", ("align.py", "wav2vec", "mms_fa"), steps=({"align": False},)),
     Rule("length", keys=("error.no_suitable_clip",), steps=({"min_len": 10.0, "max_len": 90.0},)),
-    Rule("llm", ("ollama", "llm"), keys=("error.llm_unreachable",)),
+    Rule("llm", ("ollama", "llm"), keys=("error.llm_unreachable", "error.ollama_unreachable", "error.llm_failed",
+                                         "error.llm_api", "error.llm_json")),
     Rule("network", ("403", "429", "timed out", "timeout", "connection", "temporarily", "network", "unable to download",
                      "http error"), keys=("error.download_failed", "error.download_busy", "error.download_missing",
                            "error.platform_network")),

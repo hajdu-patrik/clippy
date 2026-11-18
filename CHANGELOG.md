@@ -94,6 +94,12 @@ change, what changed rather than how; dates are ISO 8601.
   profile / channel / playlist link, no video in the post, no sound, each with what helps.
 
 ### Changed
+- The web job module is split by responsibility (`texts`, `progress`, `handlers`, `jobs`), routes share two error
+  handlers and one upload reader, the platform adapters share one wait loop, and the command line's errors (LLM,
+  ffmpeg, files) come from the text catalogue.
+- Clip media is revalidated on every load, so a cover rewritten after a title change shows at once.
+- Dependency floors moved past known-vulnerable releases (requests, pillow, starlette); CI runs on the current
+  `actions/checkout` and `actions/setup-python`.
 - The topic sets a clip's length (default limit 20-90 s): a start check moves a clip that drops into a story or a
   rant back to where it starts, the ending check follows the topic by up to four sentences, and a recording cut off
   mid-sentence loses its unfinished words.

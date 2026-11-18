@@ -5,7 +5,6 @@ The Page's access token (it does not expire) is what Clippy keeps; the user toke
 from __future__ import annotations
 
 import os
-import time
 
 from ..tools import ClippyError, report
 from . import TIMEOUT, UPLOAD_TIMEOUT, PostResult, PostText, Reader, Tokens, Upload, check_length, checked
@@ -17,7 +16,6 @@ AUTH = f"https://www.facebook.com/{VERSION}/dialog/oauth"
 SCOPES = "pages_show_list,pages_read_engagement,pages_manage_posts"
 RUPLOAD = f"https://rupload.facebook.com/video-upload/{VERSION}"
 LONGEST = 90
-POLL_SECONDS, POLL_TRIES = 5, 120
 FAILED = {"error", "expired", "upload_failed"}
 
 
@@ -25,9 +23,6 @@ class Facebook(OAuthPlatform):
     name, label, renews = "facebook", "Facebook", True
     env = ("CLIPPY_FACEBOOK_APP_ID", "CLIPPY_FACEBOOK_APP_SECRET")
     auth_endpoint, token_url, scopes, challenge = AUTH, f"{GRAPH}/oauth/access_token", SCOPES, None
-
-    def __init__(self, sleep=time.sleep):
-        self.sleep = sleep
 
     def auth_params(self, params: dict) -> dict:
         """An app with Facebook Login for Business names a saved configuration instead of the permissions."""
@@ -78,15 +73,16 @@ class Facebook(OAuthPlatform):
         return PostResult(url=f"https://www.facebook.com/reel/{video_id}", remote_id=str(video_id), state="public")
 
     def _wait(self, http, video_id: str, auth: dict) -> None:
-        for _ in range(POLL_TRIES):
+        def finished() -> bool:
             status = checked(http.get(f"{GRAPH}/{video_id}", params={**auth, "fields": "status"}, timeout=TIMEOUT),
                              self.label).get("status") or {}
             phase = status.get("publishing_phase") or {}
             if status.get("video_status") == "ready" or phase.get("status") in ("complete", "completed"):
-                return
+                return True
             if status.get("video_status") in FAILED or phase.get("status") == "error":
                 reason = (phase.get("error") or (status.get("processing_phase") or {}).get("error") or {}).get("message")
                 raise ClippyError(key="error.platform_rejected", platform=self.label,
                                   detail=str(reason or status.get("video_status") or "error")[:200])
-            self.sleep(POLL_SECONDS)
-        raise ClippyError(key="error.platform_slow", platform=self.label)
+            return False
+
+        self.wait_for(finished)

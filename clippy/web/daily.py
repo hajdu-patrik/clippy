@@ -11,7 +11,8 @@ from .. import categories
 from ..download import require_public_url
 from ..tools import ClippyError, log
 from . import schedule
-from .jobs import english, tx
+from .clips import caption_of
+from .texts import english, tx
 from .watch import generate_payload
 
 DEFAULT_N = 3
@@ -25,21 +26,8 @@ SEEN_KEEP = 500
 
 
 def clean_times(text) -> list[str]:
-    """New York posting times, best first ("19:00, 15:00, 12:00"); the order is kept, duplicates dropped."""
-    parts = text if isinstance(text, list) else str(text or "").replace(";", ",").replace(" ", ",").split(",")
-    out = []
-    for part in (str(p).strip() for p in parts):
-        if not part:
-            continue
-        found = schedule.SLOT.match(part)
-        if not found:
-            raise ClippyError(key="error.bad_slot", slot=part[:12])
-        slot = f"{int(found.group(1)):02d}:{found.group(2)}"
-        if slot not in out:
-            out.append(slot)
-    if len(out) > schedule.MAX_SLOTS:
-        raise ClippyError(key="error.too_many_slots", max=schedule.MAX_SLOTS)
-    return out or list(DEFAULT_TIMES)
+    """New York posting times, best first ("19:00, 15:00, 12:00"); the order is kept."""
+    return schedule.parse_slots(text) or list(DEFAULT_TIMES)
 
 
 def daily_settings(n=DEFAULT_N, at=DEFAULT_AT, times="", platforms=()) -> dict:
@@ -217,7 +205,7 @@ def present_daily(db, presenter, d: dict) -> dict:
         last = (db.list_messages(p["chat_id"]) or [{}])[-1]
         shown.append({**p, "number": clip["number"] if clip else None, "failed": not clip and last.get("kind") == "error",
                       "clip_title": (clip["clip"] or {}).get("title", "") if clip else "",
-                      "text": clip["txt"].split("\n---\n")[0].strip() if clip else "", "ny": eastern_clock(p["due"])})
+                      "text": caption_of(clip["txt"]) if clip else "", "ny": eastern_clock(p["due"])})
     problem = d.get("problem") or {}
     return {"id": d["id"], "game": d["game"], "name": game.name if game else d["game"], "settings": d["settings"],
             "enabled": bool(d["enabled"]), "ran": d["ran"], "picks": shown,

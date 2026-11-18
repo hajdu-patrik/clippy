@@ -17,12 +17,10 @@ from . import agent
 from . import results, schedule
 from .clips import ClipLibrary, ClipPresenter
 from .hub import Hub
-from .jobs import PLACEHOLDER_TITLE, Runner
+from .jobs import Runner
+from .texts import NEW_TITLE, PLACEHOLDER_TITLE
 from .daily import DEFAULT_AT, daily_settings
 from .watch import generate_payload, watch_settings
-
-NEW_TITLE = "New chat"
-
 
 class NotFound(LookupError):
     pass
@@ -104,14 +102,14 @@ class ChatService:
 
     def timeline(self, chat_id: int, number: int) -> dict:
         chat = self.get(chat_id)
-        row = next((c for c in self.db.current_clips(chat_id) if c["number"] == number), None)
+        row = self.db.current_clip(chat_id, number)
         if row is None:
             raise NotFound(number)
         return TimelineRepository(self.db).of(row, chat.get("options") or {}).model_dump(mode="json")
 
     def undo(self, chat_id: int, number: int) -> dict:
         self.get(chat_id)
-        if not any(c["number"] == number for c in self.db.current_clips(chat_id)):
+        if self.db.current_clip(chat_id, number) is None:
             raise NotFound(number)
         job = self.runner.submit(chat_id, "undo", {"clips": [number]})
         return {"job": job.id}
@@ -119,7 +117,7 @@ class ChatService:
     def publish(self, chat_id: int, number: int, platforms: list[str], options: dict, at: float | None = None) -> dict:
         """Now (a posting job) or at `at` (a planned post the watch loop starts on time)."""
         self.get(chat_id)
-        row = next((c for c in self.db.current_clips(chat_id) if c["number"] == number), None)
+        row = self.db.current_clip(chat_id, number)
         if row is None:
             raise NotFound(number)
         if at is not None:
@@ -133,7 +131,7 @@ class ChatService:
         item = self.db.get_scheduled(item_id)
         if item is None or not self.db.set_scheduled_state(item_id, "cancelled"):
             return False
-        row = next((c for c in self.db.current_clips(item["chat_id"]) if c["number"] == item["number"]), None)
+        row = self.db.current_clip(item["chat_id"], item["number"])
         if row is not None:
             self.hub.publish(item["chat_id"], {"type": "clip", "clip": self.presenter.present(row, current=True)})
         return True

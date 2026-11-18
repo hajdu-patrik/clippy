@@ -36,7 +36,7 @@ COMMANDS: dict[str, tuple[str, dict[str, str]]] = {
 
 
 def command_doc(cmd: str) -> str:
-    return i18n.lookup(f"cmd.{cmd}") or COMMANDS[cmd][0]
+    return COMMANDS[cmd][0]
 
 
 def clip_flags() -> list[tuple[str, str, list[str]]]:
@@ -55,7 +55,7 @@ def clip_flags() -> list[tuple[str, str, list[str]]]:
 def flags_of(cmd: str) -> list[tuple[str, str, list[str]]]:
     if cmd == "clip":
         return clip_flags()
-    return [(f, i18n.lookup(f"flag.{cmd}{f}") or d, []) for f, d in COMMANDS[cmd][1].items()]
+    return [(f, d, []) for f, d in COMMANDS[cmd][1].items()]
 
 
 def _pq(text: str) -> str:

@@ -65,28 +65,33 @@ class OllamaLLM(LLM):
             "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}],
             "keep_alive": setting("KEEP_ALIVE", "30m"), "options": self.options(think),
         }
-        try:
-            r = requests.post(f"{self.base_url}/api/chat", json=payload, timeout=1800)
-        except requests.ConnectionError as exc:
-            raise ClippyError(f"Ollama is not reachable at {self.base_url}. Start the Ollama app "
-                              f"and pull the model: ollama pull {self.model}") from exc
+        r = self._chat(payload)
         if r.status_code == 400 and "think" in r.text.lower():
             payload.pop("think")
             payload["messages"][0]["content"] += "\n/think" if think else "\n/no_think"
-            r = requests.post(f"{self.base_url}/api/chat", json=payload, timeout=1800)
+            r = self._chat(payload)
         if r.status_code == 404:
-            raise ClippyError(f"Ollama has no model '{self.model}'. Run: ollama pull {self.model}")
+            raise ClippyError(key="error.ollama_no_model", model=self.model)
         if r.status_code == 500 and "memory" in r.text.lower():
-            raise ClippyError(f"Not enough VRAM for {self.model}: {r.text[:200]}")
-        r.raise_for_status()
-        return r.json()["message"]["content"]
+            raise ClippyError(key="error.llm_vram", model=self.model, detail=r.text[:200])
+        if not r.ok:
+            raise ClippyError(key="error.llm_api", status=r.status_code, detail=r.text[:300])
+        return _answer(r, "message", "content")
+
+    def _chat(self, payload: dict) -> requests.Response:
+        try:
+            return requests.post(f"{self.base_url}/api/chat", json=payload, timeout=1800)
+        except requests.ConnectionError as exc:
+            raise ClippyError(key="error.ollama_unreachable", url=self.base_url, model=self.model) from exc
+        except requests.RequestException as exc:
+            raise _failed(exc) from exc
 
     def unload(self) -> None:
-        _post(f"{self.base_url}/api/generate", {"model": self.model, "keep_alive": 0})
+        _signal(f"{self.base_url}/api/generate", {"model": self.model, "keep_alive": 0})
 
     def warm(self) -> None:
-        _post(f"{self.base_url}/api/generate", {"model": self.model, "keep_alive": setting("KEEP_ALIVE", "30m")},
-              timeout=300)
+        _signal(f"{self.base_url}/api/generate", {"model": self.model, "keep_alive": setting("KEEP_ALIVE", "30m")},
+                timeout=300)
 
 
 class OpenAICompatibleLLM(LLM):
@@ -99,15 +104,22 @@ class OpenAICompatibleLLM(LLM):
         payload = {"model": self.model, "temperature": 0.4, "response_format": {"type": "json_object"},
                    "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}]}
         url = f"{self.base_url}/chat/completions"
-        r = requests.post(url, json=payload, headers=headers, timeout=300)
+        r = self._post(url, payload, headers)
         if r.status_code == 400 and "response_format" in r.text:
             payload.pop("response_format")
-            r = requests.post(url, json=payload, headers=headers, timeout=300)
+            r = self._post(url, payload, headers)
         if r.status_code == 429:
-            raise ClippyError("The free API quota is used up (429). Wait a bit or switch to Ollama.")
+            raise ClippyError(key="error.llm_quota")
         if not r.ok:
-            raise ClippyError(f"LLM API error {r.status_code}: {r.text[:300]}")
-        return r.json()["choices"][0]["message"]["content"]
+            raise ClippyError(key="error.llm_api", status=r.status_code, detail=r.text[:300])
+        return _answer(r, "choices", 0, "message", "content")
+
+    @staticmethod
+    def _post(url: str, payload: dict, headers: dict) -> requests.Response:
+        try:
+            return requests.post(url, json=payload, headers=headers, timeout=300)
+        except requests.RequestException as exc:
+            raise _failed(exc) from exc
 
 
 class NoLLM(LLM):
@@ -117,7 +129,7 @@ class NoLLM(LLM):
         return "heuristic (no LLM)"
 
     def _complete(self, system: str, user: str, think: bool, schema: dict | None) -> str:
-        raise ClippyError("No LLM is configured (CLIPPY_LLM_BACKEND=none).")
+        raise ClippyError(key="error.llm_none")
 
 
 BACKENDS: dict[str, type[LLM]] = {c.backend: c for c in (OllamaLLM, OpenAICompatibleLLM, NoLLM)}
@@ -126,14 +138,31 @@ BACKENDS: dict[str, type[LLM]] = {c.backend: c for c in (OllamaLLM, OpenAICompat
 def create_llm(backend: str | None = None, model: str | None = None) -> LLM:
     name = (backend or setting("BACKEND", "ollama")).lower()
     if name not in BACKENDS:
-        raise ClippyError(f"Unknown LLM backend '{name}' (choose: {', '.join(BACKENDS)}).")
+        raise ClippyError(key="error.llm_backend", name=name, choices=", ".join(BACKENDS))
     base_url = setting("BASE_URL", OLLAMA_URL if name == "ollama" else "")
     if name == "openai" and not base_url:
-        raise ClippyError("The openai backend needs CLIPPY_LLM_BASE_URL (e.g. a Groq / Gemini / OpenRouter URL).")
+        raise ClippyError(key="error.llm_base_url")
     return BACKENDS[name](model or setting("MODEL", DEFAULT_MODEL), base_url, setting("API_KEY"))
 
 
-def _post(url: str, data: dict, timeout: float = 30) -> None:
+def _failed(exc: Exception) -> ClippyError:
+    """A request that broke off (a timeout, a dropped connection): an error the optional LLM steps can skip."""
+    return ClippyError(key="error.llm_failed", detail=f"{type(exc).__name__}: {exc}"[:300])
+
+
+def _answer(response: requests.Response, *path) -> str:
+    """The text at `path` in a model's JSON answer; a malformed answer is an LLM error too."""
+    try:
+        value = response.json()
+        for step in path:
+            value = value[step]
+    except (ValueError, KeyError, IndexError, TypeError) as exc:
+        raise ClippyError(key="error.llm_failed", detail=response.text[:300]) from exc
+    return str(value or "")
+
+
+def _signal(url: str, data: dict, timeout: float = 30) -> None:
+    """A request whose answer does not matter (loading or unloading a model)."""
     try:
         requests.post(url, json=data, timeout=timeout)
     except requests.RequestException:
@@ -157,7 +186,7 @@ def loaded_models(base_url: str = OLLAMA_URL) -> list[dict] | None:
 def unload_all(base_url: str = OLLAMA_URL) -> list[str]:
     names = [m["name"] for m in loaded_models(base_url) or []]
     for name in names:
-        _post(f"{base_url}/api/generate", {"model": name, "keep_alive": 0})
+        _signal(f"{base_url}/api/generate", {"model": name, "keep_alive": 0})
     return names
 
 
@@ -174,4 +203,4 @@ def parse_json_reply(text: str) -> dict:
                 return json.loads(m.group(0))
             except json.JSONDecodeError:
                 pass
-    raise ClippyError(f"The LLM did not return valid JSON:\n{text[:500]}")
+    raise ClippyError(key="error.llm_json", detail=text[:500])

@@ -14,6 +14,7 @@ from clippy.llm import parse_json_reply
 from clippy.text import clean_text, ends_clause, ends_sentence, is_filler, merge_suffixes
 from clippy.compositing import CropCompositor, FitCompositor, cover
 from clippy.director import FramePlan
+from clippy.tools import ClippyError
 
 SAMPLE = Path(__file__).parent / "sample" / "sample.mp4"
 
@@ -53,6 +54,31 @@ def test_captions_do_not_blink_on_short_pauses():
 def test_parse_json_reply_tolerates_think_and_fences():
     reply = '<think>hmm</think>\n```json\n{"clips": [{"start": 1, "end": 30}]}\n```'
     assert parse_json_reply(reply)["clips"][0]["end"] == 30
+
+
+def test_a_model_that_times_out_or_answers_garbage_fails_as_an_llm_error(monkeypatch):
+    import requests
+
+    from clippy import llm
+
+    def slow(*args, **kwargs):
+        raise requests.ReadTimeout("read timed out")
+
+    monkeypatch.setattr(llm.requests, "post", slow)
+    with pytest.raises(ClippyError) as caught:
+        llm.OllamaLLM("m", "http://127.0.0.1:9").chat_json("system", "user")
+    assert caught.value.key == "error.llm_failed"
+
+    class Garbage:
+        status_code, ok, text = 200, True, "<html>"
+
+        def json(self):
+            raise ValueError("not json")
+
+    monkeypatch.setattr(llm.requests, "post", lambda *args, **kwargs: Garbage())
+    with pytest.raises(ClippyError) as caught:
+        llm.OpenAICompatibleLLM("m", "http://api.example").chat_json("system", "user")
+    assert caught.value.key == "error.llm_failed"
 
 
 def test_sentences_split_on_punctuation():
@@ -160,6 +186,60 @@ def test_compose_shapes():
     assert FitCompositor().compose(frame, FramePlan("fit")).shape == (1920, 1080, 3)
     square = FitCompositor(square=True).compose(frame, FramePlan("square"))
     assert square.shape == (1920, 1080, 3) and (square[420:1500] == cover(frame, 1080, 1080)).all()
+
+
+def test_cuda_folders_join_path_only_once(tmp_path, monkeypatch):
+    import os
+    import sys
+    import types
+
+    from clippy import transcribe
+
+    (tmp_path / "cublas" / "bin").mkdir(parents=True)
+    nvidia = types.ModuleType("nvidia")
+    nvidia.__path__ = [str(tmp_path)]
+    monkeypatch.setitem(sys.modules, "nvidia", nvidia)
+    monkeypatch.setattr(transcribe.sys, "platform", "win32")
+    monkeypatch.setattr(transcribe.os, "add_dll_directory", lambda path: None, raising=False)
+    monkeypatch.setenv("PATH", "start")
+    try:
+        for _ in range(3):
+            transcribe._add_cuda_dll_dirs.cache_clear()
+            transcribe._add_cuda_dll_dirs()
+    finally:
+        transcribe._add_cuda_dll_dirs.cache_clear()
+    assert os.environ["PATH"].split(os.pathsep) == [str(tmp_path / "cublas" / "bin"), "start"]
+
+
+def test_a_cpu_fallback_after_a_cuda_failure_keeps_the_transcript_cached(tmp_path, monkeypatch):
+    from types import SimpleNamespace
+
+    from clippy import transcribe
+
+    segment = SimpleNamespace(start=0.0, end=1.0, text="Szia",
+                              words=[SimpleNamespace(start=0.0, end=0.5, word=" Szia", probability=0.9)])
+
+    class Model:
+        def __init__(self, device):
+            self.device = device
+
+        def detect_language(self, audio, **kwargs):
+            return "hu", 0.9, [("hu", 0.9)]
+
+        def transcribe(self, audio, **kwargs):
+            if self.device == "cuda":
+                raise RuntimeError("Library cudnn_ops64_9.dll is not found")
+            return iter([segment]), SimpleNamespace(language="hu", duration=1.0)
+
+    monkeypatch.setattr(transcribe, "cuda_available", lambda: True)
+    monkeypatch.setattr(transcribe, "_load_model", lambda name, device: (Model(device), device))
+    monkeypatch.setattr(transcribe, "decode_audio", lambda path: np.zeros(16000, np.float32))
+    video = tmp_path / "video.mkv"
+    video.write_bytes(b"x")
+    first = transcribe.transcribe(video, tmp_path)
+    assert [w["word"] for w in first["segments"][0]["words"]] == ["Szia"]
+    monkeypatch.setattr(transcribe, "_load_model", lambda name, device: pytest.fail("transcribed again"))
+    assert transcribe.transcribe(video, tmp_path) == first
 
 
 def test_romanize_for_aligner():
