@@ -6,6 +6,10 @@ change, what changed rather than how; dates are ISO 8601.
 ## [Unreleased]
 
 ### Added
+- Accounts for seven platforms in Settings, as a grid of cards: YouTube, Instagram, TikTok and now Facebook (Page
+  Reels) and X (chunked video upload) can be connected and posted to, planned posts included; Twitch and Kick can be
+  connected, but neither has an upload API, so their cards say "Connect only" and Clippy never posts there. Each
+  platform is one class behind a shared sign-in base (`clippy/publish/`).
 - Daily picks: "minden nap 3 GTA VI klipet" (or Settings, Daily picks) clips the most watched streamer moments of a
   game's Twitch and Kick category every morning, one per streamer, in the audience's language, and gives each a time
   to post it for a US audience with its post text; Settings lists the day's picks with their times and texts.

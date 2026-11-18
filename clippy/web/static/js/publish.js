@@ -1,11 +1,10 @@
 import { api } from "./api.js";
 import { t, tx } from "./i18n.js";
 import { onLive } from "./live.js";
+import { LABELS, POSTING } from "./platforms.js";
 import { state } from "./state.js";
 import { $, esc, toast } from "./util.js";
 
-const PLATFORMS = ["youtube", "instagram", "tiktok"];
-const LABELS = { youtube: "YouTube", instagram: "Instagram", tiktok: "TikTok" };
 let target = null;
 
 export async function loadAccounts() {
@@ -61,13 +60,13 @@ function caption(c) {
 function renderPlatforms() {
   const accounts = state.accounts?.accounts || {};
   const box = $("#postPlatforms");
-  box.innerHTML = PLATFORMS.map((name) => {
+  box.innerHTML = POSTING.map((name) => {
     const a = accounts[name] || {};
     const who = a.connected ? (a.name ? ` <small>${esc(a.name)}</small>` : "") : ` <small>${esc(t("accounts.notConnected"))}</small>`;
     return `<label class="check ${a.connected ? "" : "off"}"><input type="checkbox" name="platform" value="${name}"
       ${a.connected ? "checked" : "disabled"}><span>${esc(LABELS[name])}${who}</span></label>`;
   }).join("");
-  const any = PLATFORMS.some((name) => accounts[name]?.connected);
+  const any = POSTING.some((name) => accounts[name]?.connected);
   $("#postNote").textContent = any ? t("publish.note") : t("publish.noAccount");
   $("#postSend").disabled = !any;
   $("#postSettings").hidden = any;
