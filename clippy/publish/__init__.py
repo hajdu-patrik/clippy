@@ -1,4 +1,5 @@
-"""Posting finished clips to YouTube, Instagram and TikTok with the user's own accounts (docs/publishing.md).
+"""Connecting the user's own accounts (YouTube, Instagram, Facebook, TikTok, X, Twitch, Kick) and posting finished clips
+to the ones whose platform allows it (docs/publishing.md).
 
 The user's developer apps give the client ids (in .env); the user signs in once, the tokens stay in
 data/web/accounts.json and never reach the browser; every post is the user's own action."""
@@ -11,8 +12,6 @@ from pathlib import Path
 
 from ..tools import ClippyError, report
 
-PLATFORMS = ("youtube", "instagram", "tiktok")
-LABELS = {"youtube": "YouTube", "instagram": "Instagram", "tiktok": "TikTok"}
 TIMEOUT = 60
 UPLOAD_TIMEOUT = 600
 EXPIRED_CODES = {"invalid_grant", "access_token_invalid", "token_expired", "invalid_token", 190}
@@ -79,12 +78,15 @@ def checked(response, label: str):
     code = error.get("code") if isinstance(error, dict) else error
     if response.status_code < 400 and code in (None, "", "ok"):
         return data
-    reason = (error.get("message") if isinstance(error, dict) else None) or (
-        data.get("error_description") if isinstance(data, dict) else None) or code or response.status_code
+    top = data if isinstance(data, dict) else {}
+    reason = (error.get("message") if isinstance(error, dict) else None) or top.get("error_description") or top.get(
+        "message") or top.get("detail") or code or response.status_code
     if "unaudited" in str(code):
         raise ClippyError(key="error.platform_audit", platform=label)
     if response.status_code == 401 or code in EXPIRED_CODES:
         raise ClippyError(key="error.account_expired", platform=label)
+    if response.status_code == 429:
+        raise ClippyError(key="error.platform_rate_limited", platform=label)
     raise ClippyError(key="error.platform_rejected", platform=label, detail=str(reason)[:200])
 
 

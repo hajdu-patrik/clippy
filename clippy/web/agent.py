@@ -61,7 +61,7 @@ Actions:
     new post TITLES and DESCRIPTIONS for existing clips (e.g. "írj címet és leírást a klipeknek", "generate titles
     and descriptions", "legyen jobb címük"): only the post texts change, the video stays. New clips get them anyway.
 - {"type": "delete", "clip": <clip number>}
-- {"type": "publish", "clips": [<clip numbers>] or "all", "platforms": ["youtube", "instagram", "tiktok"]}
+- {"type": "publish", "clips": [<clip numbers>] or "all", "platforms": ["youtube", "instagram", "facebook", "tiktok", "x"]}
     POST finished clips to the user's own connected accounts, only when the user asks to post / upload them
     ("posztold ki a 2. klipet YouTube-ra", "upload clip 3 to TikTok"). Empty platforms = every connected account.
 - {"type": "watch", "url": "<channel or playlist url>", "n": <clips per video, 0 = default>}
@@ -205,7 +205,9 @@ PUBLISH_INTENT = re.compile(r"\b(post\b|posts\b|publish\w*|upload\w*|posztol\w*|
                             r"tedd ki|rakd ki|tegyél ki|rakj ki|töltsd fel|feltölt\w*|kirak\w*|közzé\w*)", re.I)
 PLATFORM_WORDS = {"youtube": re.compile(r"\b(youtube\w*|yt|shorts)\b", re.I),
                   "instagram": re.compile(r"\b(insta\w*|ig|reels?)\b", re.I),
-                  "tiktok": re.compile(r"\b(tik ?tok\w*)\b", re.I)}
+                  "facebook": re.compile(r"\b(facebook\w*|fb)\b", re.I),
+                  "tiktok": re.compile(r"\b(tik ?tok\w*)\b", re.I),
+                  "x": re.compile(r"\b(twitter\w*|tweet\w*|x\.com|x-(?:re|en|et)|(?:on|to|for) x)\b", re.I)}
 WATCH_WORDS = re.compile(r"\b(figyeld|figyeljed|figyelj|kövesd|kövessed|kovesd|watch|follow|monitor|keep an eye on)\b",
                          re.I)
 RECENT_WORDS = re.compile(r"\b(legujabb\w*|legutobbi\w*|legutolso\w*|utolso\w*|friss\w*|legfrissebb\w*|latest|newest|"

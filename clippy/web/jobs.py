@@ -28,7 +28,8 @@ from ..settings import Settings
 from ..llm import create_llm
 from ..i18n import t
 from ..pipeline import Options, Project, post_text
-from ..publish import LABELS, PLATFORMS, PostText, Upload
+from ..publish import PostText, Upload
+from ..publish.registry import LABELS, POSTING
 from ..storage import Storage
 from ..tools import ClippyError, SharedProgress, atomic_write_text, log, log_sink, report_span
 from .agent import RENDER_KEYS
@@ -692,7 +693,7 @@ class PublishJob(JobHandler):
         row = next((c for c in ctx.current_clips() if c["number"] == number), None)
         if row is None or not row.get("mp4") or not Path(row["mp4"]).is_file():
             raise ClippyError(key="error.no_clip", clip=number)
-        platforms = [x for x in dict.fromkeys(p.get("platforms") or []) if x in PLATFORMS]
+        platforms = [x for x in dict.fromkeys(p.get("platforms") or []) if x in POSTING]
         if not platforms:
             raise ClippyError(key="error.no_platform")
         upload = Upload(Path(row["mp4"]), float((row.get("info") or {}).get("duration_out") or 0.0))

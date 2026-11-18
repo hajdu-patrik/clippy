@@ -6,7 +6,7 @@ import re
 import time
 from datetime import datetime, timedelta
 
-from ..publish import PLATFORMS
+from ..publish.registry import POSTING
 from ..tools import ClippyError
 
 SLOT = re.compile(r"^([01]?\d|2[0-3])[:.]([0-5]\d)$")
@@ -51,7 +51,7 @@ def next_slots(slots: list[str], count: int, taken: set[float], now: float) -> l
 
 
 def post_settings(platforms, youtube_privacy: str = "public", tiktok_mode: str = "draft") -> tuple[list[str], dict]:
-    chosen = [p for p in dict.fromkeys(platforms or []) if p in PLATFORMS]
+    chosen = [p for p in dict.fromkeys(platforms or []) if p in POSTING]
     return chosen, {"youtube": {"privacy": youtube_privacy}, "tiktok": {"mode": tiktok_mode}}
 
 

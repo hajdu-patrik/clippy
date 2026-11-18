@@ -8,7 +8,8 @@ import time
 from dataclasses import replace
 
 from ..tools import ClippyError, report
-from . import (TIMEOUT, UPLOAD_TIMEOUT, PostResult, PostText, Reader, Tokens, Upload, check_length, checked)
+from . import TIMEOUT, UPLOAD_TIMEOUT, PostResult, PostText, Reader, Tokens, Upload, check_length, checked
+from .base import Platform
 
 VERSION = "v26.0"
 GRAPH = f"https://graph.instagram.com/{VERSION}"
@@ -21,14 +22,11 @@ CAPTION = 2200
 POLL_SECONDS, POLL_TRIES = 5, 120
 
 
-class Instagram:
-    name, label, oauth = "instagram", "Instagram", False
+class Instagram(Platform):
+    name, label, oauth, renews = "instagram", "Instagram", False, True
 
     def __init__(self, sleep=time.sleep):
         self.sleep = sleep
-
-    def configured(self) -> bool:
-        return True
 
     def connect(self, http, token: str, now: float) -> Tokens:
         """Checks a pasted token by asking who it belongs to."""
