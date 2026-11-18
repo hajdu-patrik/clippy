@@ -71,10 +71,20 @@ A clip starts where a sentence starts and ends where a thought is complete (`cli
 - **Starts:** a clip never starts on a connector without the sentence before it.
 - **Length:** if no complete ending fits the length setting, the clip may run up to 12 s longer rather than stop
   mid-sentence.
-- **Payoff check:** an LLM check then looks at each chosen clip's last sentences and what follows. It may move the
-  end by whole sentences to land the punchline, never into the middle of one.
-- **Chat edits:** moving a clip's start or end in the chat lands on whole sentences too. A cut given in seconds
-  that falls inside a sentence moves to that sentence's nearer edge, so the sentence goes or stays whole. A cut
-  that falls in a pause stays where it is, and a cut given by words stays word-exact.
+- **The topic sets the length:** inside the length limits (default 20-90 s) a clip runs from where its topic,
+  story or rant starts to where it is finished; 30 s is not a target.
+- **Start check:** an LLM check reads the sentences said before each chosen clip. When the clip drops into the
+  middle of a story or a rant, its start moves back by whole sentences (up to 4) to where that topic starts, as
+  long as the clip stays within the limit and off the other clips; a start on filler moves forward.
+- **Payoff check:** an LLM check then looks at each chosen clip's last sentences and what follows. While the same
+  topic still goes on, the end moves on by whole sentences (up to 4, in two rounds), never into the middle of one.
+  When the recording itself is cut off mid-sentence, the unfinished words at the end are dropped.
+- **Chat edits:** moving a clip's start or end in the chat lands on whole sentences too, but never further than
+  6 s from where it was asked to be: in fast speech without punctuation or pauses it lands on the nearest word
+  instead. A cut given in seconds that falls inside a sentence moves to that sentence's nearer edge, so the
+  sentence goes or stays whole. A cut that falls in a pause stays where it is, and a cut given by words stays
+  word-exact.
+- **Stretched timings:** a word whose timing swallowed a silence (most of a second) does not take away the air
+  after the word before it, so a clip never ends on a clipped last word.
 
 On the cached GTA stream transcript, 200 random picks ended mid-thought 60% of the time before this and 0% after.

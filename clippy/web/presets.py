@@ -24,14 +24,14 @@ class Preset:
 
 PRESETS = (
     Preset("podcast", "🎙",
-           {"n": 6, "min_len": 30, "max_len": 60, "layout": "face", "audio": "voice", "tighten": True,
+           {"n": 6, "min_len": 30, "max_len": 90, "layout": "face", "audio": "voice", "tighten": True,
             "hook": False, "punch": False},
            "Podcast or interview. Pick standalone moments a new viewer understands without the rest: a strong or "
            "debatable opinion, a surprising fact or number, a personal story with its payoff, funny banter, an honest "
            "or emotional confession. Start on the strongest sentence (no greeting, set-up or filler), one idea per "
            "clip, stop right after the payoff."),
     Preset("gameplay", "🎮",
-           {"n": 5, "min_len": 20, "max_len": 45, "layout": "stream", "audio": "natural", "tighten": False,
+           {"n": 5, "min_len": 20, "max_len": 75, "layout": "stream", "audio": "natural", "tighten": False,
             "hook": False, "punch": False},
            "Gameplay or stream. Pick the peaks: clutch or skilful plays, wins, big fails, unexpected twists, the "
            "streamer's loud reactions, laughter, rage, funny lines, jokes with chat or teammates. Start 1-3 s before "

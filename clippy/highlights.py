@@ -293,20 +293,37 @@ def _rerank(llm: LLM, cands: list[Clip], words: list[dict], n: int, title: str, 
 
 ENDINGS_PROMPT = """You check where short video clips END. For each clip you get its last sentences and, after
 "NEXT:", what is said right after it in the video ({language}).
-A good ending lands the punchline, the conclusion or the answer. A bad ending stops on a set-up, a list that goes
-on, a promise or a question that the next sentences answer, or it adds the first sentence of a new topic.
+A good ending is where the clip's topic is finished: the punchline, the conclusion, the answer, the end of the
+story or the rant. A bad ending stops while the same topic, story, argument or rant still goes on, on a set-up, a
+list that goes on, a promise or a question that the next sentences answer, or it adds the first sentence of a new
+topic. The length does not matter here: never end a topic early to keep a clip short. When NEXT says the video
+ends and the clip's last words are an unfinished sentence (the recording was cut off mid-sentence), that is a bad
+ending too: answer "trim" with "words": how many of the clip's last words belong to that unfinished sentence.
 For each clip answer:
-- "ok": the ending is complete;
-- "extend" with "sentences" 1 or 2: the next sentence(s) finish this clip's thought;
+- "ok": the topic is finished;
+- "extend" with "sentences" 1 to {max_steps}: the next sentence(s) still belong to this topic and finish it;
 - "trim": the clip's last sentence already starts something new that the clip does not need.
+Return ONLY JSON: {{"clips": [{{"id": <id>, "verdict": "ok" | "extend" | "trim", "sentences": 1, "words": 0}}]}}"""
+
+STARTS_PROMPT = """You check where short video clips START. For each clip you get the sentences said right BEFORE
+it, numbered backwards from the clip ([-1] is the one just before it), then its first sentences after "CLIP:"
+({language}).
+A good start opens the clip's topic: a new viewer knows what is being talked about. A bad start drops into the
+middle of a story, a rant, an argument or an answer whose beginning is in the sentences before, or it opens on
+filler or on the end of the previous topic.
+For each clip answer:
+- "ok": the clip starts where its topic starts;
+- "extend" with "sentences" 1 to {max_steps}: the topic starts that many sentences earlier ([-1] = 1);
+- "trim" with "sentences" 1 or 2: the clip's first sentence(s) are filler or still the previous topic.
 Return ONLY JSON: {{"clips": [{{"id": <id>, "verdict": "ok" | "extend" | "trim", "sentences": 1}}]}}"""
+MAX_STEPS, CHECK_ROUNDS, HEAD_WORDS, MAX_CUT_WORDS = 4, 2, 40, 15
 
 ENDINGS_SCHEMA = {
     "type": "object",
     "properties": {"clips": {"type": "array", "items": {
         "type": "object", "properties": {"id": {"type": "integer"},
                                          "verdict": {"type": "string", "enum": ["ok", "extend", "trim"]},
-                                         "sentences": {"type": "integer"}},
+                                         "sentences": {"type": "integer"}, "words": {"type": "integer"}},
         "required": ["id", "verdict"]}}},
     "required": ["clips"],
 }
@@ -351,10 +368,64 @@ def _fresh(raw: list[Clip], words: list[dict], min_len: float, max_len: float, e
     return unique
 
 
+def _check_starts(llm: LLM, clips: list[Clip], words: list[dict], bounds: Boundaries, min_len: float,
+                  max_len: float, language: str, neighbours: list[Clip] | None = None) -> None:
+    """Each clip starts where its topic starts: a start may move back over whole sentences when the story or rant
+    began before it (as long as the clip stays within the length limit and off the other clips), or forward over
+    filler, never into the middle of a sentence."""
+    spans, lines = [], []
+    for k, c in enumerate(clips):
+        i0, i1 = bounds.index_at_start(c.start - 0.01), bounds.index_at_end(c.end)
+        if i0 is None or i1 is None or i1 < i0:
+            spans.append(None)
+            continue
+        before = [i for i in bounds.open_at if i < i0][-MAX_STEPS:]
+        spans.append((i0, i1, before))
+        units = [f"[{n - len(before)}] {_words_text(words[s:e])}"
+                 for n, (s, e) in enumerate(zip(before, before[1:] + [i0]))]
+        lines.append(f"id={k}\nBEFORE:\n" + ("\n".join(units) or "(the video starts here)") +
+                     f"\nCLIP: {_words_text(words[i0:i0 + HEAD_WORDS])}")
+    if not lines:
+        return
+    try:
+        reply = llm.chat_json(STARTS_PROMPT.format(language=language, max_steps=MAX_STEPS), "\n\n".join(lines),
+                              think=False, schema=ENDINGS_SCHEMA)
+    except Exception as exc:
+        log(f"[hook] start check skipped: {exc}")
+        return
+    for item in reply.get("clips", []) if isinstance(reply, dict) else []:
+        try:
+            k, verdict = int(item["id"]), str(item["verdict"])
+            span, clip = spans[k], clips[k]
+        except (KeyError, ValueError, IndexError, TypeError):
+            continue
+        if span is None or verdict not in ("extend", "trim"):
+            continue
+        i0, i1, before = span
+        steps = max(1, min(MAX_STEPS, int(item.get("sentences") or 1)))
+        if verdict == "extend":
+            fits = [i for i in before[-steps:] if bounds.duration(i, i1) <= max_len + END_OVERFLOW]
+            target = fits[0] if fits else None
+        else:
+            later = [i for i in bounds.open_at if i0 < i <= i1 and bounds.duration(i, i1) >= min_len]
+            target = later[min(steps, 2) - 1] if len(later) >= min(steps, 2) else None
+        if target is None or target == i0:
+            continue
+        moved = Clip(start_time(words, target), clip.end, clip.score)
+        if verdict == "extend" and any(o is not clip and _overlap(moved, o) >= 0.15 for o in neighbours or clips):
+            log(f"[hook] start kept: moving it back would run into another clip ({clip.start:.1f} s)")
+            continue
+        before_t = clip.start
+        _place(clip, words, target, i1)
+        log(f"[hook] start fixed: {verdict} ({before_t:.1f} s -> {clip.start:.1f} s)")
+
+
 def _check_endings(llm: LLM, clips: list[Clip], words: list[dict], bounds: Boundaries, min_len: float,
-                   max_len: float, language: str) -> None:
-    """The picker's last word on each ending: an end may move by whole sentences (to another complete boundary
-    within the length limits), never into the middle of one."""
+                   max_len: float, language: str, neighbours: list[Clip] | None = None) -> list[Clip]:
+    """The picker's last word on each ending: an end moves by whole sentences (to another complete boundary within
+    the length limit) until the clip's topic is finished, never into the middle of one. Returns the clips whose end
+    moved later, which may still need more."""
+    extended: list[Clip] = []
     spans = []
     for c in clips:
         i0, i1 = bounds.index_at_start(c.start - 0.01), bounds.index_at_end(c.end)
@@ -363,13 +434,13 @@ def _check_endings(llm: LLM, clips: list[Clip], words: list[dict], bounds: Bound
              f"{_words_text(words[i1 + 1:i1 + 1 + NEXT_WORDS]) or '(the video ends)'}"
              for k, span in enumerate(spans) if span for i0, i1 in [span]]
     if not lines:
-        return
+        return extended
     try:
-        reply = llm.chat_json(ENDINGS_PROMPT.format(language=language), "\n\n".join(lines), think=False,
-                              schema=ENDINGS_SCHEMA)
+        reply = llm.chat_json(ENDINGS_PROMPT.format(language=language, max_steps=MAX_STEPS), "\n\n".join(lines),
+                              think=False, schema=ENDINGS_SCHEMA)
     except Exception as exc:
         log(f"[hook] ending check skipped: {exc}")
-        return
+        return extended
     for item in reply.get("clips", []) if isinstance(reply, dict) else []:
         try:
             k, verdict = int(item["id"]), str(item["verdict"])
@@ -382,20 +453,26 @@ def _check_endings(llm: LLM, clips: list[Clip], words: list[dict], bounds: Bound
         ends = bounds.complete_ends(i0, max_len + END_OVERFLOW)
         if verdict == "extend":
             later = [j for j in ends if j > i1]
-            steps = max(1, min(2, int(item.get("sentences") or 1)))
+            steps = max(1, min(MAX_STEPS, int(item.get("sentences") or 1)))
             target = later[min(steps, len(later)) - 1] if later else None
         else:
+            cut_off = i1 == len(words) - 1 and 0 < int(item.get("words") or 0) <= MAX_CUT_WORDS
             earlier = [j for j in ends if j < i1 and bounds.duration(i0, j) >= min_len]
-            target = earlier[-1] if earlier else None
+            target = i1 - int(item["words"]) if cut_off else (earlier[-1] if earlier else None)
+            if target is not None and bounds.duration(i0, target) < 0.6 * min_len:
+                target = None
         if target is None:
             continue
         moved = Clip(clip.start, end_time(words, target), clip.score)
-        if verdict == "extend" and any(o is not clip and _overlap(moved, o) >= 0.15 for o in clips):
+        if verdict == "extend" and any(o is not clip and _overlap(moved, o) >= 0.15 for o in neighbours or clips):
             log(f"[hook] end kept: extending would run into another clip ({clip.end:.1f} s)")
             continue
         before = clip.end
         _place(clip, words, i0, target)
         log(f"[hook] end fixed: {verdict} ({before:.1f} s -> {clip.end:.1f} s)")
+        if verdict == "extend":
+            extended.append(clip)
+    return extended
 
 
 TEXTS_PROMPT = """You are a native {text_language} social media editor. Write the post texts of short clips cut
@@ -664,7 +741,10 @@ def find_highlights(transcript: dict, llm: LLM, max_clips: int = 5, min_len: flo
     chosen = unique[:max_clips]
     spoken = [c for c in chosen if _speaks(c, words)]
     if llm.backend != "none" and spoken:
-        _check_endings(llm, spoken, words, bounds, min_len, max_len, language)
+        _check_starts(llm, spoken, words, bounds, min_len, max_len, language, chosen)
+        again = spoken
+        for _ in range(CHECK_ROUNDS):
+            again = _check_endings(llm, again, words, bounds, min_len, max_len, language, chosen) if again else []
     untitled = [c for c in chosen if not c.description]
     if llm.backend != "none" and untitled:
         try:

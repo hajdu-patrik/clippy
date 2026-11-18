@@ -82,7 +82,7 @@ def test_a_short_video_becomes_one_clip_of_nearly_all_of_it(monkeypatch, tmp_pat
         proj.select(exclude=[clip])
     proj, seen = project_with(monkeypatch, tmp_path, 3300.0, [{"word": "hi", "start": 0.5, "end": 1.0}])
     proj.select(n=5)
-    assert seen == {"n": 5, "min_len": 20, "max_len": 60}
+    assert seen == {"n": 5, "min_len": 20, "max_len": 90}
 
 
 def test_a_whole_moment_stays_one_clip_even_when_the_picker_finds_nothing(monkeypatch, tmp_path):

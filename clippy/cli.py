@@ -24,7 +24,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("source", nargs="?", help="video link (YouTube, TikTok, Instagram, Twitch…) or a local video file")
     p.add_argument("-n", "--clips", type=int, default=5, help="how many clips (default: 5)")
     p.add_argument("--min", dest="min_len", type=float, default=20, help="minimum clip length in seconds (default: 20)")
-    p.add_argument("--max", dest="max_len", type=float, default=60, help="maximum clip length in seconds (default: 60)")
+    p.add_argument("--max", dest="max_len", type=float, default=90, help="maximum clip length in seconds; the topic sets the length up to it (default: 90)")
     p.add_argument("--wish", default="", help='what kind of moments to pick, e.g. "the funniest parts"')
     p.add_argument("--lang", default=None, choices=("hu", "en"), help="spoken language of the video (default: detected; hu or en forces it)")
     p.add_argument("--captions", default=None, choices=("hu", "en"),

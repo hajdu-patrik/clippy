@@ -53,7 +53,7 @@ Every stage is cached, so re-runs are fast.
 | Option | What it does |
 |---|---|
 | `-n 5` | number of clips |
-| `--min 20 --max 60` | clip length in seconds before the tight edit (20-45 s is a good start; TikTok Creator Rewards needs 60+) |
+| `--min 20 --max 90` | clip length limits in seconds before the tight edit; inside them the topic sets the length (a clip ends where its story or rant is finished; TikTok Creator Rewards needs 60+) |
 | `--wish "..."` | what kind of moments to pick, e.g. "the funniest parts" |
 | `--lang hu` | spoken language (default: detected, the video's own language) |
 | `--captions en` | language of the captions and the opening text; one different from the spoken language is translated |

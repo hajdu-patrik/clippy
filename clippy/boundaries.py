@@ -17,6 +17,8 @@ ANSWER_GAP = 1.5
 START_REACH = 3.0
 LEAN_BACK = 10.0
 END_OVERFLOW = 12.0
+SNAP_REACH = 6.0
+STRETCHED = 0.8
 
 COMPLETE_SENTENCE, COMPLETE_PAUSE, OPEN_SENTENCE, OPEN_PAUSE, NONE = 3, 2, 1, 0, -1
 _CLOSERS = "\"”»)'"
@@ -29,9 +31,16 @@ def start_time(words: Sequence[dict], i: int) -> float:
 
 
 def end_time(words: Sequence[dict], i: int) -> float:
-    """A clip's end just after word i, with a little air that never reaches into the word after."""
-    next_start = words[i + 1]["start"] - 0.06 if i + 1 < len(words) else words[i]["end"] + 0.5
-    return round(max(words[i]["end"], min(words[i]["end"] + 0.4, next_start)), 3)
+    """A clip's end just after word i, with a little air that never reaches into the word after. A next word
+    stretched over most of a second is a timing that swallowed a silence (its sound comes at its end), so the air
+    may go into its start then."""
+    if i + 1 >= len(words):
+        return round(words[i]["end"] + 0.4, 3)
+    after = words[i + 1]
+    begins = after["start"]
+    if after["end"] - after["start"] > STRETCHED:
+        begins = max(begins, after["end"] - 0.4)
+    return round(max(words[i]["end"], min(words[i]["end"] + 0.4, begins - 0.06)), 3)
 
 
 def _plain(word: str) -> str:
@@ -130,17 +139,31 @@ class Boundaries:
         """Every complete end after word i0 up to a duration, in order (for moving an end by whole sentences)."""
         return [j for j in self._upto(i0, max_dur) if self.level[j] >= COMPLETE_PAUSE]
 
-    def start_at(self, t: float, later: bool) -> float | None:
-        """A start time moved to a sentence start: the first at or after `t`, or the last at or before it."""
-        times = [self.starts[i] for i in self.open_at]
+    @staticmethod
+    def _toward(times: list[float], t: float, later: bool, reach: float) -> int | None:
+        """Index of the first time at or after `t` (or the last at or before it) no further than `reach` away."""
         k = bisect_left(times, t - 0.05) if later else bisect_right(times, t + 0.05) - 1
-        return start_time(self.words, self.open_at[k]) if 0 <= k < len(times) else None
+        return k if 0 <= k < len(times) and abs(times[k] - t) <= reach else None
 
-    def end_at(self, t: float, later: bool) -> float | None:
-        """An end time moved to a complete end: the first at or after `t`, or the last at or before it."""
-        times = [self.ends[j] for j in self.end_at_list]
-        k = bisect_left(times, t - 0.05) if later else bisect_right(times, t + 0.05) - 1
-        return end_time(self.words, self.end_at_list[k]) if 0 <= k < len(times) else None
+    def start_at(self, t: float, later: bool, reach: float = SNAP_REACH) -> float | None:
+        """A start time moved to a sentence start: the first at or after `t`, or the last at or before it, within
+        `reach`; past that (fast speech without punctuation or pauses) the start of the nearest word that way."""
+        k = self._toward([self.starts[i] for i in self.open_at], t, later, reach)
+        if k is not None:
+            return start_time(self.words, self.open_at[k])
+        k = self._toward(self.starts, t, later, reach)
+        return start_time(self.words, k) if k is not None else None
+
+    def end_at(self, t: float, later: bool, reach: float = SNAP_REACH) -> float | None:
+        """An end time moved to a complete end: the first at or after `t`, or the last at or before it, within
+        `reach`; else a sentence end or pause that the next words carry on, else the end of the nearest word. A
+        rant without punctuation never sends the end tens of seconds away from where it was asked to be."""
+        for found in (self.end_at_list, [j for j, level in enumerate(self.level) if level >= OPEN_PAUSE]):
+            k = self._toward([self.ends[j] for j in found], t, later, reach)
+            if k is not None:
+                return end_time(self.words, found[k])
+        k = self._toward(self.ends, t, later, reach)
+        return end_time(self.words, k) if k is not None else None
 
     def sentence_at(self, t: float) -> tuple[int, int] | None:
         """First and last word of the sentence being spoken at `t`; None in a pause or outside the speech."""

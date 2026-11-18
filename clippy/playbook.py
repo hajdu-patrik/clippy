@@ -99,8 +99,9 @@ def selection_rules(min_len: int, max_len: int) -> str:
 - RELEVANCE (10): matters to the people who watch this kind of video; one sharp idea, not a summary.
 
 Rules:
-- Length between {min_len} and {max_len} seconds, long enough for the whole arc: strong clips usually run
-  25-45 s, a story may use the maximum. Never drop the setup or the payoff to make a clip shorter.
+- Length between {min_len} and {max_len} seconds, and the TOPIC sets it: the clip starts where its topic, story or
+  rant starts and ends where it is finished. 30 s is not a target; never cut a topic short to reach a round length,
+  and never drop the setup or the payoff to make a clip shorter. Strong clips often run 25-60 s.
 - Under {PAYOFF_FIRST_MAX_SECONDS} s the payoff may come first; longer narrative clips open on the tension and
   land the payoff later, then stop within about 2 seconds.
 - Reject windows that start with filler or bridge words ("so", "anyway", "as I said", "um", "szóval", "hát", "na",
@@ -181,7 +182,8 @@ def advice() -> str:
 retention graph decides):
 - First 3 s decide: open on a specific claim, tension or mid-action; no title cards, logos or slow intros.
   Hook text adds curiosity the speech does not, max 7 words, honestly paid off.
-- Length: shortest that delivers one complete idea; test 20-45 s, stories up to 60-90 s. One Shorts study: median
+- Length: the topic sets it, one complete idea or story from its start to its end; often 20-45 s, stories and
+  rants 60-90 s; never cut a topic short to hit a round number. One Shorts study: median
   views peak at 11-20 s. TikTok Creator Rewards pays only for original videos over 1 minute.
 - Captions on (many watch muted), word by word, readable, out of the bottom ~20% and right ~15%; do not highlight
   every word. Minimal styles are replacing the loud neon look.

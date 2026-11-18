@@ -47,7 +47,7 @@ SPARSE_SPEECH = 0.35
 class Options:
     n: int = 5
     min_len: float = 20
-    max_len: float = 60
+    max_len: float = 90
     instructions: str = ""
     llm: str | None = None
     model: str | None = None

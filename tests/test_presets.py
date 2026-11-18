@@ -39,7 +39,7 @@ def test_every_button_has_a_prompt():
 
 @pytest.mark.parametrize("model", [SilentLLM(), ChattyLLM()])
 def test_a_preset_prompt_gives_the_same_settings_every_time(model):
-    expected = {"podcast": (6, 30, 60, "face", False), "gameplay": (5, 20, 45, "stream", False),
+    expected = {"podcast": (6, 30, 90, "face", False), "gameplay": (5, 20, 75, "stream", False),
                 "promo": (4, 15, 30, "face", True), "quick": (3, 10, 25, "auto", False)}
     for key, text in templates().items():
         out = run_agent(model, {"id": 1}, [], [], text + LINK)
@@ -54,7 +54,7 @@ def test_a_preset_prompt_gives_the_same_settings_every_time(model):
 
 
 def test_edited_numbers_and_an_extra_wish_are_kept():
-    text = templates()["gameplay"].replace("5 clips", "8 clips").replace("20-45", "15-30")
+    text = templates()["gameplay"].replace("5 clips", "8 clips").replace("20-75", "15-30")
     text = text.replace("Extra wishes: " + chr(10), "Extra wishes: only the GTA parts, and follow my face" + chr(10))
     action = presets.apply(text, [{"type": "generate", "url": LINK, "n": 5, "instructions": "",
                                    "options": {"layout": "face"}}])[0]

@@ -1,7 +1,7 @@
 import dataclasses
 
-from clippy.boundaries import COMPLETE_SENTENCE, END_OVERFLOW, OPEN_SENTENCE, Boundaries
-from clippy.highlights import Clip, _check_endings, _snap
+from clippy.boundaries import COMPLETE_SENTENCE, END_OVERFLOW, OPEN_SENTENCE, Boundaries, end_time
+from clippy.highlights import Clip, _check_endings, _check_starts, _snap
 
 
 def speech(text: str, start: float = 0.0, step: float = 0.5, pause_after: dict | None = None) -> list[dict]:
@@ -169,3 +169,62 @@ def test_an_ending_never_grows_into_another_picked_clip():
     _check_endings(Reply({"clips": [{"id": 0, "verdict": "extend", "sentences": 2}]}), [first, neighbour], words,
                    bounds, 2, 30, "English")
     assert first.end == before
+
+
+RANT = ("this is a joke you guys are all going into five man groups getting to level sixty in one week and you farm "
+        "four thousand gold after that playing a class everybody can play it makes me sick ")
+
+
+def test_a_rant_without_punctuation_never_sends_a_trim_far_away():
+    words = speech(RANT * 3, step=0.3)
+    bounds = Boundaries(words)
+    t = words[60]["end"]
+    for later in (False, True):
+        end = bounds.end_at(t, later=later)
+        start = bounds.start_at(t, later=later)
+        assert end is not None and abs(end - t) <= 6.5
+        assert start is not None and abs(start - t) <= 6.5
+
+
+def test_a_clip_that_drops_into_a_story_moves_its_start_to_where_the_story_begins():
+    words = speech(GTA)
+    bounds = Boundaries(words)
+    clip = _snap(Clip(14.0, 22.0, 50), words, 2, 40, bounds)
+    first_word = next(w["word"] for w in words if w["start"] >= clip.start - 0.01)
+    _check_starts(Reply({"clips": [{"id": 0, "verdict": "extend", "sentences": 2}]}), [clip], words, bounds, 2, 40,
+                  "English")
+    moved = next(w for w in words if w["start"] >= clip.start - 0.01)
+    assert moved["word"] != first_word and moved["word"][0].isupper()
+    assert clip.end - clip.start <= 40 + END_OVERFLOW
+    start = clip.start
+    _check_starts(Reply({"clips": [{"id": 0, "verdict": "extend", "sentences": 4}]}), [clip], words, bounds, 2,
+                  clip.end - clip.start - END_OVERFLOW, "English")
+    assert clip.start == start
+
+
+def test_an_ending_runs_on_while_the_topic_goes_on():
+    words = speech(GTA)
+    bounds = Boundaries(words)
+    clip = _snap(Clip(0.0, 6.0, 50), words, 2, 60, bounds)
+    before = clip.end
+    moved = _check_endings(Reply({"clips": [{"id": 0, "verdict": "extend", "sentences": 4}]}), [clip], words,
+                           bounds, 2, 60, "English")
+    assert moved == [clip] and clip.end > before
+    sentences = sum(1 for w in words if before < w["end"] <= clip.end and w["word"].endswith("."))
+    assert sentences >= 3
+
+
+def test_a_recording_cut_off_mid_sentence_loses_the_unfinished_words():
+    words = speech("it just makes me sick i am not gonna lie makes me", step=0.4)
+    bounds = Boundaries(words)
+    clip = Clip(0.0, words[-1]["end"] + 0.4, 50)
+    _check_endings(Reply({"clips": [{"id": 0, "verdict": "trim", "words": 2}]}), [clip], words, bounds, 2, 60,
+                   "English")
+    assert ending(clip, words) == ("not gonna lie", "makes")
+
+
+def test_the_end_gets_its_air_when_the_next_word_swallowed_a_silence():
+    words = [{"word": "lie", "start": 10.0, "end": 10.3}, {"word": "makes", "start": 10.3, "end": 11.3}]
+    assert end_time(words, 0) == 10.7
+    words[1]["end"] = 10.6
+    assert end_time(words, 0) == 10.3
