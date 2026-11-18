@@ -1,7 +1,7 @@
 import { api } from "./api.js";
 import { t, tx } from "./i18n.js";
 import { onLive } from "./live.js";
-import { LABELS, POSTING } from "./platforms.js";
+import { POSTING, platformLabel } from "./platforms.js";
 import { state } from "./state.js";
 import { $, esc, toast } from "./util.js";
 
@@ -33,7 +33,7 @@ function statsHtml(s) {
 
 function plannedHtml(c) {
   return (c.scheduled || []).map((s) => `<li class="post planned"><b>🕒 ${esc(whenText(s.due))}</b>
-    ${esc(s.platforms.map((p) => LABELS[p] || p).join(", "))}
+    <span class="pf-list">${s.platforms.map(platformLabel).join("")}</span>
     <button type="button" class="link-btn" data-act="unschedule" data-sid="${s.id}">${esc(t("publish.unschedule"))}</button></li>`).join("");
 }
 
@@ -42,7 +42,7 @@ export function postsHtml(c) {
   const planned = plannedHtml(c);
   if (!posts.length && !planned) return "";
   const items = posts.map((p) => {
-    const label = esc(LABELS[p.platform] || p.platform);
+    const label = platformLabel(p.platform);
     if (p.state === "failed") {
       return `<li class="post failed"><b>${label}</b> ${esc(tx(p.error_t, t("publish.state.failed")))}</li>`;
     }
@@ -64,7 +64,7 @@ function renderPlatforms() {
     const a = accounts[name] || {};
     const who = a.connected ? (a.name ? ` <small>${esc(a.name)}</small>` : "") : ` <small>${esc(t("accounts.notConnected"))}</small>`;
     return `<label class="check ${a.connected ? "" : "off"}"><input type="checkbox" name="platform" value="${name}"
-      ${a.connected ? "checked" : "disabled"}><span>${esc(LABELS[name])}${who}</span></label>`;
+      ${a.connected ? "checked" : "disabled"}><span>${platformLabel(name)}${who}</span></label>`;
   }).join("");
   const any = POSTING.some((name) => accounts[name]?.connected);
   $("#postNote").textContent = any ? t("publish.note") : t("publish.noAccount");

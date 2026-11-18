@@ -23,13 +23,13 @@ function accountButton(name, a, here) {
   const aria = esc(t("accounts.pasteTokenFor", { platform: a.label }));
   if (!here) return "";
   if (a.connected) {
-    return `<button type="button" class="ghost" data-account="disconnect" data-platform="${name}" aria-label="${label("accounts.disconnect")} ${esc(a.label)}">${label("accounts.disconnect")}</button>`;
+    return `<button type="button" class="ghost" data-account="disconnect" data-platform="${name}" aria-label="${label("accounts.disconnect")} ${esc(a.label)}">${platformIcon(name, "sm")}${label("accounts.disconnect")}</button>`;
   }
   if (!a.oauth) {
-    return `<button type="button" class="primary" data-account="token" data-platform="${name}" aria-label="${aria}">${label("accounts.pasteToken")}</button>`;
+    return `<button type="button" class="primary" data-account="token" data-platform="${name}" aria-label="${aria}">${platformIcon(name, "sm")}${label("accounts.pasteToken")}</button>`;
   }
   return a.configured
-    ? `<button type="button" class="primary" data-account="connect" data-platform="${name}" aria-label="${label("accounts.connect")} ${esc(a.label)}">${label("accounts.connect")}</button>`
+    ? `<button type="button" class="primary" data-account="connect" data-platform="${name}" aria-label="${label("accounts.connect")} ${esc(a.label)}">${platformIcon(name, "sm")}${label("accounts.connect")}</button>`
     : "";
 }
 

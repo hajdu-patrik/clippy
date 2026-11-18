@@ -38,13 +38,16 @@
   --side-w: 276px;
   --gutter: 20px;
   --tap: 36px;
-  --brand-youtube: #e62117;
-  --brand-instagram: linear-gradient(135deg, #f9a03f, #e1306c 55%, #7c3aed);
-  --brand-facebook: #1877f2;
-  --brand-tiktok: #111113;
-  --brand-x: #0b0b0c;
+  --brand-youtube: #ff0000;
+  --brand-instagram: radial-gradient(circle at 30% 107%, #fdf497 0%, #fdf497 5%, #fd5949 45%, #d6249f 60%, #285aeb 90%);
+  --brand-facebook: #0866ff;
+  --brand-tiktok: #000000;
+  --brand-tiktok-cyan: #25f4ee;
+  --brand-tiktok-red: #fe2c55;
+  --brand-x: #000000;
   --brand-twitch: #9146ff;
   --brand-kick: #53fc18;
+  --brand-paper: #ffffff;
 }
 [data-theme="light"] {
   --bg: #f4f3f5;
@@ -468,15 +471,23 @@ kbd { font: 11px var(--mono); color: var(--faint); border: 1px solid var(--borde
 .acct-name { display: grid; gap: 1px; min-width: 0; }
 .acct-name b { font-size: 14.5px; }
 .acct-tag { color: var(--faint); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; }
-.acct-icon { flex: 0 0 38px; width: 38px; height: 38px; display: grid; place-items: center; border-radius: 11px;
-  background: var(--pf, var(--accent)); color: var(--pf-ink, #ffffff); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .1); }
-.pf-youtube { --pf: var(--brand-youtube); }
-.pf-instagram { --pf: var(--brand-instagram); }
-.pf-facebook { --pf: var(--brand-facebook); }
-.pf-tiktok { --pf: var(--brand-tiktok); }
-.pf-x { --pf: var(--brand-x); }
-.pf-twitch { --pf: var(--brand-twitch); }
-.pf-kick { --pf: var(--brand-kick); --pf-ink: #0b0e0a; }
+.pf-tile { flex: none; display: inline-grid; place-items: center; background: var(--pf-bg); border-radius: 28%;
+  box-shadow: inset 0 0 0 1px var(--pf-edge, rgba(255, 255, 255, .1)); }
+.pf-tile svg { width: var(--pf-glyph, 58%); height: var(--pf-glyph, 58%); display: block; overflow: visible; }
+.pf-tile .pf-ink { fill: var(--pf-fg); }
+.pf-md { width: 38px; height: 38px; }
+.pf-sm { width: 20px; height: 20px; border-radius: 6px; }
+.pf-youtube { --pf-bg: var(--brand-paper); --pf-fg: var(--brand-youtube); --pf-glyph: 72%; --pf-edge: rgba(0, 0, 0, .08); }
+.pf-instagram { --pf-bg: var(--brand-instagram); --pf-fg: var(--brand-paper); }
+.pf-facebook { --pf-bg: var(--brand-paper); --pf-fg: var(--brand-facebook); --pf-glyph: 68%; --pf-edge: rgba(0, 0, 0, .08); }
+.pf-tiktok { --pf-bg: var(--brand-tiktok); --pf-fg: var(--brand-paper); }
+.pf-tiktok .tt-cyan { fill: var(--brand-tiktok-cyan); }
+.pf-tiktok .tt-red { fill: var(--brand-tiktok-red); }
+.pf-x { --pf-bg: var(--brand-x); --pf-fg: var(--brand-paper); --pf-glyph: 52%; }
+.pf-twitch { --pf-bg: var(--brand-twitch); --pf-fg: var(--brand-paper); --pf-glyph: 54%; }
+.pf-kick { --pf-bg: var(--brand-kick); --pf-fg: var(--brand-x); --pf-glyph: 50%; }
+.acct-foot button, .post b, .pf-label { display: inline-flex; align-items: center; gap: 8px; }
+.pf-list { display: inline-flex; flex-wrap: wrap; gap: 4px 12px; }
 .acct.on .account-state { color: var(--ok); }
 .acct-note { color: var(--muted); font-size: 12.5px; line-height: 1.4; }
 .acct-foot { margin-top: auto; padding-top: 4px; display: flex; }

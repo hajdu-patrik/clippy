@@ -1,7 +1,7 @@
 import { api } from "./api.js";
 import { t, tx } from "./i18n.js";
 import { onLive } from "./live.js";
-import { LABELS, POSTING } from "./platforms.js";
+import { LABELS, POSTING, platformLabel } from "./platforms.js";
 import { $, esc, toast } from "./util.js";
 
 const PRESET_ICONS = { podcast: "🎙️", gameplay: "🎮", promo: "📣", quick: "⚡" };
@@ -104,7 +104,7 @@ async function addWatch() {
 }
 
 export function bindWatches() {
-  $("#watchPlatforms").innerHTML = POSTING.map((name) => `<label class="check"><input type="checkbox" value="${name}"><span>${esc(LABELS[name])}</span></label>`).join("");
+  $("#watchPlatforms").innerHTML = POSTING.map((name) => `<label class="check"><input type="checkbox" value="${name}"><span>${platformLabel(name)}</span></label>`).join("");
   $("#watchList").addEventListener("click", onWatch);
   $("#watchSave").addEventListener("click", addWatch);
   $("#watchAdd").addEventListener("keydown", (e) => {
