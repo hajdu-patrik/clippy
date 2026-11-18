@@ -96,6 +96,8 @@ change, what changed rather than how; dates are ISO 8601.
   rant back to where it starts, the ending check follows the topic by up to four sentences, and a recording cut off
   mid-sentence loses its unfinished words.
 - Brand logos for the seven platforms on the account cards, the connect buttons, the post dialog and the watch form.
+- Settings is split into pages (General, Accounts, Style, Automation, Results) with a tab bar, and the style kit
+  takes an optional intro (an image stays 1.5 s) next to the logo and the outro.
 - The project page plays a 1080p demo on demand (4K behind a link), shares one stylesheet and type scale with the
   legal pages, serves half-size images to phones and has cache rules for its assets.
 - English only: the web app, the chat replies and the command line are in English, and the language switch and

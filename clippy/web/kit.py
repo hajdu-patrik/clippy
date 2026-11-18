@@ -1,5 +1,6 @@
-"""The saved style kit: caption look, a logo and an outro that every new clip gets by itself. The kit's files live in
-data/web/kit; a chat that uses them gets its own copies, so changing the kit later never breaks an older clip."""
+"""The saved style kit: caption look, a logo, an intro and an outro that every new clip gets by itself. The kit's
+files live in data/web/kit; a chat that uses them gets its own copies, so changing the kit later never breaks an
+older clip."""
 
 from __future__ import annotations
 
@@ -9,16 +10,18 @@ from pathlib import Path
 from typing import BinaryIO
 
 from ..editing.assets import Asset, AssetKind, AssetService
-from ..editing.operations.structure import SetOutro
+from ..editing.operations.structure import SetIntro, SetOutro
 from ..editing.operations.visual import AddOverlay
 from ..editing.timeline import HIGHLIGHTS
 from ..tools import ClippyError, atomic_write_text, write_json
 
 FONTS = ("Arial Black", "Impact", "Arial")
 POSITIONS = ("top-left", "top-right", "bottom-left", "bottom-right")
-SLOTS = {"logo": (AssetKind.IMAGE,), "outro": (AssetKind.VIDEO, AssetKind.IMAGE)}
+MOVING = (AssetKind.VIDEO, AssetKind.IMAGE)
+SLOTS = {"logo": (AssetKind.IMAGE,), "intro": MOVING, "outro": MOVING}
+INTRO_IMAGE_SECONDS = 1.5
 DEFAULT = {"font": "", "highlight": "", "uppercase": None, "position": "top-right", "width": 0.22,
-           "logo": None, "outro": None}
+           "logo": None, "intro": None, "outro": None}
 
 
 class KitAssets(AssetService):
@@ -92,10 +95,14 @@ class StyleKit:
         return copy
 
     def operations(self, chat_id: int) -> list:
-        """The edits that put the kit's logo and outro on a clip of this chat (none when the kit has neither)."""
+        """The edits that put the kit's logo, intro and outro on a clip of this chat (none when the kit has none).
+        An intro image stays only briefly: a slow start loses viewers."""
         kit, ops = self.load(), []
         if kit.get("logo") and (logo := self._copy_into(chat_id, kit["logo"]["asset"])):
             ops.append(AddOverlay(asset=logo.id, position=kit["position"], width=kit["width"]))
+        if kit.get("intro") and (intro := self._copy_into(chat_id, kit["intro"]["asset"])):
+            still = intro.kind == AssetKind.IMAGE
+            ops.append(SetIntro(asset=intro.id, duration=INTRO_IMAGE_SECONDS if still else None))
         if kit.get("outro") and (outro := self._copy_into(chat_id, kit["outro"]["asset"])):
             ops.append(SetOutro(asset=outro.id))
         return ops

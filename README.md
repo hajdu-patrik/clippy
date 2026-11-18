@@ -126,7 +126,7 @@ gives the same kind of clips: the count, the lengths and the CTA come from the t
 **Post text.** Every clip comes with a ready-to-paste post (*Copy text* on the card, and the `.txt` file next to
 the video): a one-line teaser ending with an emoji, the comment question, the link of the original video, your own
 profiles (YouTube as a follow line, Instagram, TikTok) and hashtags; the curiosity title for YouTube Shorts is listed
-under it. Set your profile links once under *Settings* (the gear in the sidebar), one per line, e.g.
+under it. Set your profile links once under *Settings, General* (the gear in the sidebar), one per line, e.g.
 `TikTok: https://www.tiktok.com/@you`; they stay on your computer in `data/web/settings.json`, and changing them
 rewrites every clip's post text.
 
@@ -179,16 +179,17 @@ step, with what each platform allows: **[docs/publishing.md](docs/publishing.md)
 ## Voice input and notifications
 
 The microphone button next to Send turns your speech into the message (a small Whisper model on the CPU, so it never
-waits for a running job). *Settings, Notifications* lets the browser tell you when a job is done, also when the
+waits for a running job). *Settings, General* lets the browser tell you when a job is done, also when the
 window is in the background. Both need a secure page: they work on the computer that runs Clippy
 (http://127.0.0.1); a phone over the local network cannot use the microphone or notifications without HTTPS.
 
 ## Style kit, covers and A/B titles
 
-*Settings, Style kit* saves your look once: caption font, highlight colour and capitals, a logo (with its corner)
-and an outro. Every new clip gets the caption look at once, and the logo and outro as its next version (with a
-change card and undo). Every clip also gets a cover with its title written on it (*Cover* on the card) and a second
-cover with a B title (*Cover B*); the Post dialog lets you post the A or the B title to YouTube. Hungarian titles,
+*Settings, Style* saves your look once: caption font, highlight colour and capitals, and if you want a logo (with
+its corner), a short intro and an outro; none of them is required. Every new clip gets the caption look at once, and
+the logo, intro and outro as its next version (with a change card and undo). Every clip also gets a cover with its
+title written on it (*Cover* on the card) and a second cover with a B title (*Cover B*); the Post dialog lets you
+post the A or the B title to YouTube. Hungarian titles,
 teasers and questions get a native editor's proofreading pass and Hungarian quotation marks.
 
 Streams (Twitch and Kick VODs, YouTube streams that were live) use the stream layout by default: the facecam on top,
@@ -196,7 +197,7 @@ the game below, or the blurred full frame when there is no facecam.
 
 ## Watching channels and planned posts
 
-Give Clippy a YouTube channel, a Twitch channel or a playlist under *Settings, Watched channels*, or say it in the
+Give Clippy a YouTube channel, a Twitch channel or a playlist under *Settings, Automation*, or say it in the
 chat (*"figyeld ezt a gaming csatornát: https://www.twitch.tv/…"*). It looks for new videos every 15 minutes to once
 a day; each new video becomes its own chat that makes clips with the kind you chose (podcast, gameplay & stream, video
 & promo, quick shorts). Videos already on the channel are left alone; tick *Clip the newest video now too* for one
@@ -211,11 +212,11 @@ as `twitch.tv/name`, `kick.com/name` or `@name`. Kick's stream list is read with
 yt-dlp cannot.
 
 **Daily picks.** Say *"minden nap 3 GTA VI klipet"* or *"every day 3 GTA VI clips"* (or start it under *Settings,
-Daily picks*): every morning at 09:00 Clippy takes the most watched clips of the last day in that game's Twitch and
+Automation*): every morning at 09:00 Clippy takes the most watched clips of the last day in that game's Twitch and
 Kick category, which are the streamers' biggest live reactions, keeps one per streamer in the audience's language,
 and makes a vertical clip of each in its own chat, with the stream layout and a post text that credits the streamer.
 Each pick comes with a time to post it for a US audience (New York 19:00, 15:00 and 12:00 by default, the most
-watched moment first), shown in your own time too; *Settings, Daily picks* lists today's picks with their times and
+watched moment first), shown in your own time too; *Settings, Automation* lists today's picks with their times and
 a *Copy text* button. GTA VI, GTA V, Minecraft, Fortnite, Valorant, Counter-Strike, League of Legends and Warzone are
 known by name (`clippy/categories.py`).
 
@@ -225,7 +226,7 @@ Posts can wait for their time: choose *At a set time* in the Post dialog, and th
 you set both, and it uses your own connected accounts (YouTube public, TikTok drafts).
 
 **Learning from the results.** The numbers of every post (views, likes, comments, shares, how much people watch)
-come back onto its card, and *Settings, What works* shows which openings, lengths, kinds of moment and posting times
+come back onto its card, and *Settings, Results* shows which openings, lengths, kinds of moment and posting times
 do better than your usual. The clear patterns steer the picker for the next videos.
 
 ## Configuration

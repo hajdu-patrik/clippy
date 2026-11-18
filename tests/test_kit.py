@@ -51,6 +51,16 @@ def test_the_kit_sets_the_caption_look_and_checks_its_files(tmp_path):
     assert kit.operations(8) == [] and not list((storage.web / "kit").glob("*.png"))
 
 
+def test_an_intro_image_from_the_kit_opens_every_clip_briefly(tmp_path):
+    kit = StyleKit(Storage(tmp_path / "data", tmp_path / "library"))
+    kit.put("intro", "intro.png", png())
+    [intro] = kit.operations(3)
+    assert (intro.kind, intro.duration) == ("set_intro", 1.5)
+    assert kit.present()["intro"]["name"] == "intro.png"
+    kit.remove("intro")
+    assert kit.operations(4) == []
+
+
 def test_covers_carry_the_titles_and_are_made_again_from_the_clean_frame(tmp_path):
     cover = tmp_path / "clip_01_v1.jpg"
     Image.new("RGB", (540, 960), (20, 40, 60)).save(cover, "JPEG")
@@ -82,5 +92,5 @@ def test_kit_routes(tmp_path):
     assert (saved["font"], saved["highlight"], saved["uppercase"]) == ("Impact", "cyan", True)
     added = client.put("/api/kit/logo?name=logo.png", content=png().read()).json()
     assert added["logo"]["name"] == "logo.png"
-    assert client.put("/api/kit/intro?name=x.png", content=png().read()).status_code == 422
+    assert client.put("/api/kit/banner?name=x.png", content=png().read()).status_code == 422
     assert client.delete("/api/kit/logo").json()["logo"] is None

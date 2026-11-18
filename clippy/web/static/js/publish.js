@@ -157,7 +157,7 @@ export function bindPublish() {
   $("#postPlatforms").addEventListener("change", syncOptions);
   $("#postSettings").addEventListener("click", () => {
     $("#postDialog").close();
-    document.dispatchEvent(new CustomEvent("clippy:settings"));
+    document.dispatchEvent(new CustomEvent("clippy:settings", { detail: { page: "accounts" } }));
   });
   onLive((event) => {
     if (event.type !== "accounts") return;

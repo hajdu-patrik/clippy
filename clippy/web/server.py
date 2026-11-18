@@ -392,7 +392,7 @@ def create_app(storage: Storage | None = None, db_path: Path | None = None, runn
         return kit.present()
 
     @app.put("/api/kit/{slot}")
-    async def put_kit_file(slot: Literal["logo", "outro"], request: Request,
+    async def put_kit_file(slot: Literal["logo", "intro", "outro"], request: Request,
                            name: str = Query(min_length=1, max_length=200)):
         with tempfile.SpooledTemporaryFile(max_size=SPOOL_BYTES) as spool:
             size = 0
@@ -409,7 +409,7 @@ def create_app(storage: Storage | None = None, db_path: Path | None = None, runn
         return kit.present()
 
     @app.delete("/api/kit/{slot}")
-    def delete_kit_file(slot: Literal["logo", "outro"]):
+    def delete_kit_file(slot: Literal["logo", "intro", "outro"]):
         kit.remove(slot)
         return kit.present()
 

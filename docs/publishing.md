@@ -237,7 +237,7 @@ Kick uses OAuth 2.1 with PKCE; Clippy asks for `user:read` and `channel:read`.
 
 - **At a set time:** in the Post dialog choose *At a set time* and a date. The card lists the planned post with a
   *cancel* link; at its time it starts like a post made by hand. A clip deleted in the meantime is not posted.
-- **Automatically for a watched channel:** under *Settings, Watched channels* give the channel the platforms and the
+- **Automatically for a watched channel:** under *Settings, Automation* give the channel the platforms and the
   daily times (for example *18:00, 21:00*). Each new clip of that channel takes the next free time, one clip per time
   across all channels, best clip first. YouTube posts go public, TikTok to your drafts.
 
@@ -250,7 +250,7 @@ platform tells, how much of the clip people watch (YouTube Analytics, Instagram'
 show under each post on the clip card. TikTok drafts have no public video yet, and Facebook and X posts are not read
 back yet, so only YouTube and Instagram posts are measured.
 
-*Settings, What works* compares the clips with your own usual (the median views on the same platform), from 5 clips
+*Settings, Results* compares the clips with your own usual (the median views on the same platform), from 5 clips
 that are at least two days old: which openings, lengths, kinds of moment and posting times do clearly better or
 worse. The clear patterns go to the clip picker as a soft preference (a clearly better moment still wins), and the
 chat can answer *"mi működik a legjobban?"* with your own numbers. An account connected to YouTube before this

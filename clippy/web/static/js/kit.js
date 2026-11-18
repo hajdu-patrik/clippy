@@ -2,6 +2,7 @@ import { api } from "./api.js";
 import { t, tx } from "./i18n.js";
 import { $, esc, toast } from "./util.js";
 
+const SLOTS = ["logo", "intro", "outro"];
 let kit = null;
 
 function options(select, values, current, label) {
@@ -16,7 +17,7 @@ function render() {
   $("#kitPosition").innerHTML = kit.positions.map((v) =>
     `<option value="${v}" ${v === kit.position ? "selected" : ""}>${esc(t(`kit.pos.${v}`))}</option>`).join("");
   $("#kitUpper").value = kit.uppercase === null ? "" : String(kit.uppercase);
-  for (const slot of ["logo", "outro"]) {
+  for (const slot of SLOTS) {
     const name = kit[slot]?.name;
     $(`#kit-${slot}-name`).textContent = name || t("kit.none");
     $(`#kit-${slot}-remove`).hidden = !name;
@@ -71,7 +72,7 @@ async function remove(slot) {
 
 export function bindKit() {
   $("#kitSave").addEventListener("click", save);
-  for (const slot of ["logo", "outro"]) {
+  for (const slot of SLOTS) {
     $(`#kit-${slot}-file`).addEventListener("change", (e) => upload(slot, e.target));
     $(`#kit-${slot}-remove`).addEventListener("click", () => remove(slot));
   }

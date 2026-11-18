@@ -280,7 +280,7 @@ CATALOG: dict[str, str] = {
     "error.watch_unreachable": "The channel could not be checked; trying again later.",
     "kit.applied": "Your style kit is on this clip.",
     "note.kit_failed": "The style kit could not go on clip #{clip}: {error}",
-    "error.kit_kind": "This file does not fit the {slot} slot: the logo is an image, the outro a video or an image.",
+    "error.kit_kind": "This file does not fit the {slot} slot: the logo is an image, the intro and the outro a video or an image.",
     "error.dictation_long": "The recording is too long: at most {max} seconds.",
     "error.dictation_failed": "The recording could not be turned into text: {error}",
     "cli.install_unix_path": "Add {path} to your PATH (e.g. in ~/.profile) so the clippy command is found.",

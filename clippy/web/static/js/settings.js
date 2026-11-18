@@ -65,12 +65,37 @@ async function refreshAccounts() {
   if ($("#settingsDialog").open) renderAccounts();
 }
 
-function open() {
+const PAGES = ["general", "accounts", "style", "auto", "results"];
+let page = "general";
+
+function showPage(name, focus = false) {
+  page = PAGES.includes(name) ? name : "general";
+  for (const p of PAGES) {
+    const tab = $(`#tab-${p}`), on = p === page;
+    tab.setAttribute("aria-selected", String(on));
+    tab.tabIndex = on ? 0 : -1;
+    $(`#page-${p}`).hidden = !on;
+    if (on) tab.scrollIntoView({ block: "nearest", inline: "nearest" });
+    if (on && focus) tab.focus();
+  }
+  $("#settingsDialog").scrollTop = 0;
+}
+
+function onTabKey(event) {
+  const i = PAGES.indexOf(page), n = PAGES.length;
+  const to = { ArrowRight: (i + 1) % n, ArrowLeft: (i - 1 + n) % n, Home: 0, End: n - 1 }[event.key];
+  if (to === undefined) return;
+  event.preventDefault();
+  showPage(PAGES[to], true);
+}
+
+function open(event) {
   $("#profileLinks").value = (state.settings.profile_links || []).join("\n");
   $("#igTokenBox").hidden = true;
   renderAccounts();
+  showPage(event?.detail?.page || page);
   $("#settingsDialog").showModal();
-  $("#profileLinks").focus();
+  $(`#tab-${page}`).focus();
   refreshAccounts();
   loadPicks();
   loadWatches();
@@ -144,7 +169,12 @@ export function openSettingsFromLink() {
 }
 
 export function bindSettings() {
-  $("#settingsBtn").addEventListener("click", open);
+  $("#settingsBtn").addEventListener("click", () => open());
+  $("#settingsTabs").addEventListener("click", (e) => {
+    const tab = e.target.closest("[role=tab]");
+    if (tab) showPage(tab.id.slice(4));
+  });
+  $("#settingsTabs").addEventListener("keydown", onTabKey);
   $("#settingsCancel").addEventListener("click", () => $("#settingsDialog").close());
   $("#settingsForm").addEventListener("submit", save);
   $("#accountList").addEventListener("click", onAccount);

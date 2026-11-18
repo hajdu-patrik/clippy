@@ -365,6 +365,7 @@ kbd { font: 11px var(--mono); color: var(--faint); border: 1px solid var(--borde
 .settings-dialog { width: min(520px, calc(100vw - 32px)); border: 1px solid var(--border); border-radius: var(--radius);
   background: var(--card); color: var(--text); padding: 20px; box-shadow: var(--shadow); }
 .copy-buffer { position: fixed; top: 0; left: -9999px; width: 1px; height: 1px; opacity: 0; }
+#settingsDialog { width: min(620px, calc(100vw - 32px)); }
 .settings-dialog::backdrop { background: rgba(0, 0, 0, .5); }
 .settings-dialog h2 { margin: 0 0 14px; font: 700 20px/1.2 var(--font-display); letter-spacing: -.015em; }
 .settings-dialog label { display: block; font-weight: 700; font-size: 14px; }
@@ -447,6 +448,17 @@ kbd { font: 11px var(--mono); color: var(--faint); border: 1px solid var(--borde
 .pair-button:hover { background: var(--accent-hover); }
 .settings-dialog { max-height: calc(100dvh - 32px); overflow-y: auto; }
 .settings-dialog h3 { margin: 18px 0 2px; font: 700 15px/1.3 var(--font-display); }
+.settings-tabs { position: sticky; top: -20px; z-index: 1; display: flex; gap: 4px; margin: 0 -4px 14px; padding: 4px;
+  overflow-x: auto; scrollbar-width: none; background: var(--side); border: 1px solid var(--border); border-radius: 14px; }
+.settings-tabs::-webkit-scrollbar { display: none; }
+.settings-tabs [role=tab] { flex: 1 0 auto; min-height: var(--tap); padding: 0 14px; border: 0; border-radius: 10px;
+  background: transparent; color: var(--muted); font: 600 13.5px/1 var(--font); cursor: pointer; white-space: nowrap;
+  transition: background-color .15s, color .15s; }
+.settings-tabs [role=tab]:hover { color: var(--text); }
+.settings-tabs [role=tab][aria-selected=true] { background: var(--accent); color: var(--accent-ink); }
+.settings-tabs [role=tab]:focus-visible { outline: 2px solid var(--accent-text); outline-offset: 1px; }
+.settings-page > section:first-child h3, .settings-page > label:first-child { margin-top: 4px; }
+.kit-note { display: block; margin: 2px 0 0; font-size: 12px; }
 .settings-dialog .hint.warn { color: var(--accent-text); }
 .account-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
 .account { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 12px;
