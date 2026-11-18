@@ -18,7 +18,8 @@ FINAL = frozenset({
     "error.no_clip", "error.no_sound", "error.no_video", "error.not_public", "error.only_http", "error.unresolvable",
     "error.account_missing", "error.account_expired", "error.platform_not_configured", "error.platform_audit",
     "error.platform_rejected", "error.platform_slow", "error.clip_too_long_for", "error.no_platform",
-    "error.unknown_platform", "error.bad_token",
+    "error.unknown_platform", "error.bad_token", "error.platform_rate_limited", "error.posting_unsupported",
+    "error.no_page",
 })
 
 

@@ -175,10 +175,10 @@
       <textarea id="profileLinks" rows="4" maxlength="2000" aria-describedby="profileLinksHint"
         placeholder="TikTok: https://www.tiktok.com/@…&#10;Instagram: https://www.instagram.com/…/"></textarea>
       <section class="accounts" aria-labelledby="accountsTitle">
-        <h3 id="accountsTitle" data-i18n="accounts.title">Accounts for posting</h3>
-        <p class="hint" data-i18n="accounts.hint">Post clips straight to your own channels. Set up once: docs/publishing.md.</p>
+        <h3 id="accountsTitle" data-i18n="accounts.title">Accounts</h3>
+        <p class="hint" data-i18n="accounts.hint">Connect your own accounts. Clips can be posted to YouTube, Instagram, Facebook, TikTok and X. One-time setup: docs/publishing.md.</p>
         <p class="hint warn" id="accountsHere" hidden data-i18n="accounts.hereOnly">Connect accounts on the computer that runs Clippy; posting works from here too.</p>
-        <ul class="account-list" id="accountList"></ul>
+        <ul class="account-grid" id="accountList"></ul>
         <div class="token-box" id="igTokenBox" hidden>
           <label for="igToken" data-i18n="accounts.tokenLabel">Instagram access token</label>
           <p class="hint" id="igTokenHint" data-i18n="accounts.tokenHint">From your Meta app: Instagram, API setup with Instagram login, Generate token.</p>
@@ -298,11 +298,7 @@
           </div>
           <fieldset class="post-platforms">
             <legend data-i18n="watch.autopost">Post the new clips automatically (optional)</legend>
-            <div id="watchPlatforms">
-              <label class="check"><input type="checkbox" value="youtube"><span>YouTube</span></label>
-              <label class="check"><input type="checkbox" value="instagram"><span>Instagram</span></label>
-              <label class="check"><input type="checkbox" value="tiktok"><span>TikTok</span></label>
-            </div>
+            <div id="watchPlatforms"></div>
           </fieldset>
           <label for="watchSlots" data-i18n="watch.slots">Daily posting times, one clip each</label>
           <input class="field" id="watchSlots" maxlength="120" autocomplete="off" placeholder="18:00, 21:00"

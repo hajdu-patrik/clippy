@@ -24,7 +24,7 @@ from ..editing.assets import LIMITS
 from ..tools import ClippyError, log
 from ..download import sweep_partials
 from ..llm import create_llm
-from ..publish import LABELS
+from ..publish.registry import LABELS, PLATFORMS, POSTING
 from ..publish.oauth import OAuthFlows
 from ..settings import Settings
 from ..storage import Storage
@@ -81,11 +81,12 @@ class SettingsPatch(BaseModel):
     profile_links: str = Field(max_length=2000)
 
 
-Platform = Literal["youtube", "instagram", "tiktok"]
+Platform = Literal[PLATFORMS]
+PostingPlatform = Literal[POSTING]
 
 
 class PublishRequest(BaseModel):
-    platforms: list[Platform] = Field(min_length=1, max_length=3)
+    platforms: list[PostingPlatform] = Field(min_length=1, max_length=len(POSTING))
     youtube_privacy: Literal["public", "unlisted", "private"] = "public"
     tiktok_mode: Literal["draft", "private"] = "draft"
     variant: Literal["a", "b"] = "a"
@@ -98,7 +99,7 @@ class NewWatch(BaseModel):
     preset: str = Field(default="", max_length=20)
     instructions: str = Field(default="", max_length=400)
     every: int = 60
-    platforms: list[Platform] = Field(default_factory=list, max_length=3)
+    platforms: list[PostingPlatform] = Field(default_factory=list, max_length=len(POSTING))
     youtube_privacy: Literal["public", "unlisted", "private"] = "public"
     tiktok_mode: Literal["draft", "private"] = "draft"
     slots: str = Field(default="", max_length=120)

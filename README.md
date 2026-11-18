@@ -167,12 +167,14 @@ re-render). Older versions stay playable.
 
 ## Posting
 
-A finished clip goes straight to your own YouTube, Instagram and TikTok with the **Post** button on its card, or from
-the chat (*"posztold ki a 2. klipet YouTube-ra"*). It goes up with its post text and, on YouTube, its title; the card
-then links each post. You make a free developer app per platform once and sign in on the platform's own page: the
-tokens stay in `data/web/accounts.json` on this computer. TikTok sends the clip to your drafts (or posts it as private
-until it reviews your app); YouTube may keep uploads of a new API project private until its audit. Setup, step by
-step: **[docs/publishing.md](docs/publishing.md)**.
+A finished clip goes straight to your own YouTube, Instagram, Facebook Page, TikTok and X with the **Post** button on
+its card, or from the chat (*"posztold ki a 2. klipet YouTube-ra"*). It goes up with its post text and, on YouTube, its
+title; the card then links each post. You make a free developer app per platform once and sign in on the platform's own
+page: the tokens stay in `data/web/accounts.json` on this computer. *Settings, Accounts* shows all seven platforms as
+cards. **Twitch and Kick** can be connected, but neither offers apps any way to upload a video, so Clippy does not post
+there (and uses no unofficial way). TikTok sends the clip to your drafts (or posts it as private until it reviews your
+app); YouTube may keep uploads of a new API project private until its audit; X's API is paid per use. Setup, step by
+step, with what each platform allows: **[docs/publishing.md](docs/publishing.md)**.
 
 ## Voice input and notifications
 
@@ -245,6 +247,9 @@ do better than your usual. The clear patterns steer the picker for the next vide
 | `CLIPPY_COOKIES_FILE` | - | a `cookies.txt` (Netscape format) exported from any signed-in browser with an extension; Clippy only reads it, each download uses a private copy. Keep it in `data/` (ignored), it is as good as your login |
 | `CLIPPY_YOUTUBE_CLIENT_ID`, `CLIPPY_YOUTUBE_CLIENT_SECRET` | - | your Google "Desktop app" OAuth client, for posting to YouTube ([docs/publishing.md](docs/publishing.md)) |
 | `CLIPPY_TIKTOK_CLIENT_KEY`, `CLIPPY_TIKTOK_CLIENT_SECRET` | - | your TikTok developer app, for posting to TikTok |
+| `CLIPPY_FACEBOOK_APP_ID`, `CLIPPY_FACEBOOK_APP_SECRET` | - | your Meta app, for posting Reels to a Facebook Page (optional `CLIPPY_FACEBOOK_PAGE_ID`, `CLIPPY_FACEBOOK_CONFIG_ID`) |
+| `CLIPPY_X_CLIENT_ID` | - | your X developer app's client id, for posting to X (optional `CLIPPY_X_CLIENT_SECRET` for a confidential app) |
+| `CLIPPY_TWITCH_CLIENT_ID`, `CLIPPY_TWITCH_CLIENT_SECRET`, `CLIPPY_KICK_CLIENT_ID`, `CLIPPY_KICK_CLIENT_SECRET` | - | your Twitch / Kick developer apps, only to connect the account (neither platform lets apps upload videos) |
 | `CLIPPY_WORKERS`, `CLIPPY_RENDER_SLOTS` | `3`, `3` | jobs of different chats at once, clips rendered at once (the GPU always runs one heavy model at a time) |
 
 **Where files go.** Finished clips: `<CLIPPY_LIBRARY>\<video title>\` (mp4 + cover jpg + post text), never removed

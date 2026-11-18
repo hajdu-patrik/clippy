@@ -10,7 +10,7 @@ from ..download import require_public_url
 from ..editing.assets import Asset, AssetService
 from ..editing.repository import TimelineRepository
 from ..llm import LLM
-from ..publish import LABELS, PLATFORMS
+from ..publish.registry import LABELS, POSTING
 from ..storage import Storage
 from ..tools import ClippyError
 from . import agent
@@ -215,7 +215,7 @@ class ChatService:
 
     def _publish_jobs(self, action: dict) -> list[tuple[str, dict]]:
         status = self.runner.accounts.status()
-        connected = [p for p in PLATFORMS if status[p]["connected"]]
+        connected = [p for p in POSTING if status[p]["connected"]]
         platforms = [p for p in action["platforms"] if p in connected] if action["platforms"] else connected
         if not platforms:
             missing = action["platforms"][0] if action["platforms"] else "youtube"

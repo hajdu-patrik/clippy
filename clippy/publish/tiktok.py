@@ -5,14 +5,11 @@ straight away but only visible to the user, which is all TikTok allows before it
 
 from __future__ import annotations
 
-import os
 import time
-from dataclasses import replace
-from urllib.parse import urlencode
 
 from ..tools import ClippyError, report
-from . import (TIMEOUT, UPLOAD_TIMEOUT, PostResult, PostText, Reader, Tokens, Upload, bearer, check_length, checked,
-               env_client)
+from . import (TIMEOUT, UPLOAD_TIMEOUT, PostResult, PostText, Reader, Tokens, Upload, bearer, check_length, checked)
+from .base import OAuthPlatform
 from .oauth import hex_challenge
 
 AUTH = "https://www.tiktok.com/v2/auth/authorize/"
@@ -34,54 +31,24 @@ def chunks(size: int) -> tuple[int, int]:
     return CHUNK, size // CHUNK
 
 
-class TikTok:
-    name, label, oauth = "tiktok", "TikTok", True
+class TikTok(OAuthPlatform):
+    name, label = "tiktok", "TikTok"
+    env = ("CLIPPY_TIKTOK_CLIENT_KEY", "CLIPPY_TIKTOK_CLIENT_SECRET")
+    auth_endpoint, token_url, scopes, scope_env = AUTH, f"{API}/oauth/token/", SCOPES, "CLIPPY_TIKTOK_SCOPES"
+    id_param, challenge, lifetime = "client_key", staticmethod(hex_challenge), 86400
 
     def __init__(self, sleep=time.sleep):
         self.sleep = sleep
 
-    def client(self) -> tuple[str, ...]:
-        return env_client(self.label, "CLIPPY_TIKTOK_CLIENT_KEY", "CLIPPY_TIKTOK_CLIENT_SECRET")
+    def tokens_of(self, data: dict, now: float) -> Tokens:
+        tokens = super().tokens_of(data, now)
+        tokens.user_id = str(data.get("open_id") or "")
+        return tokens
 
-    def configured(self) -> bool:
-        try:
-            self.client()
-        except ClippyError:
-            return False
-        return True
-
-    def auth_url(self, redirect: str, state: str, verifier: str) -> str:
-        key, _ = self.client()
-        return AUTH + "?" + urlencode({
-            "client_key": key, "scope": os.environ.get("CLIPPY_TIKTOK_SCOPES") or SCOPES, "response_type": "code",
-            "redirect_uri": redirect, "state": state, "code_challenge": hex_challenge(verifier),
-            "code_challenge_method": "S256"})
-
-    def _token(self, http, form: dict) -> dict:
-        key, secret = self.client()
-        return checked(http.post(f"{API}/oauth/token/", data={"client_key": key, "client_secret": secret, **form},
-                                 headers={"Content-Type": "application/x-www-form-urlencoded"}, timeout=TIMEOUT),
-                       self.label)
-
-    def exchange(self, http, code: str, verifier: str, redirect: str, now: float) -> Tokens:
-        data = self._token(http, {"code": code, "grant_type": "authorization_code", "redirect_uri": redirect,
-                                  "code_verifier": verifier})
-        tokens = Tokens(access_token=data["access_token"], refresh_token=data.get("refresh_token", ""),
-                        expires_at=now + float(data.get("expires_in") or 86400), user_id=str(data.get("open_id") or ""))
+    def identify(self, http, tokens: Tokens) -> None:
         user = checked(http.get(f"{API}/user/info/", params={"fields": "open_id,display_name"},
                                 headers=bearer(tokens.access_token), timeout=TIMEOUT), self.label)
         tokens.name = str(((user.get("data") or {}).get("user") or {}).get("display_name") or "")
-        return tokens
-
-    def needs_refresh(self, tokens: Tokens, now: float) -> bool:
-        return tokens.expires_at - now < 300
-
-    def refresh(self, http, tokens: Tokens, now: float) -> Tokens:
-        if not tokens.refresh_token:
-            raise ClippyError(key="error.account_expired", platform=self.label)
-        data = self._token(http, {"grant_type": "refresh_token", "refresh_token": tokens.refresh_token})
-        return replace(tokens, access_token=data["access_token"], expires_at=now + float(data.get("expires_in") or 86400),
-                       refresh_token=data.get("refresh_token") or tokens.refresh_token)
 
     def _call(self, http, tokens: Tokens, path: str, body: dict) -> dict:
         return checked(http.post(f"{API}{path}", json=body, timeout=TIMEOUT, headers={

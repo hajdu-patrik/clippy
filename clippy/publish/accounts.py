@@ -10,15 +10,8 @@ from typing import Callable
 
 from ..storage import Storage
 from ..tools import ClippyError, write_json
-from . import LABELS, PLATFORMS, Tokens
-
-
-def default_platforms() -> dict:
-    from .instagram import Instagram
-    from .tiktok import TikTok
-    from .youtube import YouTube
-
-    return {"youtube": YouTube(), "instagram": Instagram(), "tiktok": TikTok()}
+from . import Tokens
+from .registry import LABELS, PLATFORMS, default_platforms
 
 
 def new_http():
@@ -71,8 +64,8 @@ class AccountStore:
             entry = data.get(name) or {}
             out[name] = {"label": LABELS[name], "connected": bool(entry.get("access_token")),
                          "name": str(entry.get("name") or ""), "expires": int(entry.get("expires_at") or 0),
-                         "lasting": bool(entry.get("refresh_token")) or name == "instagram",
-                         "configured": platform.configured(), "oauth": platform.oauth}
+                         "lasting": bool(entry.get("refresh_token")) or platform.renews,
+                         "configured": platform.configured(), "oauth": platform.oauth, "posting": platform.posting}
             if name == "youtube" and entry.get("access_token"):
                 out[name]["analytics"] = "yt-analytics" in str(entry.get("scope") or "")
         return out

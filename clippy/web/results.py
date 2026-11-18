@@ -10,7 +10,7 @@ from collections import defaultdict
 from datetime import datetime
 
 from ..highlights import PEAK_REASON
-from ..publish import LABELS
+from ..publish.registry import LABELS
 from ..publish.stats import instagram_stats, youtube_stats
 from ..tools import ClippyError, log
 

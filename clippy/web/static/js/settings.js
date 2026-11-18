@@ -1,6 +1,7 @@
 import { api } from "./api.js";
 import { t, tx } from "./i18n.js";
 import { onLive } from "./live.js";
+import { platformIcon } from "./platforms.js";
 import { loadAccounts } from "./publish.js";
 import { state } from "./state.js";
 import { bindKit, loadKit } from "./kit.js";
@@ -17,33 +18,45 @@ function dateText(seconds) {
   return new Date(seconds * 1000).toLocaleDateString(document.documentElement.lang || undefined);
 }
 
-function accountRow(name, a, here) {
+function accountButton(name, a, here) {
+  const label = (key) => esc(t(key));
+  const aria = esc(t("accounts.pasteTokenFor", { platform: a.label }));
+  if (!here) return "";
+  if (a.connected) {
+    return `<button type="button" class="ghost" data-account="disconnect" data-platform="${name}" aria-label="${label("accounts.disconnect")} ${esc(a.label)}">${label("accounts.disconnect")}</button>`;
+  }
+  if (!a.oauth) {
+    return `<button type="button" class="primary" data-account="token" data-platform="${name}" aria-label="${aria}">${label("accounts.pasteToken")}</button>`;
+  }
+  return a.configured
+    ? `<button type="button" class="primary" data-account="connect" data-platform="${name}" aria-label="${label("accounts.connect")} ${esc(a.label)}">${label("accounts.connect")}</button>`
+    : "";
+}
+
+function accountCard(name, a, here) {
   const status = a.connected
     ? t("accounts.connectedAs", { name: a.name || a.label })
     : t(a.configured ? "accounts.notConnected" : "accounts.notConfigured");
   const until = a.connected && a.expires && !a.lasting ? ` · ${t("accounts.until", { date: dateText(a.expires) })}` : "";
   const notice = state.accounts?.notices?.[name];
-  let button = "";
-  if (here && a.connected) {
-    button = `<button type="button" class="ghost" data-account="disconnect" data-platform="${name}">${esc(t("accounts.disconnect"))}</button>`;
-  } else if (here && a.oauth && a.configured) {
-    button = `<button type="button" class="primary" data-account="connect" data-platform="${name}">${esc(t("accounts.connect"))}</button>`;
-  } else if (here && !a.oauth) {
-    button = `<button type="button" class="primary" data-account="token" data-platform="${name}">${esc(t("accounts.pasteToken"))}</button>`;
-  }
-  return `<li class="account ${a.connected ? "on" : ""}">
-    <div><b>${esc(a.label)}</b><span class="account-state">${esc(status + until)}</span>
-      ${notice ? `<span class="account-error">${esc(tx(notice, ""))}</span>` : ""}</div>${button}</li>`;
+  const tag = a.posting ? "accounts.canPost" : "accounts.connectOnly";
+  return `<li class="acct ${a.connected ? "on" : ""} ${a.posting ? "" : "no-post"}" data-platform="${name}">
+    <div class="acct-head">${platformIcon(name)}<div class="acct-name"><b>${esc(a.label)}</b>
+      <span class="acct-tag">${esc(t(tag))}</span></div></div>
+    <span class="account-state">${esc(status + until)}</span>
+    ${a.posting ? "" : `<span class="acct-note">${esc(t("accounts.noPosting", { platform: a.label }))}</span>`}
+    ${notice ? `<span class="account-error" role="alert">${esc(tx(notice, ""))}</span>` : ""}
+    <div class="acct-foot">${accountButton(name, a, here)}</div></li>`;
 }
 
 function renderAccounts() {
   const data = state.accounts;
   const list = $("#accountList");
   if (!data) {
-    list.innerHTML = `<li class="account"><span class="account-state">${esc(t("accounts.loading"))}</span></li>`;
+    list.innerHTML = `<li class="acct wide"><span class="account-state">${esc(t("accounts.loading"))}</span></li>`;
     return;
   }
-  list.innerHTML = Object.entries(data.accounts).map(([name, a]) => accountRow(name, a, data.here)).join("");
+  list.innerHTML = Object.entries(data.accounts).map(([name, a]) => accountCard(name, a, data.here)).join("");
   $("#accountsHere").hidden = data.here;
 }
 
