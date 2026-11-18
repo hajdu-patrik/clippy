@@ -94,3 +94,12 @@ def test_kit_routes(tmp_path):
     assert added["logo"]["name"] == "logo.png"
     assert client.put("/api/kit/banner?name=x.png", content=png().read()).status_code == 422
     assert client.delete("/api/kit/logo").json()["logo"] is None
+
+
+def test_a_cover_title_is_in_capitals_without_hashtags(tmp_path, monkeypatch):
+    from clippy import covers
+
+    seen = []
+    monkeypatch.setattr(covers, "_wrap", lambda draw, text, font, width: seen.append(text) or [text])
+    covers.draw_title(Image.new("RGB", (540, 960)), "xQc steals his first car #shorts", None)
+    assert seen[0] == "XQC STEALS HIS FIRST CAR"

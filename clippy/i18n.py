@@ -117,13 +117,13 @@ CATALOG: dict[str, str] = {
     "risk.copyrighted_music": "copyrighted music in the background",
     "post.pinned": "Pinned comment",
     "post.full_video": "Full video: {url}",
-    "post.comments": "Drop it in the comments 👇",
-    "post.original": "🎥 Original video: {url}",
-    "post.subscribe": "⭐ Subscribe for more {topic} clips: {url}",
-    "post.subscribe_plain": "⭐ Subscribe for more clips: {url}",
-    "post.instagram": "📸 Instagram: {url}",
-    "post.tiktok": "🎵 TikTok: {url}",
-    "post.link": "🔗 {label}: {url}",
+    "post.comments": "Tell us in the comments.",
+    "post.original": "Original video: {url}",
+    "post.subscribe": "Subscribe for more {topic} clips: {url}",
+    "post.subscribe_plain": "Subscribe for more clips: {url}",
+    "post.instagram": "Instagram: {url}",
+    "post.tiktok": "TikTok: {url}",
+    "post.link": "{label}: {url}",
     "post.title": "Title (YouTube Shorts)",
     "post.alt_title": "B title (A/B test)",
     "error.bad_link": "This line has no link: “{line}”. Write one link per line (e.g. TikTok: https://…).",
@@ -263,6 +263,8 @@ CATALOG: dict[str, str] = {
                    "one per streamer, make a clip of each and tell you when to post it for a US audience. The "
                    "first ones start now, each in its own chat; Settings, Daily picks lists them with their "
                    "times and texts.",
+    "daily.not_posted": "Clip {clip} is not posted by itself: its score is {score}, below {min}. Post it by hand"
+                        " if you like it.",
     "daily.pick_today": "Daily {game} pick {i} of {n}: {streamer} on {platform}, {views} views in the last day. "
                         "Post it today at {time} ({ny} in New York).",
     "daily.pick_tomorrow": "Daily {game} pick {i} of {n}: {streamer} on {platform}, {views} views in the last "

@@ -40,6 +40,16 @@ _RANGE_DASH = re.compile(r"(?<=[\d}])\s*[–—]\s*(?=[\d{])")
 _DASH = re.compile(r"\s*[–—]+\s*")
 
 
+_EMOJI = re.compile("[\U0001F000-\U0001FAFF\U0001F1E6-\U0001F1FF\u2300-\u23FF\u2600-\u27BF\u2B00-\u2BFF"
+                    "\uFE0E\uFE0F\u200D\u20E3]")
+
+
+def no_emoji(text: str) -> str:
+    """Post texts, titles and covers carry no emoji: many fonts draw them as empty boxes."""
+    lines = (re.sub(r"[ \t]{2,}", " ", _EMOJI.sub("", line)).strip() for line in (text or "").split("\n"))
+    return "\n".join(lines).strip()
+
+
 def no_dashes(text: str) -> str:
     """Post and on-screen texts never use the long dashes typical of AI writing: a range gets a hyphen (20-45), a
     dash between words becomes a comma."""
@@ -71,7 +81,7 @@ def hu_quotes(text: str) -> str:
 
 
 def post_clean(text: str, language: str = "") -> str:
-    text = no_dashes(clean_text(text))
+    text = no_dashes(clean_text(no_emoji(text)))
     return hu_quotes(text) if language in ("hu", "Hungarian") else text
 
 

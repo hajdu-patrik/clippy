@@ -507,13 +507,13 @@ def test_old_clips_get_new_titles_and_descriptions(env, monkeypatch):
     assert [(r["version"], r["clip"]["title"], r["clip"]["description"]) for r in rows] == [
         (1, "Nobody expected #0", "Teaser 0."), (1, "Nobody expected #1", "Teaser 1.")]
     txt = Path(rows[0]["txt"]).read_text(encoding="utf-8")
-    assert txt.startswith("Teaser 0.") and "🎵 TikTok: https://www.tiktok.com/@me" in txt
+    assert txt.startswith("Teaser 0.") and "TikTok: https://www.tiktok.com/@me" in txt
     assert "Title (YouTube Shorts): Nobody expected #0" in txt
     library = list((storage.library / "Test video").glob(f"chat{cid}_clip_01_*.txt"))
     assert len(library) == 1 and "Teaser 0." in library[0].read_text(encoding="utf-8")
     client.put("/api/settings", json={"profile_links": "https://www.youtube.com/@me"})
     again = Path(rows[1]["txt"]).read_text(encoding="utf-8")
-    assert "⭐ Subscribe for more clips: https://www.youtube.com/@me" in again and "TikTok" not in again
+    assert "Subscribe for more clips: https://www.youtube.com/@me" in again and "TikTok" not in again
 
 
 def test_titles_and_descriptions_never_go_to_the_video_editor():

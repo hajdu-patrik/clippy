@@ -5,8 +5,12 @@ from __future__ import annotations
 import re
 import time
 from datetime import datetime, timezone
+from pathlib import Path
 
-from ..tools import ClippyError, report
+import requests
+
+from ..text import no_emoji
+from ..tools import ClippyError, log, report
 from . import TIMEOUT, UPLOAD_TIMEOUT, PostResult, PostText, Reader, Tokens, Upload, bearer, check_length, checked
 from .base import OAuthPlatform
 
@@ -14,6 +18,8 @@ AUTH = "https://accounts.google.com/o/oauth2/v2/auth"
 TOKEN = "https://oauth2.googleapis.com/token"
 API = "https://www.googleapis.com/youtube/v3"
 UPLOAD = "https://www.googleapis.com/upload/youtube/v3/videos"
+THUMBNAILS = "https://www.googleapis.com/upload/youtube/v3/thumbnails/set"
+THUMBNAIL_MAX = 2 * 1024 * 1024
 SCOPES = ("https://www.googleapis.com/auth/youtube.upload https://www.googleapis.com/auth/youtube.readonly "
           "https://www.googleapis.com/auth/yt-analytics.readonly")
 CHUNK = 8 * 1024 * 1024
@@ -55,9 +61,9 @@ class YouTube(OAuthPlatform):
         check_length(self.label, upload, LONGEST)
         privacy = options.get("privacy") if options.get("privacy") in PRIVACY else "public"
         size = upload.size
-        body = {"snippet": {"title": no_brackets(post.title)[:100] or "Short",
-                            "description": no_brackets(post.caption)[:4900], "tags": tags_of(post.hashtags),
-                            "categoryId": "22"},
+        body = {"snippet": {"title": no_emoji(no_brackets(post.title))[:100] or "Short",
+                            "description": no_emoji(no_brackets(post.caption))[:4900], "tags": tags_of(post.hashtags),
+                            "categoryId": str(options.get("category") or "22")},
                 "status": {"privacyStatus": privacy, "selfDeclaredMadeForKids": False}}
         at = options.get("publish_at")
         planned = isinstance(at, (int, float)) and at > time.time() + AHEAD
@@ -72,9 +78,23 @@ class YouTube(OAuthPlatform):
         if not session:
             raise ClippyError(key="error.platform_rejected", platform=self.label, detail="no upload session")
         video = self._send(http, tokens, session, upload, size)
+        self.set_thumbnail(http, tokens, video["id"], upload.path.with_suffix(".jpg"))
         got = (video.get("status") or {}).get("privacyStatus") or privacy
         state = "scheduled" if planned else got if got == privacy else f"{got}_until_audit"
         return PostResult(url=f"https://youtube.com/shorts/{video['id']}", remote_id=video["id"], state=state)
+
+    def set_thumbnail(self, http, tokens: Tokens, video_id: str, image: Path) -> bool:
+        """The clip's cover (its title written on a frame) as the video's thumbnail; a refusal never fails the post."""
+        if not image.is_file() or image.stat().st_size > THUMBNAIL_MAX:
+            return False
+        try:
+            checked(http.post(THUMBNAILS, params={"videoId": video_id, "uploadType": "media"}, data=image.read_bytes(),
+                              headers={**bearer(tokens.access_token), "Content-Type": "image/jpeg"},
+                              timeout=UPLOAD_TIMEOUT), self.label)
+        except (ClippyError, OSError, requests.RequestException) as exc:
+            log(f"[publish] YouTube thumbnail skipped: {exc}")
+            return False
+        return True
 
     def _send(self, http, tokens: Tokens, session: str, upload: Upload, size: int) -> dict:
         offset, failures = 0, 0

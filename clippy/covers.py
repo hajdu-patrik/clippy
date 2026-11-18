@@ -3,10 +3,12 @@ clean frame is kept beside them, so new titles give new covers."""
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFont
 
+from .text import no_emoji
 from .tools import atomic_path, log
 
 FONTS = ("ariblk.ttf", "impact.ttf", "arialbd.ttf", "Arial Black.ttf", "Impact.ttf", "Arial Bold.ttf",
@@ -14,6 +16,7 @@ FONTS = ("ariblk.ttf", "impact.ttf", "arialbd.ttf", "Arial Black.ttf", "Impact.t
 WIDTH_SHARE = 0.86
 TOP_SHARE = 0.11
 MAX_LINES = 3
+HASHTAG = re.compile(r"\s*#\w+")
 
 
 def frame_of(cover: Path) -> Path:
@@ -45,7 +48,8 @@ def _wrap(draw, text: str, font, width: float) -> list[str]:
 
 
 def draw_title(frame: Image.Image, text: str, fonts: Path | None) -> Image.Image:
-    """Big white words with a black outline in the top part, as large as three lines allow."""
+    """Big white capitals with a black outline in the top part, as large as three lines allow; hashtags stay off."""
+    text = no_emoji(HASHTAG.sub("", text)).upper()
     image = frame.convert("RGB").copy()
     draw = ImageDraw.Draw(image)
     w, h = image.size

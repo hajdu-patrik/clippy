@@ -562,7 +562,7 @@ def text_language_name(code: str | None, spoken: str | None) -> str:
 
 PROOFREAD_PROMPT = """You are a native Hungarian copy editor for a Hungarian creator's short videos. Proofread every
 text: fix spelling, accents (ő, ű), grammar, agreement and punctuation, and rewrite anything that sounds translated
-from English into natural spoken Hungarian. Keep the meaning, the names, the emoji and the length (never longer).
+from English into natural spoken Hungarian. Keep the meaning, the names and the length (never longer); no emojis.
 Titles in sentence case. Hungarian quotation marks („…”). No em or en dashes.
 Return ONLY JSON: {"texts": [{"id": <id>, "text": "..."}]} with every id, unchanged texts included."""
 PROOFREAD_SCHEMA = {

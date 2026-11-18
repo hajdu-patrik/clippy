@@ -114,10 +114,10 @@ Rules:
 
 TITLE_RULE = """- "title": the post title, max 70 characters: a curiosity-gap headline people must click (honest clickbait: a
   bold claim, a surprising number, an unfinished story, "nobody expected…"), the topic or guest keyword early (it
-  is searchable); it never promises what the clip does not show."""
+  is searchable); no emojis; it never promises what the clip does not show."""
 DESCRIPTION_RULE = """- "description": the post caption's opening: 1-2 short, punchy sentences that tease what happens and why it
-  matters without giving away the payoff, ending with exactly one fitting emoji (e.g. "Your shirt, your car's gas
-  level, even how a dog reacts to you: GTA 6 is watching every move you make. 👀"); no hashtags, no links."""
+  matters without giving away the payoff (e.g. "Your shirt, your car's gas level, even how a dog reacts to you: GTA 6
+  is watching every move you make."); no emojis, no hashtags, no links."""
 TOPIC_RULE = """- "topic": the VIDEO's main subject in 1-3 words, as people search it ("GTA 6", "Joe Rogan", "budget travel"),
   the same for every clip of this video (never this clip's detail), for the line that asks viewers to follow for
   more; no hashtag sign."""

@@ -66,8 +66,8 @@ def test_post_text_is_ready_to_paste_in_the_clip_language():
                 risks=["misquote"])
     text = post_text(clip, "https://youtu.be/x", {"duration_out": 28.4, "dead_air_removed": 1.2})
     caption, notes = text.split("\n---\n")
-    assert caption.strip() == ("Miért hagyta abba?\n\nTe abbahagytad volna? Írd meg kommentben 👇\n\n"
-                               "🎥 Eredeti videó: https://youtu.be/x\n\n#zene")
+    assert caption.strip() == ("Miért hagyta abba?\n\nTe abbahagytad volna? Írd meg kommentben.\n\n"
+                               "Eredeti videó: https://youtu.be/x\n\n#zene")
     assert "Title (YouTube Shorts): Miért hagyta abba?" in notes
     assert "Pinned comment: A teljes videó: https://youtu.be/x" in notes
     assert "Opening text idea (question): Erről senki nem beszél" in notes
@@ -85,9 +85,9 @@ def test_post_text_is_ready_to_paste_in_the_clip_language():
     caption = post_text(teaser, "https://youtu.be/x", {"duration_out": 20, "dead_air_removed": 0}, links)
     assert caption.split("\n---\n")[0].strip() == (
         "Your shirt, your car's gas level: GTA 6 is watching every move you make. 👀\n\n"
-        "Which detail surprised you? Drop it in the comments 👇\n\n🎥 Original video: https://youtu.be/x\n\n"
-        "⭐ Subscribe for more GTA 6 clips: https://www.youtube.com/@me\n📸 Instagram: https://www.instagram.com/me\n"
-        "🎵 TikTok: https://www.tiktok.com/@me\n🔗 Blog: https://me.example\n\n#GTA6 #GTAVI")
+        "Which detail surprised you? Tell us in the comments.\n\nOriginal video: https://youtu.be/x\n\n"
+        "Subscribe for more GTA 6 clips: https://www.youtube.com/@me\nInstagram: https://www.instagram.com/me\n"
+        "TikTok: https://www.tiktok.com/@me\nBlog: https://me.example\n\n#GTA6 #GTAVI")
 
 
 def test_captions_stay_clear_of_the_right_hand_buttons():
@@ -121,3 +121,10 @@ def test_generated_texts_have_no_long_dashes():
     assert written([{"kind": "set_title", "title": "GTA 6 — new"}, {"kind": "fix_caption", "replace": "a – b"}]) == [
         {"kind": "set_title", "title": "GTA 6, new"}, {"kind": "fix_caption", "replace": "a – b"}]
     assert "em dashes" in playbook.writing_rules("Hungarian")
+
+
+def test_post_texts_and_covers_carry_no_emoji():
+    from clippy.text import no_emoji
+
+    assert no_emoji("Oh no, lock in! \U0001F3AE\U0001F525\nWatch ⚠️ now") == "Oh no, lock in!\nWatch now"
+    assert no_emoji("Lucia’s café… 20-45 s") == "Lucia’s café… 20-45 s"

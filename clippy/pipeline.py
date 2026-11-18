@@ -97,9 +97,9 @@ class Options:
 
 
 LINK_LINES = {"YouTube": "post.youtube", "Instagram": "post.instagram", "TikTok": "post.tiktok"}
-AUDIENCE_HU = {"post.comments": "Írd meg kommentben 👇", "post.original": "🎥 Eredeti videó: {url}",
-               "post.subscribe": "⭐ Iratkozz fel további {topic} klipekért: {url}",
-               "post.subscribe_plain": "⭐ Iratkozz fel további klipekért: {url}", "post.full_video": "A teljes videó: {url}"}
+AUDIENCE_HU = {"post.comments": "Írd meg kommentben.", "post.original": "Eredeti videó: {url}",
+               "post.subscribe": "Iratkozz fel további {topic} klipekért: {url}",
+               "post.subscribe_plain": "Iratkozz fel további klipekért: {url}", "post.full_video": "A teljes videó: {url}"}
 
 
 def link_lines(links, topic: str, tr) -> list[str]:

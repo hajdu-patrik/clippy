@@ -38,6 +38,8 @@ from .hub import Hub
 from .kit import StyleKit
 from . import results, schedule
 
+AUTO_POST_MIN = 65
+GAMING = "20"
 PLACEHOLDER_TITLE = "Processing video…"
 WORKERS = max(1, int(os.environ.get("CLIPPY_WORKERS", "3")))
 
@@ -529,10 +531,15 @@ class GenerateJob(JobHandler):
 
     @staticmethod
     def post_new(ctx, first: int, post: dict) -> None:
-        """A daily pick's clip goes out at its time; past that time, right away."""
-        options = {"youtube": {"privacy": "public"}}
+        """A daily pick's clip goes out at its time; past that time, right away. A weak pick (a test stream, a clip
+        with nothing to show) is left for the user instead of going out by itself."""
+        options = {"youtube": {"privacy": "public", "category": GAMING}}
         for row in ctx.current_clips():
             if row["number"] < first:
+                continue
+            score = float((row.get("clip") or {}).get("score") or 0)
+            if score < AUTO_POST_MIN:
+                ctx.note("daily.not_posted", clip=row["number"], score=round(score), min=AUTO_POST_MIN)
                 continue
             if float(post["at"]) > time.time() + schedule.MIN_AHEAD:
                 schedule.post_at(ctx.db, ctx.runner, ctx.job.chat_id, row["number"], post["platforms"], options,

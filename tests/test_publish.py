@@ -140,6 +140,22 @@ def test_youtube_keeps_a_planned_clip_private_until_its_time(video):
     assert result.state == "scheduled"
 
 
+def test_youtube_sets_the_clips_cover_as_thumbnail(video):
+    video.path.with_suffix(".jpg").write_bytes(b"jpegbytes")
+    session = "https://upload.youtube/session"
+    http = FakeHTTP({("POST", youtube.UPLOAD): Resp(200, {}, {"Location": session}),
+                     ("PUT", session): Resp(200, {"id": "abc", "status": {"privacyStatus": "public"}}),
+                     ("POST", youtube.THUMBNAILS): Resp(200, {})})
+    youtube.YouTube().publish(http, TOKENS, video, POST, {"privacy": "public", "category": "20"})
+    assert http.calls[0][2]["json"]["snippet"]["categoryId"] == "20"
+    thumb = http.calls[-1]
+    assert thumb[1] == youtube.THUMBNAILS and thumb[2]["params"]["videoId"] == "abc" and thumb[2]["data"] == b"jpegbytes"
+    failing = FakeHTTP({("POST", youtube.UPLOAD): Resp(200, {}, {"Location": session}),
+                        ("PUT", session): Resp(200, {"id": "abc", "status": {"privacyStatus": "public"}}),
+                        ("POST", youtube.THUMBNAILS): Resp(403, {"error": {"message": "verify your channel"}})})
+    assert youtube.YouTube().publish(failing, TOKENS, video, POST, {}).state == "public"
+
+
 def test_youtube_resumes_where_google_says_after_a_broken_chunk(monkeypatch, video):
     monkeypatch.setattr(youtube, "CHUNK", 4)
     session = "https://upload.youtube/session"

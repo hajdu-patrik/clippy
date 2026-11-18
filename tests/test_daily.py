@@ -1,3 +1,4 @@
+import time
 from datetime import date, datetime, timezone
 
 import pytest
@@ -241,3 +242,33 @@ def test_daily_routes(tmp_path, monkeypatch):
     assert client.delete(f"/api/daily/{made['id']}").json() == {"ok": True}
     assert client.delete(f"/api/daily/{made['id']}").status_code == 404
     assert TestClient(client.app).post("/api/daily", json={"game": "gta-vi"}).status_code == 403
+
+
+def test_a_daily_pick_goes_out_at_its_time_unless_it_is_weak():
+    from clippy.web import jobs
+
+    class Runner:
+        def __init__(self):
+            self.submitted = []
+
+        def submit(self, chat_id, kind, payload):
+            self.submitted.append(payload)
+            return type("Job", (), {"id": len(self.submitted)})()
+
+    class Ctx:
+        def __init__(self, rows):
+            self.rows, self.notes, self.runner = rows, [], Runner()
+            self.db, self.job = None, type("J", (), {"chat_id": 5})()
+
+        def current_clips(self):
+            return self.rows
+
+        def note(self, key, **params):
+            self.notes.append(key)
+
+    at = time.time() + 3600
+    good = Ctx([{"number": 1, "clip": {"score": 90}}, {"number": 2, "clip": {"score": 30}}])
+    jobs.GenerateJob.post_new(good, 1, {"platforms": ["youtube"], "at": at})
+    [posted] = good.runner.submitted
+    assert posted["clip"] == 1 and posted["options"]["youtube"]["publish_at"] == at
+    assert good.notes == ["daily.not_posted"]
