@@ -48,8 +48,10 @@ def test_posting_times_come_at_least_an_hour_ahead_best_first():
 
 
 def test_daily_settings_keep_the_order_of_the_times():
-    assert daily_settings() == {"n": 3, "at": "09:00", "times": ["19:00", "15:00", "12:00"]}
-    assert daily_settings(5, "7.30", "21:00; 9:15 21:00") == {"n": 2, "at": "07:30", "times": ["21:00", "09:15"]}
+    assert daily_settings() == {"n": 3, "at": "09:00", "times": ["19:00", "15:00", "12:00"], "platforms": []}
+    assert daily_settings(platforms=["youtube", "twitch", "youtube"])["platforms"] == ["youtube"]
+    assert daily_settings(5, "7.30", "21:00; 9:15 21:00") == {"n": 2, "at": "07:30", "times": ["21:00", "09:15"],
+                                                              "platforms": []}
     for bad in ({"times": "25:00"}, {"at": "noon"}):
         with pytest.raises(ClippyError) as caught:
             daily_settings(**bad)

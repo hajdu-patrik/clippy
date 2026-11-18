@@ -1,4 +1,6 @@
-"""Planned posts: a clip goes out at a set time, or into the next free daily slot of a watched channel."""
+"""Planned posts: a clip goes out at a set time, or into the next free daily slot of a watched channel. A platform
+that schedules by itself (YouTube) gets the clip at once with its time on it, so it goes out even while this
+computer is off; the others wait in Clippy's own plan."""
 
 from __future__ import annotations
 
@@ -6,7 +8,7 @@ import re
 import time
 from datetime import datetime, timedelta
 
-from ..publish.registry import POSTING
+from ..publish.registry import POSTING, SELF_SCHEDULING
 from ..tools import ClippyError
 
 SLOT = re.compile(r"^([01]?\d|2[0-3])[:.]([0-5]\d)$")
@@ -60,6 +62,23 @@ def plan(db, chat_id: int, number: int, platforms: list[str], options: dict, due
     if due < (now or time.time()) + MIN_AHEAD:
         raise ClippyError(key="error.schedule_past")
     return db.add_scheduled(chat_id, number, platforms, options, due)
+
+
+def post_at(db, runner, chat_id: int, number: int, platforms: list[str], options: dict, at: float,
+            now: float | None = None) -> dict:
+    """One clip at a set time on each platform: uploaded now with its time where the platform keeps it, planned here
+    for the rest. Returns the started job's and the planned item's ids."""
+    if at < (now or time.time()) + MIN_AHEAD:
+        raise ClippyError(key="error.schedule_past")
+    own = [p for p in platforms if p in SELF_SCHEDULING]
+    rest = [p for p in platforms if p not in own]
+    out = {}
+    if own:
+        timed = {**options, **{p: {**(options.get(p) or {}), "publish_at": at} for p in own}}
+        out["job"] = runner.submit(chat_id, "publish", {"clip": number, "platforms": own, "options": timed}).id
+    if rest:
+        out["scheduled"] = plan(db, chat_id, number, rest, options, at, now)["id"]
+    return out
 
 
 def plan_in_slots(db, chat_id: int, numbers: list[int], autopost: dict, now: float | None = None) -> list[dict]:

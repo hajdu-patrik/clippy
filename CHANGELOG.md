@@ -95,6 +95,8 @@ change, what changed rather than how; dates are ISO 8601.
 - The topic sets a clip's length (default limit 20-90 s): a start check moves a clip that drops into a story or a
   rant back to where it starts, the ending check follows the topic by up to four sentences, and a recording cut off
   mid-sentence loses its unfinished words.
+- A planned YouTube post is uploaded at once with its publish time, so YouTube makes it public on time even while
+  the computer is off; daily picks can post each clip at its time by themselves (Settings, Automation).
 - Brand logos for the seven platforms on the account cards, the connect buttons, the post dialog and the watch form.
 - Settings is split into pages (General, Accounts, Style, Automation, Results) with a tab bar, and the style kit
   takes an optional intro (an image stays 1.5 s) next to the logo and the outro.

@@ -20,6 +20,7 @@ class Platform:
     name = label = ""
     oauth = True
     posting = True
+    schedules = False
     renews = False
     env: tuple[str, ...] = ()
 

@@ -210,14 +210,17 @@ def test_a_post_can_be_planned_from_the_card_and_cancelled(web, tmp_path):
     from clippy.publish import Tokens
 
     runner.accounts.save("youtube", Tokens(access_token="a", expires_at=9e12, name="Me"))
+    runner.accounts.save("tiktok", Tokens(access_token="t", expires_at=9e12, name="Me"))
     when = datetime.now().timestamp() + 7200
-    answer = client.post(f"/api/chats/{chat['id']}/clips/1/publish", json={"platforms": ["youtube"], "at": when})
-    item = answer.json()["scheduled"]
-    assert not runner.pending
+    answer = client.post(f"/api/chats/{chat['id']}/clips/1/publish",
+                         json={"platforms": ["youtube", "tiktok"], "at": when}).json()
+    item = answer["scheduled"]
+    [job] = runner.pending
+    assert job.payload["platforms"] == ["youtube"] and job.payload["options"]["youtube"]["publish_at"] == when
     clip = next(iter(client.get(f"/api/chats/{chat['id']}").json()["clips"].values()), None)
     assert clip is None or clip["scheduled"][0]["id"] == item
     row = db.current_clips(chat["id"])[0]
-    assert runner.presenter.present(row)["scheduled"] == [{"id": item, "due": when, "platforms": ["youtube"]}]
+    assert runner.presenter.present(row)["scheduled"] == [{"id": item, "due": when, "platforms": ["tiktok"]}]
     past = client.post(f"/api/chats/{chat['id']}/clips/1/publish", json={"platforms": ["youtube"], "at": 1000})
     assert past.status_code == 400 and past.json()["detail"]["key"] == "error.schedule_past"
     assert client.delete(f"/api/scheduled/{item}").json() == {"ok": True}

@@ -123,9 +123,9 @@ class ChatService:
         if row is None:
             raise NotFound(number)
         if at is not None:
-            item = schedule.plan(self.db, chat_id, number, platforms, options, at)
+            out = schedule.post_at(self.db, self.runner, chat_id, number, platforms, options, at)
             self.hub.publish(chat_id, {"type": "clip", "clip": self.presenter.present(row, current=True)})
-            return {"scheduled": item["id"]}
+            return out
         job = self.runner.submit(chat_id, "publish", {"clip": number, "platforms": platforms, "options": options})
         return {"job": job.id}
 
@@ -199,7 +199,8 @@ class ChatService:
         if kind == "daily":
             current = next((d["settings"] for d in self.db.list_daily() if d["game"] == action["game"]), {})
             self.watcher.daily.add(action["game"], daily_settings(action["n"], current.get("at") or DEFAULT_AT,
-                                                                  current.get("times") or ""))
+                                                                  current.get("times") or "",
+                                                                  current.get("platforms") or ()))
             return []
         return [(kind, action)]
 

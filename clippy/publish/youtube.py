@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import re
+import time
+from datetime import datetime, timezone
 
 from ..tools import ClippyError, report
 from . import TIMEOUT, UPLOAD_TIMEOUT, PostResult, PostText, Reader, Tokens, Upload, bearer, check_length, checked
@@ -18,6 +20,7 @@ CHUNK = 8 * 1024 * 1024
 LONGEST = 180
 PRIVACY = ("public", "unlisted", "private")
 TRIES = 3
+AHEAD = 120.0
 
 
 def no_brackets(text: str) -> str:
@@ -39,6 +42,7 @@ class YouTube(OAuthPlatform):
     env = ("CLIPPY_YOUTUBE_CLIENT_ID", "CLIPPY_YOUTUBE_CLIENT_SECRET")
     auth_endpoint, token_url, scopes = AUTH, TOKEN, SCOPES
     extra_auth = {"access_type": "offline", "prompt": "consent"}
+    schedules = True
 
     def identify(self, http, tokens: Tokens) -> None:
         channels = checked(http.get(f"{API}/channels", params={"part": "snippet", "mine": "true"},
@@ -55,6 +59,11 @@ class YouTube(OAuthPlatform):
                             "description": no_brackets(post.caption)[:4900], "tags": tags_of(post.hashtags),
                             "categoryId": "22"},
                 "status": {"privacyStatus": privacy, "selfDeclaredMadeForKids": False}}
+        at = options.get("publish_at")
+        planned = isinstance(at, (int, float)) and at > time.time() + AHEAD
+        if planned:
+            body["status"] |= {"privacyStatus": "private",
+                               "publishAt": datetime.fromtimestamp(at, timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")}
         start = http.post(UPLOAD, params={"uploadType": "resumable", "part": "snippet,status"}, json=body,
                           headers={**bearer(tokens.access_token), "X-Upload-Content-Length": str(size),
                                    "X-Upload-Content-Type": "video/mp4"}, timeout=TIMEOUT)
@@ -64,8 +73,8 @@ class YouTube(OAuthPlatform):
             raise ClippyError(key="error.platform_rejected", platform=self.label, detail="no upload session")
         video = self._send(http, tokens, session, upload, size)
         got = (video.get("status") or {}).get("privacyStatus") or privacy
-        return PostResult(url=f"https://youtube.com/shorts/{video['id']}", remote_id=video["id"],
-                          state=got if got == privacy else f"{got}_until_audit")
+        state = "scheduled" if planned else got if got == privacy else f"{got}_until_audit"
+        return PostResult(url=f"https://youtube.com/shorts/{video['id']}", remote_id=video["id"], state=state)
 
     def _send(self, http, tokens: Tokens, session: str, upload: Upload, size: int) -> dict:
         offset, failures = 0, 0

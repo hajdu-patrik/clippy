@@ -521,7 +521,25 @@ class GenerateJob(JobHandler):
                     ctx.show(row)
             if planned:
                 return tx("done.generate_planned", n=n, title=proj.title, count=len(planned))
+        if p.get("post") and not p.get("posted"):
+            self.post_new(ctx, first, p["post"])
+            p["posted"] = True
+            ctx.remember()
         return tx("done.generate", n=n, title=proj.title)
+
+    @staticmethod
+    def post_new(ctx, first: int, post: dict) -> None:
+        """A daily pick's clip goes out at its time; past that time, right away."""
+        options = {"youtube": {"privacy": "public"}}
+        for row in ctx.current_clips():
+            if row["number"] < first:
+                continue
+            if float(post["at"]) > time.time() + schedule.MIN_AHEAD:
+                schedule.post_at(ctx.db, ctx.runner, ctx.job.chat_id, row["number"], post["platforms"], options,
+                                 float(post["at"]))
+            else:
+                ctx.runner.submit(ctx.job.chat_id, "publish", {"clip": row["number"], "platforms": post["platforms"],
+                                                              "options": options})
 
 
 class MoreJob(JobHandler):

@@ -217,7 +217,8 @@ Kick category, which are the streamers' biggest live reactions, keeps one per st
 and makes a vertical clip of each in its own chat, with the stream layout and a post text that credits the streamer.
 Each pick comes with a time to post it for a US audience (New York 19:00, 15:00 and 12:00 by default, the most
 watched moment first), shown in your own time too; *Settings, Automation* lists today's picks with their times and
-a *Copy text* button. GTA VI, GTA V, Minecraft, Fortnite, Valorant, Counter-Strike, League of Legends and Warzone are
+a *Copy text* button. Tick YouTube under *Post each clip at its time* and every pick also goes out by itself:
+YouTube gets it as soon as it is made and publishes it at its time. GTA VI, GTA V, Minecraft, Fortnite, Valorant, Counter-Strike, League of Legends and Warzone are
 known by name (`clippy/categories.py`).
 
 Posts can wait for their time: choose *At a set time* in the Post dialog, and the card shows the planned post with a

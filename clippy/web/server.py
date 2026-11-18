@@ -115,6 +115,7 @@ class NewDaily(BaseModel):
     n: int = Field(default=3, ge=1, le=5)
     at: str = Field(default="09:00", max_length=5)
     times: str = Field(default="", max_length=80)
+    platforms: list[PostingPlatform] = Field(default_factory=list, max_length=len(POSTING))
     now: bool = True
 
 
@@ -469,7 +470,7 @@ def create_app(storage: Storage | None = None, db_path: Path | None = None, runn
     @app.post("/api/daily")
     def add_daily(body: NewDaily):
         try:
-            d = watcher.daily.add(body.game, daily_settings(body.n, body.at, body.times), body.now)
+            d = watcher.daily.add(body.game, daily_settings(body.n, body.at, body.times, body.platforms), body.now)
         except ClippyError as exc:
             raise HTTPException(400, error_detail(exc)) from None
         return present_daily(db, presenter, d)

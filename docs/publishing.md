@@ -20,7 +20,7 @@ official sign-in; where a platform offers apps no way to upload a video, the car
 
 | Platform | Connect | Post | Plan a post | What the platform requires |
 | --- | --- | --- | --- | --- |
-| YouTube | yes (Google, PKCE) | yes, Shorts up to 3 min | yes | a Google Cloud project; uploads of an unaudited project may stay private |
+| YouTube | yes (Google, PKCE) | yes, Shorts up to 3 min | yes | a Google Cloud project with the YouTube Data API v3 |
 | Instagram | yes (token you generate) | yes, Reels up to 15 min | yes | a Meta app with Instagram login, Creator or Business account |
 | Facebook | yes (Facebook Login) | yes, Page Reels 3 to 90 s | yes | a Meta app and a Facebook Page you manage |
 | TikTok | yes (PKCE) | drafts, or private until its audit | yes | a TikTok developer app, Sandbox or audit |
@@ -28,8 +28,9 @@ official sign-in; where a platform offers apps no way to upload a video, the car
 | Twitch | yes (shows the channel) | **no**: no upload API | - | a Twitch developer app |
 | Kick | yes (PKCE, shows the channel) | **no**: no upload API | - | a Kick developer app |
 
-"Plan a post" is Clippy's own scheduler (see below): Clippy has to be running at the planned time. The platforms' own
-scheduling is not used, so every platform plans the same way.
+"Plan a post": YouTube gets the clip at once, private, with its publish time, and makes it public at that time by
+itself, so it goes out even while this computer is off. The other platforms wait in Clippy's own scheduler (see
+below), so Clippy has to be running at their planned time.
 
 The official documentation this is built on (checked November 2026):
 [YouTube resumable upload](https://developers.google.com/youtube/v3/guides/using_resumable_upload_protocol),
@@ -84,9 +85,11 @@ http://127.0.0.1:7860/oauth/<name>/callback
 
 Good to know:
 
-* Google may keep uploads of a new, unaudited API project **private** until the project passes the YouTube API
-  compliance audit. The clip card then says so; you can make the video public in YouTube Studio.
-* The default API quota allows only a few uploads a day. A Short can be at most 3 minutes long.
+* Uploads have their own quota bucket: 100 uploads a day, each costing 1 unit, separate from the 10,000 units of
+  the other calls. Google's reference now says uploads of unverified API projects are not restricted to private
+  viewing ([videos.insert](https://developers.google.com/youtube/v3/docs/videos/insert), checked November 2026).
+  If YouTube still keeps a video private, the clip card says so and you can make it public in YouTube Studio.
+* A Short can be at most 3 minutes long.
 
 ## Instagram
 

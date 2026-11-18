@@ -42,7 +42,7 @@ def clean_times(text) -> list[str]:
     return out or list(DEFAULT_TIMES)
 
 
-def daily_settings(n=DEFAULT_N, at=DEFAULT_AT, times="") -> dict:
+def daily_settings(n=DEFAULT_N, at=DEFAULT_AT, times="", platforms=()) -> dict:
     run = schedule.clean_slots(at or DEFAULT_AT)
     if len(run) != 1:
         raise ClippyError(key="error.bad_slot", slot=str(at)[:12])
@@ -51,7 +51,8 @@ def daily_settings(n=DEFAULT_N, at=DEFAULT_AT, times="") -> dict:
     except (TypeError, ValueError):
         count = DEFAULT_N
     slots = clean_times(times)
-    return {"n": max(1, min(MAX_N, count, len(slots))), "at": run[0], "times": slots}
+    posting = [p for p in dict.fromkeys(platforms or ()) if p in schedule.POSTING]
+    return {"n": max(1, min(MAX_N, count, len(slots))), "at": run[0], "times": slots, "platforms": posting}
 
 
 def _nth_sunday(year: int, month: int, nth: int) -> datetime:
@@ -161,7 +162,7 @@ class Daily:
             dues = post_times(free, len(picked), now)
             made = []
             for i, (m, due, slot) in enumerate(zip(picked, dues, free), len(today) + 1):
-                chat = self.start_chat(game, m, due, i, len(today) + len(picked))
+                chat = self.start_chat(game, m, due, i, len(today) + len(picked), settings.get("platforms") or [])
                 if chat is not None:
                     made.append({"chat_id": chat["id"], "due": due, "slot": slot, "streamer": m.streamer,
                                  "platform": m.platform, "views": m.views, "url": m.url, "title": m.title, "run": now})
@@ -172,7 +173,7 @@ class Daily:
         self.changed()
         return len(made)
 
-    def start_chat(self, game: categories.Game, m, due: float, i: int, n: int) -> dict | None:
+    def start_chat(self, game: categories.Game, m, due: float, i: int, n: int, platforms=()) -> dict | None:
         try:
             require_public_url(m.url)
         except ClippyError:
@@ -186,6 +187,8 @@ class Daily:
         self.hub.publish(chat["id"], {"type": "chat", "chat": self.db.get_chat(chat["id"])})
         payload = generate_payload(m.url, {"preset": "gameplay", "n": 1, "instructions": instructions(game, m)})
         payload["options"].update(whole=True, max_len=WHOLE_MAX)
+        if platforms:
+            payload["post"] = {"platforms": list(platforms), "at": due}
         self.runner.submit(chat["id"], "generate", payload)
         return chat
 

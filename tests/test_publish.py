@@ -1,4 +1,6 @@
 import json
+import time
+from datetime import datetime
 
 import pytest
 from fastapi.testclient import TestClient
@@ -124,6 +126,18 @@ def test_youtube_uploads_in_chunks_with_the_clip_title(monkeypatch, video):
     ranges = [kw["headers"]["Content-Range"] for m, url, kw in http.calls if m == "PUT"]
     assert ranges == ["bytes 0-3/10", "bytes 4-7/10", "bytes 8-9/10"]
     assert b"".join(kw["sent"] for m, url, kw in http.calls if m == "PUT") == b"0123456789"
+
+
+def test_youtube_keeps_a_planned_clip_private_until_its_time(video):
+    session = "https://upload.youtube/session"
+    http = FakeHTTP({("POST", youtube.UPLOAD): Resp(200, {}, {"Location": session}),
+                     ("PUT", session): Resp(200, {"id": "abc", "status": {"privacyStatus": "private"}})})
+    at = time.time() + 3 * 3600
+    result = youtube.YouTube().publish(http, TOKENS, video, POST, {"privacy": "public", "publish_at": at})
+    status = http.calls[0][2]["json"]["status"]
+    assert status["privacyStatus"] == "private" and status["publishAt"].endswith("Z")
+    assert abs(datetime.fromisoformat(status["publishAt"].replace("Z", "+00:00")).timestamp() - at) < 1
+    assert result.state == "scheduled"
 
 
 def test_youtube_resumes_where_google_says_after_a_broken_chunk(monkeypatch, video):

@@ -2,6 +2,7 @@ import { api } from "./api.js";
 import { showCopyDialog } from "./cards.js";
 import { t, tx } from "./i18n.js";
 import { onLive } from "./live.js";
+import { LABELS, POSTING, platformLabel } from "./platforms.js";
 import { $, copyText, esc, toast } from "./util.js";
 
 let daily = [];
@@ -33,7 +34,9 @@ function pickRow(p) {
 
 function dailyRow(d) {
   const s = d.settings || {};
-  const state = t("picks.summary", { n: s.n || 3, at: s.at || "09:00", times: (s.times || []).join(", ") })
+  const names = (s.platforms || []).map((p) => LABELS[p] || p).join(", ");
+  const posts = names ? ` · ${t("picks.posts", { platforms: names })}` : "";
+  const state = t("picks.summary", { n: s.n || 3, at: s.at || "09:00", times: (s.times || []).join(", ") }) + posts
     + (d.enabled ? "" : ` · ${t("picks.paused")}`);
   return `<li class="account watch ${d.enabled ? "on" : ""}" data-did="${d.id}">
     <div><b>${esc(d.name)}</b><span class="account-state">${esc(state)}</span>
@@ -50,6 +53,12 @@ function render() {
   if (!list) return;
   list.innerHTML = daily.length ? daily.map(dailyRow).join("")
     : `<li class="account"><span class="account-state">${esc(t("picks.none"))}</span></li>`;
+  const boxes = $("#picksPlatforms");
+  if (boxes && !boxes.children.length) {
+    boxes.innerHTML = POSTING.map((name) =>
+      `<label class="check"><input type="checkbox" name="picksPlatform" value="${name}">` +
+      `<span>${platformLabel(name)}</span></label>`).join("");
+  }
   const select = $("#picksGame");
   if (select && select.options.length !== games.length) {
     select.innerHTML = games.map((g) => `<option value="${esc(g.key)}">${esc(g.name)}</option>`).join("");
@@ -111,6 +120,7 @@ async function addDaily() {
       n: Number($("#picksN").value) || 3,
       at: $("#picksAt").value || "09:00",
       times: $("#picksTimes").value,
+      platforms: [...document.querySelectorAll("input[name=picksPlatform]:checked")].map((box) => box.value),
       now: true,
     });
     $("#picksAdd").open = false;

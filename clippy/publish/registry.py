@@ -14,6 +14,7 @@ from .youtube import YouTube
 ADAPTERS: tuple[type[Platform], ...] = (YouTube, Instagram, Facebook, TikTok, X, Twitch, Kick)
 PLATFORMS = tuple(a.name for a in ADAPTERS)
 POSTING = tuple(a.name for a in ADAPTERS if a.posting)
+SELF_SCHEDULING = tuple(a.name for a in ADAPTERS if a.schedules)
 LABELS = {a.name: a.label for a in ADAPTERS}
 
 
