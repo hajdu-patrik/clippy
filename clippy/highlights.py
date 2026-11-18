@@ -466,8 +466,9 @@ def _check_endings(llm: LLM, clips: list[Clip], words: list[dict], bounds: Bound
         if v.move == "extend":
             later = [j for j in ends if j > i1]
             target = later[min(v.sentences, len(later)) - 1] if later else None
-        elif i1 == len(words) - 1 and 0 < v.words <= MAX_CUT_WORDS:
-            target = i1 - v.words
+        elif i1 == len(words) - 1 and 0 < v.words:
+            cut_off = v.words <= MAX_CUT_WORDS and not ends_sentence(words[i1]["word"])
+            target = i1 - v.words if cut_off else None
         else:
             earlier = [j for j in ends if j < i1 and bounds.duration(i0, j) >= min_len]
             target = earlier[-1] if earlier else None

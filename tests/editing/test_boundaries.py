@@ -228,3 +228,12 @@ def test_the_end_gets_its_air_when_the_next_word_swallowed_a_silence():
     assert end_time(words, 0) == 10.7
     words[1]["end"] = 10.6
     assert end_time(words, 0) == 10.3
+
+
+def test_a_recording_that_ends_on_a_finished_sentence_keeps_it():
+    words = speech("you have got to be kidding me. it is going to start me from all the way back.", step=0.4)
+    bounds = Boundaries(words)
+    clip = Clip(0.0, words[-1]["end"] + 0.4, 50)
+    _check_endings(Reply({"clips": [{"id": 0, "verdict": "trim", "words": 3}]}), [clip], words, bounds, 2, 60,
+                   "English")
+    assert ending(clip, words) == ("the way back.", "")
