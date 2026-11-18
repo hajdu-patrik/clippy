@@ -97,6 +97,7 @@ change, what changed rather than how; dates are ISO 8601.
 - The web job module is split by responsibility (`texts`, `progress`, `handlers`, `jobs`), routes share two error
   handlers and one upload reader, the platform adapters share one wait loop, and the command line's errors (LLM,
   ffmpeg, files) come from the text catalogue.
+- The project page is served with a strict Content-Security-Policy and the usual security headers.
 - Clip media is revalidated on every load, so a cover rewritten after a title change shows at once.
 - Dependency floors moved past known-vulnerable releases (requests, pillow, starlette); CI runs on the current
   `actions/checkout` and `actions/setup-python`.

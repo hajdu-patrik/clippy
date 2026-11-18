@@ -57,9 +57,9 @@ Every stage is cached, so re-runs are fast.
 | `--wish "..."` | what kind of moments to pick, e.g. "the funniest parts" |
 | `--lang hu` | spoken language (default: detected, the video's own language) |
 | `--captions en` | language of the captions and the opening text; one different from the spoken language is translated |
-| `--vocab "DESH, Young Fly"` | names and slang to spell right; the video title is added automatically |
-| `--whisper large-v3-turbo` | faster transcription (default: `auto` = large-v3 on the GPU) |
-| `--llm ollama/openai/none` | hook picker (also settable in `.env`) |
+| `--vocab "DESH, Young Fly"` | names and slang to spell right; the video title is added automatically (`--no-title-vocab` leaves it out) |
+| `--whisper large-v3-turbo`, `--device cpu` | faster transcription (default: `auto` = large-v3 on the GPU); the device to transcribe on (`auto`, `cuda`, `cpu`) |
+| `--llm ollama/openai/none`, `--model <name>` | hook picker and its model (also settable in `.env`) |
 | `--layout auto/face/center/blur/stream` | `auto`: decides per shot (speaking face → tracking, otherwise blur) |
 | `--facecam x,y,w,h` | facecam for the stream layout (estimated automatically otherwise) |
 | `--no-tighten` | keep dead air and filler words |

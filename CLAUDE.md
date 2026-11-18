@@ -19,7 +19,7 @@ belongs in `data/` (ignored) and `.env` (ignored).
 - User-facing texts live in catalogues: server and CLI texts in `clippy/i18n.py` (`CATALOG`), UI texts in
   `clippy/web/static/js/i18n.js`. The server sends `{key, params}`; errors raise `ClippyError(key=..., **params)`.
 - Long-running steps report progress with `tools.report(fraction)` inside `tools.report_span(lo, hi)`; the web job runner
-  turns it into the live progress card (`clippy/web/jobs.py`, `Progress`).
+  turns it into the live progress card (`clippy/web/progress.py`, `Progress`).
 - Paths come from `clippy/storage.py` only. Deleting a chat must remove every file of it.
 - Parallel work goes through `clippy/concurrency.py`: lock order source video → render slot → GPU (checked at
   runtime), one job per chat at a time, LLM calls of jobs through `GuardedLLM`. Files that others read are written

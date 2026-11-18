@@ -34,3 +34,11 @@ def test_the_cache_rules_are_valid_and_keep_pages_fresh():
     values = {r["source"]: r["headers"][0]["value"] for r in rules}
     assert "immutable" in values["/assets/site.(css|js)"]
     assert values["/"].startswith("public, max-age=0")
+
+
+def test_every_page_is_served_with_security_headers():
+    rules = json.loads((DOCS / "vercel.json").read_text(encoding="utf-8"))["headers"]
+    sent = {h["key"]: h["value"] for r in rules if r["source"] == "/(.*)" for h in r["headers"]}
+    assert "default-src 'self'" in sent["Content-Security-Policy"] and "unsafe" not in sent["Content-Security-Policy"]
+    assert sent["X-Content-Type-Options"] == "nosniff" and sent["X-Frame-Options"] == "DENY"
+    assert {"Referrer-Policy", "Permissions-Policy"} <= set(sent)
