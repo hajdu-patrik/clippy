@@ -35,6 +35,15 @@ def test_hook_and_cta_replace_their_role_layers(timeline, ctx):
     assert tl.text_with_role("cta").transform.y == 0.82 and changes[0].action == "added"
 
 
+def test_the_opening_text_moves_without_new_text(timeline, ctx):
+    tl, _ = SetHook(text="GTA 6 is out TOMORROW").apply(timeline, ctx)
+    tl, changes = SetHook(position="center").apply(tl, ctx)
+    hook = tl.text_with_role("hook")
+    assert (hook.text, hook.transform.y, changes[0].action) == ("GTA 6 is out TOMORROW", 0.5, "changed")
+    with pytest.raises(ClippyError):
+        SetCta(position="top").apply(timeline.without_layer("cta"), ctx)
+
+
 def test_caption_style_and_hiding(timeline, ctx):
     tl, _ = StyleCaptions(highlight="cyan", height="middle", uppercase=False).apply(timeline, ctx)
     captions = tl.layer("captions")

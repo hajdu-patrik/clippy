@@ -77,22 +77,29 @@ class EditText(TextLook):
 
 
 class RoleText(TextLook):
-    """The hook and the CTA are text layers with a role: the renderer times them (first / last seconds)."""
+    """The hook and the CTA are text layers with a role: the renderer times them (first / last seconds). Without
+    text it only moves or restyles the existing one."""
 
     kind: str
-    text: str = Field(min_length=1, max_length=120)
+    text: str | None = Field(None, min_length=1, max_length=120)
+    position: Position | None = None
     role: ClassVar[str] = "hook"
     default_position: ClassVar[str] = "top"
 
     def apply(self, timeline: Timeline, ctx: EditContext) -> Applied:
         old = timeline.text_with_role(self.role)
         if old is None:
+            if self.text is None:
+                raise ClippyError(key="edit.no_layer", layer=self.role)
             base = HOOK_STYLE if self.role == "hook" else TextStyle()
             layer = TextLayer(id=self.role, role=self.role, text=self.text, style=self.styled(base),
-                              transform=place(self.default_position, TEXT_WIDTH))
+                              transform=place(self.position or self.default_position, TEXT_WIDTH))
             return timeline.with_layer(layer), [Change.added(self.role, text=self.text)]
-        new = old.evolve(text=self.text, style=self.styled(old.style))
-        return timeline.replacing(new), [Change.changed(self.role, text=self.text)]
+        update = {"text": self.text or old.text, "style": self.styled(old.style)}
+        if self.position is not None:
+            update["transform"] = place(self.position, old.transform.width, old.transform.opacity)
+        new = old.evolve(**update)
+        return timeline.replacing(new), [Change.changed(self.role, text=new.text)]
 
 
 @operation
