@@ -12,7 +12,7 @@ from . import schedule
 from .media import MediaStore
 
 INFO_KEYS = ("duration_out", "dead_air_removed", "jump_cuts", "shots", "layout_frames", "encoder", "source",
-             "loudness_in")
+             "loudness_in", "restores")
 
 
 def slim_info(info: dict) -> dict:

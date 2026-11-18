@@ -79,3 +79,20 @@ def test_undoing_twice_steps_back_twice():
     assert repo.undo_target(1, 1) is None
     rows.append({"version": 6, "info": {}})
     assert repo.undo_target(1, 1) == {"version": 1}
+
+
+def test_undo_twice_steps_back_twice_through_the_stored_versions(tmp_path):
+    from clippy.web.clips import slim_info
+    from clippy.web.db import DB
+
+    db = DB(tmp_path / "t.db")
+    chat = db.create_chat()["id"]
+    repo = TimelineRepository(db)
+
+    def store(version, info):
+        db.add_clip(chat, 1, version, {}, {}, slim_info(info), f"v{version}.mp4", "c.jpg", "c.txt")
+
+    for version in (1, 2, 3):
+        store(version, {"duration_out": 30.0})
+    store(4, {**slim_info({}), "restores": repo.undo_target(chat, 1)["version"]})
+    assert repo.undo_target(chat, 1)["version"] == 1

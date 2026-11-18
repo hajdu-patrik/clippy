@@ -92,6 +92,12 @@ change, what changed rather than how; dates are ISO 8601.
   profile / channel / playlist link, no video in the post, no sound, each with what helps.
 
 ### Changed
+- The topic sets a clip's length (default limit 20-90 s): a start check moves a clip that drops into a story or a
+  rant back to where it starts, the ending check follows the topic by up to four sentences, and a recording cut off
+  mid-sentence loses its unfinished words.
+- Brand logos for the seven platforms on the account cards, the connect buttons, the post dialog and the watch form.
+- The project page plays a 1080p demo on demand (4K behind a link), shares one stylesheet and type scale with the
+  legal pages, serves half-size images to phones and has cache rules for its assets.
 - English only: the web app, the chat replies and the command line are in English, and the language switch and
   `clippy lang` are gone. Videos still keep their own language for the transcript, the captions and the post text
   (a Hungarian video gets a Hungarian post), and captions can still be translated between English and Hungarian.
@@ -134,6 +140,10 @@ change, what changed rather than how; dates are ISO 8601.
 - The separate restyle action is gone; style changes are ordinary edits.
 - Captions keep 120 px from the sides, clear of the platform buttons on the right.
 - Clips rendered side by side no longer log "font skipped" when another render copied the caption font first.
+- Undo twice steps back two versions instead of bringing back the undone edit.
+- The opening text and the call to action can be moved by asking ("move the opening text to the center").
+- Moving a clip's start or end in fast speech without punctuation lands within 6 s of where it was asked, not tens
+  of seconds away.
 
 ### Performance
 - Rendering a clip from a 4K source is about 2.7x faster (45 s -> 16 s for a 28 s clip): the stream layout is
