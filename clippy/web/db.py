@@ -126,6 +126,9 @@ class DB:
             if "stats" not in {r[1] for r in self.conn.execute("PRAGMA table_info(posts)")}:
                 self.conn.execute("ALTER TABLE posts ADD COLUMN stats TEXT NOT NULL DEFAULT '{}'")
                 self.conn.execute("ALTER TABLE posts ADD COLUMN stats_at REAL NOT NULL DEFAULT 0")
+            if "cover_due" not in {r[1] for r in self.conn.execute("PRAGMA table_info(posts)")}:
+                self.conn.execute("ALTER TABLE posts ADD COLUMN cover_due REAL NOT NULL DEFAULT 0")
+                self.conn.execute("ALTER TABLE posts ADD COLUMN cover_tries INTEGER NOT NULL DEFAULT 0")
             try:
                 self.conn.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_clip_version ON clips(chat_id, number, version)")
             except sqlite3.IntegrityError:
@@ -251,13 +254,22 @@ class DB:
         return cur.rowcount
 
     def add_post(self, clip: dict, platform: str, state: str, url: str = "", remote_id: str = "",
-                 problem: dict | None = None) -> dict:
+                 problem: dict | None = None, cover_due: float = 0.0) -> dict:
+        """`cover_due`: when to try the cover again that the platform turned down at posting (0: nothing to do)."""
         cur = self._exec(
-            "INSERT INTO posts (chat_id, clip_id, number, platform, state, url, remote_id, problem, created) "
-            "VALUES (?,?,?,?,?,?,?,?,?)",
+            "INSERT INTO posts (chat_id, clip_id, number, platform, state, url, remote_id, problem, created, cover_due) "
+            "VALUES (?,?,?,?,?,?,?,?,?,?)",
             (clip["chat_id"], clip["id"], clip["number"], platform, state, url, remote_id,
-             json.dumps(problem or {}, ensure_ascii=False), time.time()))
+             json.dumps(problem or {}, ensure_ascii=False), time.time(), cover_due))
         return self._one("SELECT * FROM posts WHERE id = ?", (cur.lastrowid,))
+
+    def covers_due(self, now: float) -> list[dict]:
+        return self._all(
+            "SELECT p.*, c.jpg AS jpg FROM posts p JOIN clips c ON c.id = p.clip_id WHERE p.cover_due > 0 "
+            "AND p.cover_due <= ? AND p.state != 'failed' AND p.remote_id != '' ORDER BY p.cover_due", (now,))
+
+    def set_cover_retry(self, post_id: int, due: float, tries: int) -> None:
+        self._exec("UPDATE posts SET cover_due = ?, cover_tries = ? WHERE id = ?", (due, tries, post_id))
 
     def latest_posts(self, chat_id: int, number: int) -> list[dict]:
         """The newest post of a clip number on each platform (a failed try is replaced by the next one)."""

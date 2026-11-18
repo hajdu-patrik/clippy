@@ -9,7 +9,7 @@ import traceback
 
 from ..download import latest_uploads, require_public_url
 from ..tools import ClippyError, log
-from . import results, schedule
+from . import cover_retry, results, schedule
 from .jobs import english, tx
 from .presets import PRESETS
 
@@ -77,6 +77,7 @@ class Watcher:
         with self._lock:
             self.post_due()
             now = self.clock()
+            cover_retry.retry(self.db, self.runner.accounts, now)
             if now - self._measured >= MEASURE_EVERY:
                 self._measured = now
                 self.measure()

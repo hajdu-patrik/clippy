@@ -90,6 +90,10 @@ Good to know:
   viewing ([videos.insert](https://developers.google.com/youtube/v3/docs/videos/insert), checked November 2026).
   If YouTube still keeps a video private, the clip card says so and you can make it public in YouTube Studio.
 * A Short can be at most 3 minutes long.
+* The clip's cover is set as the video's thumbnail right after the upload. YouTube limits how many thumbnails a
+  channel may set in a row ("too many requests"); a cover it turns down is tried again in the background, first after
+  15 minutes and then less and less often (at most every 6 hours, 8 tries), also after a restart. Custom thumbnails
+  need a verified channel (YouTube Studio, Settings, Channel, Feature eligibility).
 
 ## Instagram
 

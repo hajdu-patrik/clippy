@@ -6,6 +6,8 @@ change, what changed rather than how; dates are ISO 8601.
 ## [Unreleased]
 
 ### Added
+- A cover YouTube turns down at posting (its thumbnail rate limit) is tried again in the background, less and less
+  often, until it is set or eight tries run out.
 - Accounts for seven platforms in Settings, as a grid of cards: YouTube, Instagram, TikTok and now Facebook (Page
   Reels) and X (chunked video upload) can be connected and posted to, planned posts included; Twitch and Kick can be
   connected, but neither has an upload API, so their cards say "Connect only" and Clippy never posts there. Each

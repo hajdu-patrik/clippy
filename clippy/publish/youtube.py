@@ -43,6 +43,10 @@ def tags_of(hashtags) -> list[str]:
     return out
 
 
+def usable_cover(image: Path) -> bool:
+    return image.is_file() and image.stat().st_size <= THUMBNAIL_MAX
+
+
 class YouTube(OAuthPlatform):
     name, label = "youtube", "YouTube"
     env = ("CLIPPY_YOUTUBE_CLIENT_ID", "CLIPPY_YOUTUBE_CLIENT_SECRET")
@@ -78,17 +82,19 @@ class YouTube(OAuthPlatform):
         if not session:
             raise ClippyError(key="error.platform_rejected", platform=self.label, detail="no upload session")
         video = self._send(http, tokens, session, upload, size)
-        self.set_thumbnail(http, tokens, video["id"], upload.path.with_suffix(".jpg"))
+        cover = upload.path.with_suffix(".jpg")
+        pending = usable_cover(cover) and not self.set_cover(http, tokens, video["id"], cover)
         got = (video.get("status") or {}).get("privacyStatus") or privacy
         state = "scheduled" if planned else got if got == privacy else f"{got}_until_audit"
-        return PostResult(url=f"https://youtube.com/shorts/{video['id']}", remote_id=video["id"], state=state)
+        return PostResult(url=f"https://youtube.com/shorts/{video['id']}", remote_id=video["id"], state=state,
+                          cover_pending=pending)
 
-    def set_thumbnail(self, http, tokens: Tokens, video_id: str, image: Path) -> bool:
+    def set_cover(self, http, tokens: Tokens, remote_id: str, image: Path) -> bool:
         """The clip's cover (its title written on a frame) as the video's thumbnail; a refusal never fails the post."""
-        if not image.is_file() or image.stat().st_size > THUMBNAIL_MAX:
+        if not usable_cover(image):
             return False
         try:
-            checked(http.post(THUMBNAILS, params={"videoId": video_id, "uploadType": "media"}, data=image.read_bytes(),
+            checked(http.post(THUMBNAILS, params={"videoId": remote_id, "uploadType": "media"}, data=image.read_bytes(),
                               headers={**bearer(tokens.access_token), "Content-Type": "image/jpeg"},
                               timeout=UPLOAD_TIMEOUT), self.label)
         except (ClippyError, OSError, requests.RequestException) as exc:

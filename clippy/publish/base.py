@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import os
 from dataclasses import replace
+from pathlib import Path
 from urllib.parse import urlencode
 
 from ..tools import ClippyError
@@ -42,6 +43,10 @@ class Platform:
 
     def publish(self, http, tokens: Tokens, upload: Upload, post: PostText, options: dict) -> PostResult:
         raise ClippyError(key="error.posting_unsupported", platform=self.label)
+
+    def set_cover(self, http, tokens: Tokens, remote_id: str, image: Path) -> bool:
+        """Sets a posted clip's cover afterwards; False when the platform has no separate cover or turned it down."""
+        return False
 
 
 class OAuthPlatform(Platform):

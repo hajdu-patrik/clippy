@@ -165,3 +165,48 @@ def test_results_route(tmp_path):
     runner.accounts.save("youtube", Tokens(access_token="a", expires_at=9e12, scope="youtube.upload"))
     assert client.get("/api/results").json()["analytics"] is False
     assert client.post("/api/results/refresh").json()["read"] == 0
+
+
+def test_a_turned_down_cover_is_tried_again_less_often_until_it_goes_through(db, tmp_path):
+    from clippy.web import cover_retry
+
+    class Platform:
+        def __init__(self):
+            self.answers, self.calls = [False, False, True], []
+
+        def set_cover(self, http, tokens, remote_id, image):
+            self.calls.append((remote_id, image.name))
+            return self.answers.pop(0)
+
+    class Accounts:
+        http = None
+
+        def __init__(self):
+            self.youtube = Platform()
+
+        def tokens(self, name):
+            return TOKENS
+
+        def platform(self, name):
+            return self.youtube
+
+    cover = tmp_path / "c.jpg"
+    cover.write_bytes(b"jpg")
+    chat = db.create_chat("c")
+    row = db.add_clip(chat["id"], 1, 1, Clip(0.0, 20.0, 80).to_dict(), {}, {}, "c.mp4", str(cover), "c.txt")
+    post = db.add_post(row, "youtube", "scheduled", "https://youtube.com/shorts/v1", "v1",
+                       cover_due=cover_retry.first_try(NOW))
+    db.add_post(row, "youtube", "public", "https://youtube.com/shorts/v2", "v2")
+    accounts = Accounts()
+    assert cover_retry.retry(db, accounts, NOW) == 0 and accounts.youtube.calls == []
+    now = NOW + cover_retry.FIRST
+    assert cover_retry.retry(db, accounts, now) == 0
+    first = db._one("SELECT * FROM posts WHERE id = ?", (post["id"],))
+    assert first["cover_tries"] == 1 and first["cover_due"] == now + 2 * cover_retry.FIRST
+    assert cover_retry.retry(db, accounts, first["cover_due"]) == 0
+    second = db._one("SELECT * FROM posts WHERE id = ?", (post["id"],))
+    assert second["cover_due"] == first["cover_due"] + 4 * cover_retry.FIRST
+    assert cover_retry.retry(db, accounts, second["cover_due"]) == 1
+    assert accounts.youtube.calls == [("v1", "c.jpg")] * 3 and db.covers_due(NOW * 2) == []
+    assert cover_retry.next_try(NOW, cover_retry.TRIES) == 0.0
+    assert cover_retry.next_try(NOW, cover_retry.TRIES - 1) == NOW + cover_retry.LONGEST

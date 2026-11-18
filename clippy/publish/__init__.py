@@ -39,6 +39,7 @@ class PostResult:
     url: str
     remote_id: str
     state: str
+    cover_pending: bool = False
 
 
 @dataclass

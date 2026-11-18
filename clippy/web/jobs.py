@@ -36,7 +36,7 @@ from .agent import RENDER_KEYS
 from .clips import ClipLibrary, ClipPresenter, slim_info
 from .hub import Hub
 from .kit import StyleKit
-from . import results, schedule
+from . import cover_retry, results, schedule
 
 AUTO_POST_MIN = 65
 GAMING = "20"
@@ -742,7 +742,10 @@ class PublishJob(JobHandler):
                     else:
                         failed[name] = problem_of(error)
                 else:
-                    ctx.db.add_post(row, name, result.state, result.url, result.remote_id)
+                    if result.cover_pending:
+                        log(f"[publish] {LABELS[name]} cover: trying again later")
+                    ctx.db.add_post(row, name, result.state, result.url, result.remote_id,
+                                    cover_due=cover_retry.first_try(time.time()) if result.cover_pending else 0.0)
                     done[name] = result.state
                 ctx.remember()
             ctx.show(row)

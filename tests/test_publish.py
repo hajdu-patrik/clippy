@@ -146,14 +146,17 @@ def test_youtube_sets_the_clips_cover_as_thumbnail(video):
     http = FakeHTTP({("POST", youtube.UPLOAD): Resp(200, {}, {"Location": session}),
                      ("PUT", session): Resp(200, {"id": "abc", "status": {"privacyStatus": "public"}}),
                      ("POST", youtube.THUMBNAILS): Resp(200, {})})
-    youtube.YouTube().publish(http, TOKENS, video, POST, {"privacy": "public", "category": "20"})
+    assert not youtube.YouTube().publish(http, TOKENS, video, POST, {"privacy": "public", "category": "20"}).cover_pending
     assert http.calls[0][2]["json"]["snippet"]["categoryId"] == "20"
     thumb = http.calls[-1]
     assert thumb[1] == youtube.THUMBNAILS and thumb[2]["params"]["videoId"] == "abc" and thumb[2]["data"] == b"jpegbytes"
     failing = FakeHTTP({("POST", youtube.UPLOAD): Resp(200, {}, {"Location": session}),
                         ("PUT", session): Resp(200, {"id": "abc", "status": {"privacyStatus": "public"}}),
                         ("POST", youtube.THUMBNAILS): Resp(403, {"error": {"message": "verify your channel"}})})
-    assert youtube.YouTube().publish(failing, TOKENS, video, POST, {}).state == "public"
+    refused = youtube.YouTube().publish(failing, TOKENS, video, POST, {})
+    assert refused.state == "public" and refused.cover_pending
+    video.path.with_suffix(".jpg").unlink()
+    assert not youtube.YouTube().publish(failing, TOKENS, video, POST, {}).cover_pending
 
 
 def test_youtube_resumes_where_google_says_after_a_broken_chunk(monkeypatch, video):
