@@ -12,7 +12,7 @@ from ..editing.assets import Asset, AssetKind, AssetService
 from ..editing.operations.structure import SetOutro
 from ..editing.operations.visual import AddOverlay
 from ..editing.timeline import HIGHLIGHTS
-from ..tools import ClippyError, write_json
+from ..tools import ClippyError, atomic_write_text, write_json
 
 FONTS = ("Arial Black", "Impact", "Arial")
 POSITIONS = ("top-left", "top-right", "bottom-left", "bottom-right")
@@ -88,7 +88,7 @@ class StyleKit:
         if not target.is_file():
             shutil.copyfile(asset.path, target)
         copy = asset.model_copy(update={"path": target})
-        (folder / f"{asset.id}.json").write_text(copy.model_dump_json(), encoding="utf-8")
+        atomic_write_text(folder / f"{asset.id}.json", copy.model_dump_json())
         return copy
 
     def operations(self, chat_id: int) -> list:

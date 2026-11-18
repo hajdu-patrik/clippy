@@ -4,13 +4,12 @@ the voices clearly differ (a podcast host and a guest), otherwise it says nothin
 
 from __future__ import annotations
 
-import json
 import subprocess
 from pathlib import Path
 
 import numpy as np
 
-from .tools import ffmpeg_path, log, write_json
+from .tools import ffmpeg_path, json_cache, log
 
 RATE = 16000
 FFT = 512
@@ -164,12 +163,9 @@ def speaker_turns(path: Path, sentences: list[dict]) -> list[str]:
 
 
 def cached(path: Path, make) -> list[str]:
-    try:
-        return list(json.loads(path.read_text(encoding="utf-8")))
-    except (OSError, ValueError, TypeError):
-        pass
-    turns = make()
-    write_json(path, turns)
+    turns, made = json_cache(path, make, list)
+    if not made:
+        return turns
     voices = sorted(set(t for t in turns if t))
     log(f"[hook] voices: {len(voices) or 1} speaker(s)" + (f" ({', '.join(voices)})" if voices else ""))
     return turns

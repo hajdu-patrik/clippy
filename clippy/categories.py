@@ -10,7 +10,8 @@ from typing import Callable
 
 import requests
 
-from .streamers import BROWSER_UA, KICK_CHANNEL, KICK_VIDEOS, fold
+from .streamers import BROWSER_UA, KICK_CHANNEL, KICK_VIDEOS
+from .text import fold
 from .tools import log
 
 TWITCH_GQL = "https://gql.twitch.tv/gql"

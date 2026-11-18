@@ -6,7 +6,6 @@ references into output seconds using the clock and the words the viewer hears.""
 from __future__ import annotations
 
 import re
-import unicodedata
 from dataclasses import dataclass
 from typing import Annotated, Literal, Sequence
 
@@ -14,6 +13,7 @@ from pydantic import Field
 
 from ..tools import ClippyError
 from .timeline import Frozen, TimeRange
+from ..text import fold as plain_fold
 
 
 class At(Frozen):
@@ -69,8 +69,8 @@ class Clock:
 
 
 def fold(text: str) -> str:
-    text = unicodedata.normalize("NFKD", text.lower())
-    return re.sub(r"[^\w]", "", "".join(c for c in text if not unicodedata.combining(c)))
+    """A word as it is compared: no accents, case or punctuation."""
+    return re.sub(r"[^\w]", "", plain_fold(text))
 
 
 def corrected(words: Sequence[dict], fixes: Sequence) -> list[dict]:

@@ -13,7 +13,7 @@ from pathlib import Path
 
 import numpy as np
 
-from .tools import ffmpeg_path, log, report, write_json
+from .tools import ffmpeg_path, json_cache, log, report
 
 HOP = 0.5
 RATE = 8000
@@ -251,12 +251,9 @@ def build(sound: Path | None, words: list[dict], video: Path | None = None, chat
 
 
 def cached(path: Path, make) -> Signals:
-    try:
-        return Signals.from_json(json.loads(path.read_text(encoding="utf-8")))
-    except (OSError, ValueError, TypeError):
-        pass
-    signals = make()
-    write_json(path, signals.to_json())
+    signals, made = json_cache(path, make, Signals.from_json, Signals.to_json)
+    if not made:
+        return signals
     strongest = "; ".join(f"{p.time:.0f} s {'+'.join(p.kinds)}" for p in signals.peaks(5))
     log(f"[hook] reactions: {len(signals.peaks())} peaks" + (f", strongest: {strongest}" if strongest else ""))
     return signals

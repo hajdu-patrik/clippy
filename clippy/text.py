@@ -3,10 +3,17 @@
 from __future__ import annotations
 
 import re
+import unicodedata
 
 _CLOSERS = "\"”»)'"
 FILLERS = {"ö", "öö", "ööö", "őő", "ööh", "öhm", "hmm", "hm", "mhm", "mm", "eee", "ee", "e",
            "um", "umm", "uh", "uhm", "erm", "er", "ah", "eh"}
+
+
+def fold(text: str) -> str:
+    """Lowercase without accents, so "Legújabb" and "legujabb" are the same word."""
+    plain = unicodedata.normalize("NFKD", text or "")
+    return "".join(c for c in plain if not unicodedata.combining(c)).lower()
 
 
 def ends_sentence(word: str) -> bool:

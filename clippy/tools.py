@@ -196,6 +196,17 @@ def write_json(path: Path, data) -> None:
     atomic_write_text(path, json.dumps(data, ensure_ascii=False, indent=2))
 
 
+def json_cache(path: Path, make, decode=lambda data: data, encode=lambda value: value):
+    """The value stored at `path`, else `make()` stored there; returns (value, made now)."""
+    try:
+        return decode(read_json(path)), False
+    except (OSError, ValueError, TypeError):
+        pass
+    value = make()
+    write_json(path, encode(value))
+    return value, True
+
+
 def read_json(path: Path):
     return json.loads(path.read_text(encoding="utf-8"))
 

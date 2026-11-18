@@ -4,7 +4,6 @@ finished stream across YouTube, Twitch and Kick."""
 from __future__ import annotations
 
 import re
-import unicodedata
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -13,6 +12,7 @@ from typing import Callable, NamedTuple
 import requests
 
 from .download import Upload, past_streams, stream_moment
+from .text import fold
 from .tools import ClippyError, log
 
 PLATFORMS = ("youtube", "twitch", "kick")
@@ -82,12 +82,6 @@ class Stream:
     @property
     def date(self) -> str:
         return datetime.fromtimestamp(self.when, timezone.utc).strftime("%Y-%m-%d")
-
-
-def fold(text: str) -> str:
-    """Lowercase without accents, so "Legújabb" and "legujabb" are the same word."""
-    plain = unicodedata.normalize("NFKD", text or "")
-    return "".join(c for c in plain if not unicodedata.combining(c)).lower()
 
 
 def words(text: str) -> list[str]:

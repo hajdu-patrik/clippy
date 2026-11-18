@@ -208,7 +208,7 @@ class AssetService:
             parse_cube(text)
         except (UnicodeDecodeError, ValueError, IndexError):
             raise ClippyError(key="asset.broken", name=name) from None
-        target.write_text(text, encoding="utf-8")
+        atomic_write_text(target, text)
         return Asset(id=asset_id, kind=AssetKind.LUT, name=name, path=target)
 
     @staticmethod

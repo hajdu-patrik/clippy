@@ -8,7 +8,7 @@ from clippy import download, separation
 from clippy.concurrency import GPU, RENDER, SOURCE, GuardedLLM, KeyedLock, LockOrderError, Slots, held
 from clippy.highlights import Clip
 from clippy.storage import Storage
-from clippy.tools import SharedProgress, atomic_path, log_sink, report, write_json
+from clippy.tools import SharedProgress, atomic_path, json_cache, log_sink, report, write_json
 from clippy.web import jobs
 from clippy.web.clips import ClipLibrary, ClipPresenter
 from clippy.web.db import DB
@@ -302,3 +302,16 @@ def test_the_base_made_with_a_clip_is_kept_only_when_the_editor_wants_it(tmp_pat
     found = [store.get(TimelineRepository(db).of(r, {}).base_key()) for r in db.current_clips(chat)]
     assert sum(b is not None for b in found) == kept
     assert not list(storage.chat_clips(chat).glob(".*"))
+
+
+def test_a_json_cache_makes_its_value_once(tmp_path):
+    path, calls = tmp_path / "turns.json", []
+
+    def make():
+        calls.append(1)
+        return ["A", "B"]
+
+    assert json_cache(path, make, list) == (["A", "B"], True)
+    assert json_cache(path, make, list) == (["A", "B"], False) and len(calls) == 1
+    path.write_text("{broken", encoding="utf-8")
+    assert json_cache(path, make, list) == (["A", "B"], True) and len(calls) == 2
