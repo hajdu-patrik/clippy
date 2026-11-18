@@ -8,6 +8,7 @@ from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFont
 
+from .render import system_fonts
 from .text import no_emoji
 from .tools import atomic_path, log
 
@@ -28,9 +29,9 @@ def b_cover(cover: Path) -> Path:
 
 
 def _font(fonts: Path | None, size: int):
-    for name in FONTS:
-        path = (fonts / name) if fonts else None
-        if path is not None and path.is_file():
+    """The heaviest font found: in Clippy's font folder first, then among this system's caption fonts."""
+    for path in [*(fonts / name for name in FONTS if fonts), *system_fonts()]:
+        if path.is_file():
             return ImageFont.truetype(str(path), size)
     return ImageFont.load_default(size)
 

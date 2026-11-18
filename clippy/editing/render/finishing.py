@@ -71,7 +71,7 @@ class FinishingRenderer:
                "-pix_fmt", "yuv420p", *VIDEO_TAGS, "-c:a", "aac", "-b:a", profile.audio_bitrate, "-ar", "48000",
                "-movflags", "+faststart", str(out_file)]
         self._run(cmd, work)
-        write_cover(out_file, duration)
+        write_cover(out_file, duration, words)
         return {"duration_out": round(duration, 2), "profile": profile.name, "hook": hook or "",
                 "format": timeline.format,
                 "loudness_in": measured.get("input_i") if measured else None}

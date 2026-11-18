@@ -25,6 +25,7 @@ from .tools import (ROOT, ClippyError, atomic_path, ffmpeg_features, ffmpeg_path
                     read_exact, report, report_span)
 
 LAYOUTS = ("auto", "face", "center", "blur", "stream")
+COVER_PAUSE = 0.6
 SYSTEM_FONTS = ("ariblk.ttf", "impact.ttf", "arialbd.ttf", "arial.ttf")
 VIDEO_TAGS = ["-color_primaries", "bt709", "-color_trc", "bt709", "-colorspace", "bt709", "-color_range", "tv"]
 
@@ -163,7 +164,7 @@ class ClipRenderer:
         with report_span(0.3, 1.0):
             written = self._pump(cmd, work, edit, plans, compositor, an.n_frames, dw, dh)
         if not self.s.mezzanine:
-            write_cover(out_file, edit.duration)
+            write_cover(out_file, edit.duration, words)
         modes: dict[str, int] = {}
         for s, e, m in shots:
             modes[m] = modes.get(m, 0) + (e - s)
@@ -321,10 +322,22 @@ def fonts_dir_for(work: Path, fonts: Path) -> str:
         return "fonts"
 
 
-def write_cover(out_file: Path, duration: float) -> None:
-    """The cover image next to the video: a frame from the first seconds, with the hook already burnt in."""
-    subprocess.run([ffmpeg_path(), "-hide_banner", "-loglevel", "error", "-y", "-ss", f"{min(1.0, duration / 3):.2f}",
-                    "-i", str(out_file), "-frames:v", "1", "-q:v", "2", str(out_file.with_suffix(".jpg"))], check=False)
+def quiet_time(words, duration: float) -> float:
+    """A moment for the cover where nobody speaks, so no caption is on the frame: the middle of the first clear pause
+    in the first half, else early in the clip."""
+    edges = [(0.0, float(words[0]["start"]))] if words else []
+    edges += [(float(a["end"]), float(b["start"])) for a, b in zip(words, words[1:])]
+    for a, b in edges:
+        if b - a >= COVER_PAUSE and 0.3 <= (a + b) / 2 <= duration * 0.5:
+            return round((a + b) / 2, 2)
+    return round(min(1.0, duration / 3), 2)
+
+
+def write_cover(out_file: Path, duration: float, words=()) -> None:
+    """The cover image next to the video: a frame from a quiet moment, so no caption sits under the cover title."""
+    at = quiet_time(list(words), duration)
+    subprocess.run([ffmpeg_path(), "-hide_banner", "-loglevel", "error", "-y", "-ss", f"{at:.2f}", "-i", str(out_file),
+                    "-frames:v", "1", "-q:v", "2", str(out_file.with_suffix(".jpg"))], check=False)
 
 
 def render_clip(video: Path, words: list[dict], start: float, end: float, out_file: Path, work: Path, fonts: Path,

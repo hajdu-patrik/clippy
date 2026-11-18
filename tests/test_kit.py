@@ -103,3 +103,12 @@ def test_a_cover_title_is_in_capitals_without_hashtags(tmp_path, monkeypatch):
     monkeypatch.setattr(covers, "_wrap", lambda draw, text, font, width: seen.append(text) or [text])
     covers.draw_title(Image.new("RGB", (540, 960)), "xQc steals his first car #shorts", None)
     assert seen[0] == "XQC STEALS HIS FIRST CAR"
+
+
+def test_the_cover_frame_is_taken_where_nobody_speaks():
+    from clippy.render import quiet_time
+
+    words = [{"start": 0.1, "end": 1.0}, {"start": 1.1, "end": 2.0}, {"start": 3.0, "end": 4.0}]
+    assert quiet_time(words, 20.0) == 2.5
+    assert quiet_time(words[:2], 20.0) == round(min(1.0, 20.0 / 3), 2)
+    assert quiet_time([], 20.0) == 1.0
