@@ -24,6 +24,7 @@
   <link rel="modulepreload" href="/static/js/chat.js">
   <link rel="modulepreload" href="/static/js/live.js">
   <link rel="modulepreload" href="/static/js/settings.js">
+  <link rel="modulepreload" href="/static/js/llm.js">
   <link rel="modulepreload" href="/static/js/publish.js">
   <link rel="modulepreload" href="/static/js/watches.js">
   <link rel="modulepreload" href="/static/js/picks.js">
@@ -172,6 +173,7 @@
       <h2 id="settingsTitle" data-i18n="settings.title">Settings</h2>
       <div class="settings-tabs" role="tablist" aria-labelledby="settingsTitle" id="settingsTabs">
         <button type="button" role="tab" id="tab-general" aria-controls="page-general" aria-selected="true" data-i18n="settings.page.general">General</button>
+        <button type="button" role="tab" id="tab-ai" aria-controls="page-ai" aria-selected="false" tabindex="-1" data-i18n="settings.page.ai">AI</button>
         <button type="button" role="tab" id="tab-accounts" aria-controls="page-accounts" aria-selected="false" tabindex="-1" data-i18n="settings.page.accounts">Accounts</button>
         <button type="button" role="tab" id="tab-style" aria-controls="page-style" aria-selected="false" tabindex="-1" data-i18n="settings.page.style">Style</button>
         <button type="button" role="tab" id="tab-auto" aria-controls="page-auto" aria-selected="false" tabindex="-1" data-i18n="settings.page.auto">Automation</button>
@@ -186,6 +188,30 @@
         <h3 id="notifyTitle" data-i18n="notify.title">Notifications</h3>
         <label class="check inline"><input type="checkbox" id="notifyToggle"><span data-i18n="notify.toggle">Tell me when a job is done (also when this window is in the background)</span></label>
         <p class="hint" id="notifyHint" hidden data-i18n="notify.unavailable">This browser cannot show notifications here; on the computer that runs Clippy it works.</p>
+      </section>
+      </div>
+      <div class="settings-page" role="tabpanel" id="page-ai" aria-labelledby="tab-ai" hidden>
+      <section class="llm" aria-labelledby="llmTitle">
+        <h3 id="llmTitle" data-i18n="llm.title">AI</h3>
+        <p class="hint" data-i18n="llm.hint">Which AI picks the moments and writes the titles and texts. Change it any time.</p>
+        <p class="hint warn" id="llmFirst" hidden data-i18n="llm.first">Choose how Clippy thinks. Ollama runs on this computer and is the default.</p>
+        <p class="hint warn" id="llmHere" hidden data-i18n="llm.hereOnly">The AI can be changed on the computer that runs Clippy.</p>
+        <ul class="account-grid" id="llmModes" role="radiogroup" aria-labelledby="llmTitle"></ul>
+        <div class="post-options">
+          <div id="llmModelBox"><label for="llmModel" data-i18n="llm.model">Model</label>
+            <input class="field" id="llmModel" autocomplete="off" spellcheck="false" maxlength="100"></div>
+          <div id="llmKeyBox" hidden><label for="llmKey" data-i18n="llm.key">OpenRouter API key</label>
+            <input class="field" id="llmKey" type="password" autocomplete="off" spellcheck="false" maxlength="300"
+              aria-describedby="llmKeyHint"></div>
+        </div>
+        <p class="hint" id="llmKeyHint" data-i18n="llm.keyHint">The key stays on this computer and is never shown again.</p>
+        <p class="hint" id="llmModelHint" hidden data-i18n="llm.modelHint">Any model id from openrouter.ai/models; ids ending in :free cost nothing.</p>
+        <p class="hint" id="llmStatus" role="status"></p>
+        <p class="hint" data-i18n="llm.note">A change applies from the next request, no restart needed.</p>
+        <div class="watch-btns">
+          <button type="button" class="ghost small-btn" id="llmTest" data-i18n="llm.test">Test</button>
+          <button type="button" class="small-btn" id="llmSave" data-i18n="llm.save">Save AI</button>
+        </div>
       </section>
       </div>
       <div class="settings-page" role="tabpanel" id="page-accounts" aria-labelledby="tab-accounts" hidden>

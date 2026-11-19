@@ -21,7 +21,8 @@ FINAL = frozenset({
     "error.unknown_platform", "error.bad_token", "error.platform_rate_limited", "error.posting_unsupported",
     "error.no_page", "error.ffmpeg_missing", "error.ytdlp_missing", "error.no_file", "error.no_video_stream",
     "error.ollama_no_model", "error.llm_none", "error.llm_backend", "error.llm_base_url", "error.isolation_extras",
-    "error.ducking_extras",
+    "error.ducking_extras", "error.claude_missing", "error.claude_login", "error.codex_missing", "error.codex_login",
+    "error.llm_openrouter_key", "error.llm_auth", "error.llm_cli_limit",
 })
 
 
@@ -47,7 +48,7 @@ RULES = (
     Rule("alignment", ("align.py", "wav2vec", "mms_fa"), steps=({"align": False},)),
     Rule("length", keys=("error.no_suitable_clip",), steps=({"min_len": 10.0, "max_len": 90.0},)),
     Rule("llm", ("ollama", "llm"), keys=("error.llm_unreachable", "error.ollama_unreachable", "error.llm_failed",
-                                         "error.llm_api", "error.llm_json")),
+                                         "error.llm_api", "error.llm_json", "error.llm_cli_timeout")),
     Rule("network", ("403", "429", "timed out", "timeout", "connection", "temporarily", "network", "unable to download",
                      "http error"), keys=("error.download_failed", "error.download_busy", "error.download_missing",
                            "error.platform_network")),

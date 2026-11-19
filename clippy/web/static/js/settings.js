@@ -1,5 +1,6 @@
 import { api } from "./api.js";
 import { t, tx } from "./i18n.js";
+import { bindLlm, loadLlm } from "./llm.js";
 import { onLive } from "./live.js";
 import { platformIcon } from "./platforms.js";
 import { loadAccounts } from "./publish.js";
@@ -65,7 +66,7 @@ async function refreshAccounts() {
   if ($("#settingsDialog").open) renderAccounts();
 }
 
-const PAGES = ["general", "accounts", "style", "auto", "results"];
+const PAGES = ["general", "ai", "accounts", "style", "auto", "results"];
 let page = "general";
 
 function showPage(name, focus = false) {
@@ -97,6 +98,7 @@ function open(event) {
   $("#settingsDialog").showModal();
   $(`#tab-${page}`).focus();
   refreshAccounts();
+  loadLlm();
   loadPicks();
   loadWatches();
   loadResults();
@@ -183,6 +185,7 @@ export function bindSettings() {
     if (e.key === "Enter") { e.preventDefault(); saveToken(); }
   });
   document.addEventListener("clippy:settings", open);
+  bindLlm();
   bindPicks();
   bindWatches();
   bindResults();

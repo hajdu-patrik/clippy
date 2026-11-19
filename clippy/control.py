@@ -16,10 +16,10 @@ from pathlib import Path
 import requests
 
 from . import __version__, i18n
-from .llm import OLLAMA_SERVER_ENV, loaded_models, ollama_running, unload_all
+from .llm import OLLAMA_SERVER_ENV, create_llm, loaded_models, mode_of, ollama_running, stored, unload_all
 from .shell import COMMANDS, command_doc, flags_of
 from .storage import DATA
-from .tools import ROOT
+from .tools import ROOT, ClippyError
 
 PY = ROOT / ".venv" / ("Scripts/python.exe" if sys.platform == "win32" else "bin/python")
 STATE = DATA / "web"
@@ -304,7 +304,8 @@ def start(open_ui: bool = True, lan: bool = False) -> int:
     if not PY.exists():
         print(f"{R}{tr('cli.no_venv', path=PY)}{N}")
         return 1
-    ensure_ollama()
+    if mode_of(stored()) == "ollama":
+        ensure_ollama()
     STATE.mkdir(parents=True, exist_ok=True)
     with open(LOG_FILE, "a", encoding="utf-8") as log:
         log.write(f"\n===== start {time.strftime('%Y-%m-%d %H:%M:%S')} =====\n")
@@ -359,6 +360,20 @@ def down(stop_ollama: bool = False) -> int:
     return 0
 
 
+def _llm_text() -> str:
+    """The AI in the status line: the models Ollama holds in VRAM, or the mode that answers instead."""
+    if mode_of(stored()) != "ollama":
+        try:
+            return "LLM: " + create_llm().describe()
+        except ClippyError as exc:
+            return f"{Y}{exc}{N}"
+    models = loaded_models()
+    if models is None:
+        return f"{Y}{tr('cli.ollama_off')}{N}"
+    return "LLM: " + (", ".join(f"{m['name']} ({m.get('size_vram', 0) / 2**30:.1f} GiB)" for m in models)
+                      or tr("cli.llm_standby"))
+
+
 def status_line() -> str:
     st = running()
     if not st:
@@ -374,12 +389,7 @@ def status_line() -> str:
         work = f"{Y}{tr('cli.status_busy', label=label)}{N}{percent}{queued}"
     else:
         work = tr("cli.status_idle")
-    models = loaded_models()
-    if models is None:
-        llm = f"{Y}{tr('cli.ollama_off')}{N}"
-    else:
-        llm = "LLM: " + (", ".join(f"{m['name']} ({m.get('size_vram', 0) / 2**30:.1f} GiB)" for m in models)
-                         or tr("cli.llm_standby"))
+    llm = _llm_text()
     lan = f"  {D}·{N}  {tr('cli.status_lan')}" if st.get("lan") else ""
     return f"{G}●{N} {tr('cli.running')}  {D}·{N}  {URL}{lan}  {D}·{N}  {work}  {D}·{N}  {llm}"
 
@@ -454,9 +464,18 @@ def _clip(args: list[str]) -> int:
 
 
 def _install(args: list[str]) -> int:
+    from .llm_setup import first_run
     from .shell import install
 
-    return install(say=say)
+    code = install(say=say)
+    first_run(say)
+    return code
+
+
+def _llm(args: list[str]) -> int:
+    from .llm_setup import command
+
+    return command(args, say)
 
 
 def _help(args: list[str]) -> int:
@@ -473,6 +492,7 @@ ACTIONS: dict[str, Callable[[list[str]], int]] = {
     "pair": lambda args: pair(reset="--reset" in args),
     "logs": _logs,
     "clip": _clip,
+    "llm": _llm,
     "install": _install,
     "help": _help,
 }

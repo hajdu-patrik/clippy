@@ -31,7 +31,7 @@ WORKERS = max(1, int(os.environ.get("CLIPPY_WORKERS", "3")))
 
 def default_edit_service(runner: Runner) -> Callable[[Project], EditService]:
     def build(project: Project) -> EditService:
-        llm = GuardedLLM(create_llm(project.opts.llm, project.opts.model))
+        llm = GuardedLLM(create_llm(project.opts.llm, project.opts.model, runner.storage))
         return EditService(runner.db, runner.storage, AssetService(runner.storage), EditPlanner(llm))
     return build
 

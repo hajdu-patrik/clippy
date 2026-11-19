@@ -37,6 +37,10 @@ class Storage:
         return self.web / "settings.json"
 
     @property
+    def llm_file(self) -> Path:
+        return self.web / "llm.json"
+
+    @property
     def accounts_file(self) -> Path:
         return self.web / "accounts.json"
 

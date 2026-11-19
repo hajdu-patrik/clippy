@@ -260,7 +260,7 @@ class Project:
     def _gpu(self):
         """GPU work (Demucs, Whisper, alignment) runs alone on the GPU, with the LLM moved out of VRAM first."""
         with GPU.hold():
-            create_llm(self.opts.llm, self.opts.model).unload()
+            create_llm(self.opts.llm, self.opts.model, self.storage).unload()
             yield
 
     def select(self, n: int | None = None, exclude: list[Clip] | tuple = (), instructions: str | None = None,
@@ -291,7 +291,7 @@ class Project:
             log(f"[hook] short video ({duration:.0f} s): one clip of all of it")
         with report_span(0.0, 0.05):
             reactions = None if short else self.reactions(duration)
-        llm = GuardedLLM(create_llm(o.llm, o.model))
+        llm = GuardedLLM(create_llm(o.llm, o.model, self.storage))
         self.llm_desc = llm.describe()
         clips = find_highlights(self.transcript, llm, max_clips=n, min_len=min_len, max_len=max_len,
                                 title=self.title, exclude=list(exclude), text_language=o.captions,
@@ -388,7 +388,7 @@ class Project:
         o = o or self.opts
         if not target or target == self.spoken_language:
             return None
-        llm = create_llm(o.llm, o.model)
+        llm = create_llm(o.llm, o.model, self.storage)
         if llm.backend == "none":
             log("[render] caption translation needs an LLM backend; captions stay in the spoken language")
             return None

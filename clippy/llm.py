@@ -1,18 +1,31 @@
-"""LLM backends behind one interface: local Ollama, any OpenAI-compatible API, or none."""
+"""LLM backends behind one interface: local Ollama, OpenRouter or any OpenAI-compatible API, the user's Claude or
+ChatGPT subscription through the vendor's own command line tool, or none. The mode the user picked lives in
+data/web/llm.json and is read at every call, so a change takes effect at once."""
 
 from __future__ import annotations
 
 import json
 import os
 import re
+import shutil
+import subprocess
+import sys
+import tempfile
 from abc import ABC, abstractmethod
+from pathlib import Path
 
 import requests
 
-from .tools import ClippyError
+from .storage import Storage
+from .tools import ClippyError, read_json
 
 OLLAMA_URL = "http://127.0.0.1:11434"
 DEFAULT_MODEL = "clippy-qwen3:14b-q6k"
+OPENROUTER_URL = "https://openrouter.ai/api/v1"
+OPENROUTER_MODEL = "qwen/qwen3-235b-a22b:free"
+MODES = ("ollama", "openrouter", "claude", "codex", "none")
+DEFAULT_MODELS = {"ollama": DEFAULT_MODEL, "openrouter": OPENROUTER_MODEL}
+MODEL_NAME = re.compile(r"[\w./:@+-]{0,100}")
 OLLAMA_SERVER_ENV = {"OLLAMA_FLASH_ATTENTION": "1", "OLLAMA_KV_CACHE_TYPE": "q8_0",
                      "OLLAMA_NUM_PARALLEL": "1", "OLLAMA_MAX_LOADED_MODELS": "1"}
 
@@ -23,6 +36,23 @@ def setting(name: str, default: str = "") -> str:
 
 def think_enabled() -> bool:
     return setting("THINK", "1") != "0"
+
+
+def stored(storage: Storage | None = None) -> dict:
+    """The user's choice from Settings or `clippy llm`: {"mode", "models": {mode: name}, "keys": {mode: key}}."""
+    try:
+        data = read_json((storage or Storage()).llm_file)
+    except (OSError, ValueError):
+        return {}
+    return data if isinstance(data, dict) else {}
+
+
+def json_prompt(user: str, schema: dict | None) -> str:
+    """The question for a model that cannot be forced to answer in JSON: it is told the shape in words."""
+    ask = "Reply with one JSON object only, without markdown fences or any other text."
+    if schema:
+        ask += " It must match this JSON Schema:\n" + json.dumps(schema, ensure_ascii=False)
+    return f"{user}\n\n{ask}"
 
 
 class LLM(ABC):
@@ -42,6 +72,10 @@ class LLM(ABC):
 
     def warm(self) -> None:
         """Load the model ahead of the first request (a cold 14B model takes about a minute)."""
+        return None
+
+    def problem(self) -> ClippyError | None:
+        """Why this backend cannot answer right now (not installed, not signed in, no key), else None."""
         return None
 
     @abstractmethod
@@ -86,6 +120,16 @@ class OllamaLLM(LLM):
         except requests.RequestException as exc:
             raise _failed(exc) from exc
 
+    def problem(self) -> ClippyError | None:
+        try:
+            tags = requests.get(f"{self.base_url}/api/tags", timeout=3).json().get("models", [])
+        except (requests.RequestException, ValueError):
+            return ClippyError(key="error.ollama_unreachable", url=self.base_url, model=self.model)
+        names = {m.get("name") for m in tags}
+        if self.model in names or f"{self.model}:latest" in names:
+            return None
+        return ClippyError(key="error.ollama_no_model", model=self.model)
+
     def unload(self) -> None:
         _signal(f"{self.base_url}/api/generate", {"model": self.model, "keep_alive": 0})
 
@@ -96,9 +140,10 @@ class OllamaLLM(LLM):
 
 class OpenAICompatibleLLM(LLM):
     backend = "openai"
+    extra_headers: dict[str, str] = {}
 
     def _complete(self, system: str, user: str, think: bool, schema: dict | None) -> str:
-        headers = {"Content-Type": "application/json"}
+        headers = {"Content-Type": "application/json", **self.extra_headers}
         if self.api_key:
             headers["Authorization"] = f"Bearer {self.api_key}"
         payload = {"model": self.model, "temperature": 0.4, "response_format": {"type": "json_object"},
@@ -110,6 +155,8 @@ class OpenAICompatibleLLM(LLM):
             r = self._post(url, payload, headers)
         if r.status_code == 429:
             raise ClippyError(key="error.llm_quota")
+        if r.status_code in (401, 403):
+            raise ClippyError(key="error.llm_auth", status=r.status_code)
         if not r.ok:
             raise ClippyError(key="error.llm_api", status=r.status_code, detail=r.text[:300])
         return _answer(r, "choices", 0, "message", "content")
@@ -122,6 +169,140 @@ class OpenAICompatibleLLM(LLM):
             raise _failed(exc) from exc
 
 
+class OpenRouterLLM(OpenAICompatibleLLM):
+    """OpenRouter's OpenAI-compatible API with the user's key; its ":free" models cost nothing."""
+
+    backend = "openrouter"
+    extra_headers = {"X-Title": "Clippy"}
+
+    def problem(self) -> ClippyError | None:
+        return None if self.api_key else ClippyError(key="error.llm_openrouter_key")
+
+    def _complete(self, system: str, user: str, think: bool, schema: dict | None) -> str:
+        if not self.api_key:
+            raise ClippyError(key="error.llm_openrouter_key")
+        return super()._complete(system, json_prompt(user, schema), think, None)
+
+
+class CliLLM(LLM):
+    """A subscription used through the vendor's own command line tool, signed in by the user, with no API key."""
+
+    tool = ""
+    drop_env: tuple[str, ...] = ()
+    timeout = int(setting("CLI_TIMEOUT", "600"))
+
+    def describe(self) -> str:
+        return f"{self.backend}:{self.model or 'default'}"
+
+    def executable(self) -> str:
+        found = shutil.which(self.tool)
+        if not found:
+            raise ClippyError(key=f"error.{self.backend}_missing")
+        return found
+
+    def problem(self) -> ClippyError | None:
+        try:
+            signed_in = self._signed_in(self.executable())
+        except ClippyError as exc:
+            return exc
+        return None if signed_in else ClippyError(key=f"error.{self.backend}_login")
+
+    def run(self, argv: list[str], text: str = "", timeout: float | None = None,
+            cwd: str | None = None) -> tuple[int, str, str]:
+        """Run the tool without a shell and without a window; a tool that hangs is stopped with its children."""
+        env = {k: v for k, v in os.environ.items() if k not in self.drop_env}
+        extra = {"creationflags": subprocess.CREATE_NO_WINDOW} if sys.platform == "win32" else {"start_new_session": True}
+        try:
+            proc = subprocess.Popen(argv, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                    cwd=cwd, env={**env, "NO_COLOR": "1"}, **extra)
+        except OSError as exc:
+            raise ClippyError(key=f"error.{self.backend}_missing") from exc
+        wait = timeout or self.timeout
+        try:
+            out, err = proc.communicate(text.encode("utf-8"), timeout=wait)
+        except subprocess.TimeoutExpired:
+            _kill_tree(proc)
+            proc.communicate()
+            raise ClippyError(key="error.llm_cli_timeout", tool=self.tool, seconds=int(wait)) from None
+        return proc.returncode, out.decode("utf-8", "replace"), err.decode("utf-8", "replace")
+
+    def refused(self, detail: str) -> ClippyError:
+        """The error for a tool that ran and said no: its usage limit, a missing sign-in, or anything else."""
+        if re.search(r"usage limit|rate limit|limit reached|quota", detail, re.I):
+            return ClippyError(key="error.llm_cli_limit", tool=self.tool, detail=detail[:200])
+        if re.search(r"not logged in|log ?in|sign ?in|unauthori[sz]ed|authenticat|credentials|401", detail, re.I):
+            return ClippyError(key=f"error.{self.backend}_login")
+        return ClippyError(key="error.llm_failed", detail=detail[:300])
+
+    @abstractmethod
+    def _signed_in(self, exe: str) -> bool: ...
+
+
+class ClaudeLLM(CliLLM):
+    """Claude Code in print mode: no tools, no saved session, no settings files, its own system prompt."""
+
+    backend = "claude"
+    tool = "claude"
+    drop_env = ("ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN")
+
+    def _signed_in(self, exe: str) -> bool:
+        code, out, _ = self.run([exe, "auth", "status"], timeout=20)
+        try:
+            return bool(json.loads(out).get("loggedIn"))
+        except (ValueError, AttributeError):
+            return code == 0
+
+    def _complete(self, system: str, user: str, think: bool, schema: dict | None) -> str:
+        exe = self.executable()
+        with tempfile.TemporaryDirectory(prefix="clippy-") as scratch:
+            prompt = Path(scratch, "system.txt")
+            prompt.write_text(system, encoding="utf-8")
+            argv = [exe, "-p", "--output-format", "json", "--tools", "", "--no-session-persistence",
+                    "--disable-slash-commands", "--setting-sources", "", "--strict-mcp-config",
+                    "--system-prompt-file", str(prompt)]
+            if self.model:
+                argv += ["--model", self.model]
+            code, out, err = self.run(argv, json_prompt(user, schema), cwd=scratch)
+        try:
+            reply = json.loads(out)
+        except ValueError:
+            raise self.refused(err or out) from None
+        if code != 0 or reply.get("is_error"):
+            raise self.refused(str(reply.get("result") or err or out))
+        return str(reply.get("result") or "")
+
+
+class CodexLLM(CliLLM):
+    """Codex in exec mode: read-only sandbox, no saved session, no user config, the last message read from a file.
+    Signed out, `codex exec` waits for a login that never comes, so the sign-in is checked first."""
+
+    backend = "codex"
+    tool = "codex"
+    drop_env = ("OPENAI_API_KEY", "CODEX_API_KEY")
+
+    def _signed_in(self, exe: str) -> bool:
+        return self.run([exe, "login", "status"], timeout=20)[0] == 0
+
+    def _complete(self, system: str, user: str, think: bool, schema: dict | None) -> str:
+        exe = self.executable()
+        if not self._signed_in(exe):
+            raise ClippyError(key="error.codex_login")
+        with tempfile.TemporaryDirectory(prefix="clippy-") as scratch:
+            answer = Path(scratch, "answer.txt")
+            argv = [exe, "exec", "--skip-git-repo-check", "--sandbox", "read-only", "--ephemeral",
+                    "--ignore-user-config", "--ignore-rules", "--color", "never", "--output-last-message", str(answer)]
+            if self.model:
+                argv += ["--model", self.model]
+            prompt = (f"{system}\n\n---\n\n{json_prompt(user, schema)}\n\n"
+                      "Answer directly: run no commands and read no files.")
+            code, out, err = self.run(argv + ["-"], prompt, cwd=scratch)
+            text = answer.read_text(encoding="utf-8").strip() if answer.is_file() else ""
+        if code != 0 or not text:
+            lines = [ln[len("ERROR:"):].strip() for ln in err.splitlines() if ln.startswith("ERROR:")]
+            raise self.refused(lines[-1] if lines else err or out)
+        return text
+
+
 class NoLLM(LLM):
     backend = "none"
 
@@ -132,17 +313,52 @@ class NoLLM(LLM):
         raise ClippyError(key="error.llm_none")
 
 
-BACKENDS: dict[str, type[LLM]] = {c.backend: c for c in (OllamaLLM, OpenAICompatibleLLM, NoLLM)}
+BACKENDS: dict[str, type[LLM]] = {
+    c.backend: c for c in (OllamaLLM, OpenAICompatibleLLM, OpenRouterLLM, ClaudeLLM, CodexLLM, NoLLM)}
 
 
-def create_llm(backend: str | None = None, model: str | None = None) -> LLM:
-    name = (backend or setting("BACKEND", "ollama")).lower()
+def mode_of(config: dict, backend: str | None = None) -> str:
+    """The backend in force: the one asked for, else the user's choice, else CLIPPY_LLM_BACKEND, else Ollama."""
+    return (backend or config.get("mode") or setting("BACKEND", "ollama")).lower()
+
+
+def model_of(name: str, config: dict) -> str:
+    """The user's model for a mode, else the environment's (when that is the mode it configures), else the default."""
+    env = setting("MODEL") if name == setting("BACKEND", "ollama").lower() else ""
+    return (config.get("models") or {}).get(name) or env or DEFAULT_MODELS.get(name, "")
+
+
+def key_of(name: str, config: dict) -> str:
+    env = setting("API_KEY") if name in ("openai", "openrouter") else ""
+    return (config.get("keys") or {}).get(name) or env
+
+
+def build_llm(name: str, model: str, key: str = "") -> LLM:
     if name not in BACKENDS:
-        raise ClippyError(key="error.llm_backend", name=name, choices=", ".join(BACKENDS))
-    base_url = setting("BASE_URL", OLLAMA_URL if name == "ollama" else "")
+        raise ClippyError(key="error.llm_backend", name=name, choices=", ".join(MODES))
+    base_url = {"ollama": setting("BASE_URL", OLLAMA_URL), "openai": setting("BASE_URL"),
+                "openrouter": OPENROUTER_URL}.get(name, "")
     if name == "openai" and not base_url:
         raise ClippyError(key="error.llm_base_url")
-    return BACKENDS[name](model or setting("MODEL", DEFAULT_MODEL), base_url, setting("API_KEY"))
+    return BACKENDS[name](model, base_url, key)
+
+
+def create_llm(backend: str | None = None, model: str | None = None, storage: Storage | None = None) -> LLM:
+    config = stored(storage)
+    name = mode_of(config, backend)
+    return build_llm(name, model or model_of(name, config), key_of(name, config))
+
+
+def _kill_tree(proc: subprocess.Popen) -> None:
+    """Stop a tool and everything it started (the npm shims start node under cmd.exe)."""
+    if sys.platform == "win32":
+        subprocess.run(["taskkill", "/PID", str(proc.pid), "/T", "/F"], capture_output=True,
+                       creationflags=subprocess.CREATE_NO_WINDOW)
+    else:
+        try:
+            os.killpg(proc.pid, 9)
+        except OSError:
+            proc.kill()
 
 
 def _failed(exc: Exception) -> ClippyError:

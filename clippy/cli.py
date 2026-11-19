@@ -10,6 +10,7 @@ from pathlib import Path
 from . import __version__
 from .captions import COLORS
 from .i18n import CAPTION_LANGUAGES
+from .llm import BACKENDS
 from .pipeline import Options, Project
 from .render import LAYOUTS
 from .storage import Storage
@@ -37,9 +38,11 @@ def build_parser() -> argparse.ArgumentParser:
                    help='names/slang to spell right, e.g. "DESH, Young Fly" (the video title is added automatically)')
     p.add_argument("--no-title-vocab", action="store_true", help="do not pass the video title to Whisper")
     p.add_argument("--device", default="auto", choices=["auto", "cuda", "cpu"], help="transcription device")
-    p.add_argument("--llm", default=None, choices=["ollama", "openai", "none"],
-                   help="hook picker: ollama (local), openai (Groq/Gemini/OpenRouter), none (heuristic)")
-    p.add_argument("--model", default=None, help="LLM model name (default: CLIPPY_LLM_MODEL or clippy-qwen3:14b-q6k)")
+    p.add_argument("--llm", default=None, choices=list(BACKENDS),
+                   help="hook picker: ollama (local), openrouter, claude (Claude subscription), codex (ChatGPT "
+                        "subscription), openai (any compatible API), none (heuristic); default: the one set with "
+                        "clippy llm")
+    p.add_argument("--model", default=None, help="LLM model name (default: the one saved for that mode)")
     p.add_argument("--layout", default="auto", choices=LAYOUTS,
                    help="auto | face (speaker tracking) | center | blur (gameplay) | stream (facecam on top, game below)")
     p.add_argument("--facecam", default=None, help="stream layout: x,y,w,h in source pixels")

@@ -30,6 +30,9 @@ COMMANDS: dict[str, tuple[str, dict[str, str]]] = {
              {"--reset": "Forget every paired device"}),
     "logs": ("The end of the server log", {}),
     "clip": ("Make clips from the command line: clippy clip <link> [options]", {}),
+    "llm": ("Choose the AI: ollama, openrouter, claude, codex or none (clippy llm <mode>)",
+            {"--model": "Model name for that mode (empty: its default)",
+             "--test": "Do one tiny round trip to check that the AI answers"}),
     "install": ("Install the clippy command, PowerShell and cmd (Clink) tab completion", {}),
     "help": ("This help", {}),
 }

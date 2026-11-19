@@ -24,6 +24,8 @@ from .. import categories, i18n, streamers
 from ..editing.assets import LIMITS
 from ..tools import ClippyError, log
 from ..download import sweep_partials
+from .. import llm_setup
+from ..concurrency import GuardedLLM
 from ..llm import create_llm
 from ..publish.registry import LABELS, PLATFORMS, POSTING
 from ..publish.oauth import OAuthFlows
@@ -143,6 +145,12 @@ class KitPatch(BaseModel):
     width: float = Field(default=0.22, ge=0.05, le=0.5)
 
 
+class LLMChoice(BaseModel):
+    mode: str = Field(max_length=20)
+    model: str = Field(default="", max_length=100)
+    key: str = Field(default="", max_length=300)
+
+
 class InstagramToken(BaseModel):
     token: str = Field(min_length=20, max_length=2000)
 
@@ -155,15 +163,15 @@ def create_app(storage: Storage | None = None, db_path: Path | None = None, runn
     media = MediaStore(storage)
     presenter, library = ClipPresenter(media, db), ClipLibrary(storage)
     runner = runner or Runner(db, hub, storage, presenter, library, start=start_worker)
-    chats = ChatService(db, hub, runner, storage, presenter, library, llm_factory or create_llm)
+    make_llm = llm_factory or (lambda: create_llm(storage=storage))
+    chats = ChatService(db, hub, runner, storage, presenter, library, make_llm)
     watcher = Watcher(db, runner, hub)
     watcher.daily = Daily(db, runner, hub)
     chats.watcher = watcher
     if start_worker:
         watcher.start()
         sweep_partials(storage.cache("downloads"))
-        threading.Thread(target=lambda: (llm_factory or create_llm)().warm(), name="clippy-llm-warmup",
-                         daemon=True).start()
+        threading.Thread(target=lambda: make_llm().warm(), name="clippy-llm-warmup", daemon=True).start()
 
     build = static_build()
     index_page = index_html(build)
@@ -210,9 +218,9 @@ def create_app(storage: Storage | None = None, db_path: Path | None = None, runn
     settings = Settings(storage)
     accounts, flows, notices = runner.accounts, OAuthFlows(), {}
 
-    def from_this_computer(request: Request) -> None:
+    def from_this_computer(request: Request, key: str = "error.accounts_here_only") -> None:
         if not is_local(request):
-            raise HTTPException(403, error_detail(ClippyError(key="error.accounts_here_only")))
+            raise HTTPException(403, error_detail(ClippyError(key=key)))
 
     def accounts_changed() -> None:
         hub.publish(None, {"type": "accounts"})
@@ -285,6 +293,29 @@ def create_app(storage: Storage | None = None, db_path: Path | None = None, runn
         rewrite_post_texts(db, runner.library, saved["profile_links"])
         hub.publish(None, {"type": "settings", "settings": saved})
         return saved
+
+    @app.get("/api/llm")
+    def get_llm(request: Request):
+        return {**llm_setup.public(storage), "here": is_local(request)}
+
+    @app.put("/api/llm")
+    def put_llm(body: LLMChoice, request: Request):
+        from_this_computer(request, "error.llm_here_only")
+        saved = llm_setup.save(storage, body.mode, body.model, body.key)
+        hub.publish(None, {"type": "llm", "llm": saved})
+        return saved
+
+    @app.get("/api/llm/problem")
+    def llm_problem(mode: Annotated[str, Query(max_length=20)], model: Annotated[str, Query(max_length=100)] = ""):
+        """Whether a mode can answer right now, and if not, what the user has to do."""
+        problem = llm_setup.candidate(storage, mode, model).problem()
+        return {"problem": None if problem is None else error_detail(problem)}
+
+    @app.post("/api/llm/test")
+    def test_llm(body: LLMChoice, request: Request):
+        from_this_computer(request, "error.llm_here_only")
+        llm = llm_setup.candidate(storage, body.mode, body.model, body.key)
+        return llm_setup.probe(GuardedLLM(llm) if llm.backend == "ollama" else llm)
 
     @app.get("/api/i18n")
     def catalog():

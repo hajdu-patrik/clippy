@@ -421,7 +421,7 @@ class TextsJob(JobHandler):
         clips = [Clip.from_dict(row["clip"]) for row in rows]
         log(f"[edit] writing titles and descriptions for {len(clips)} clip(s)")
         language = text_language_name(ctx.options().captions, proj.spoken_language)
-        changed = write_texts(GuardedLLM(create_llm(proj.opts.llm, proj.opts.model)), clips, proj.words,
+        changed = write_texts(GuardedLLM(create_llm(proj.opts.llm, proj.opts.model, ctx.runner.storage)), clips, proj.words,
                               proj.title, language)
         links = Settings(ctx.runner.storage).profile_links()
         for row, clip in zip(rows, clips):

@@ -52,6 +52,11 @@ export const api = {
   settings: () => request("/api/settings"),
   saveSettings: (profileLinks) =>
     request("/api/settings", { method: "PUT", body: JSON.stringify({ profile_links: profileLinks }) }),
+  llm: () => request("/api/llm"),
+  saveLlm: (body) => request("/api/llm", { method: "PUT", body: JSON.stringify(body) }),
+  llmProblem: (mode, model) =>
+    request(`/api/llm/problem?mode=${encodeURIComponent(mode)}&model=${encodeURIComponent(model)}`),
+  testLlm: (body) => request("/api/llm/test", { method: "POST", body: JSON.stringify(body) }),
   accounts: () => request("/api/accounts"),
   connectAccount: (platform) => request(`/api/accounts/${platform}/connect`, { method: "POST" }),
   disconnectAccount: (platform) => request(`/api/accounts/${platform}`, { method: "DELETE" }),

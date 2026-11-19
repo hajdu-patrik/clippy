@@ -6,6 +6,9 @@ change, what changed rather than how; dates are ISO 8601.
 ## [Unreleased]
 
 ### Added
+- The AI is chosen at the first start, in Settings, AI, or with `clippy llm <mode>`: Ollama on this computer
+  (default), OpenRouter with your key, your Claude subscription through Claude Code, your ChatGPT subscription
+  through Codex, or none; it applies from the next request.
 - A cover YouTube turns down at posting (its thumbnail rate limit) is tried again in the background, less and less
   often, until it is set or eight tries run out.
 - Accounts for seven platforms in Settings, as a grid of cards: YouTube, Instagram, TikTok and now Facebook (Page

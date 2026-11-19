@@ -501,6 +501,9 @@ kbd { font: 11px var(--mono); color: var(--faint); border: 1px solid var(--borde
 .acct-foot button, .post b, .pf-label { display: inline-flex; align-items: center; gap: 8px; }
 .pf-list { display: inline-flex; flex-wrap: wrap; gap: 4px 12px; }
 .acct.on .account-state { color: var(--ok); }
+.llm-mode { display: flex; align-items: center; gap: 10px; cursor: pointer; }
+.llm-mode input { accent-color: var(--accent); width: 16px; height: 16px; margin: 0; }
+.llm .watch-btns { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
 .acct-note { color: var(--muted); font-size: 12.5px; line-height: 1.4; }
 .acct-foot { margin-top: auto; padding-top: 4px; display: flex; }
 .acct-foot:empty { display: none; }

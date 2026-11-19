@@ -7,6 +7,7 @@ export const state = {
   status: null,
   settings: { profile_links: [] },
   accounts: null,
+  llm: null,
 };
 
 export const currentChat = () => state.chats.find((c) => c.id === state.current);

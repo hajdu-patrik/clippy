@@ -13,6 +13,8 @@ clippy restart --lan  :: phones and tablets on the same Wi-Fi too (after pairing
 clippy restart --force  :: now, even while jobs run (they start again after the restart)
 clippy pair           :: one-time pairing link + QR code   (--reset: forget every device)
 clippy clip <link>    :: make clips from the command line (clippy clip -h: every option)
+clippy llm            :: the AI in use and whether each mode is ready
+clippy llm claude     :: use your Claude subscription (also: ollama, openrouter, codex, none)
 clippy install        :: set up the command and tab completion (PATH, PowerShell profile, Clink)
 ```
 
@@ -21,6 +23,14 @@ Bare `clippy` shows the banner, the live status and the command list.
 `clippy st<Tab>` → `start` / `status`, `clippy clip --layout <Tab>` → `auto face center blur stream`.
 The completion scripts are generated from one command spec (`clippy/shell.py`), so they never drift from the
 help text.
+
+## The AI: `clippy llm`
+
+`clippy llm` lists the modes (`ollama`, `openrouter`, `claude`, `codex`, `none`), marks the one in use and says whether
+each can answer (installed, signed in, key set). `clippy llm <mode>` switches (`--model <name>` sets that mode's model,
+`--test` asks the AI one tiny question). OpenRouter asks for its API key without showing it; `claude` and `codex` need
+the Claude Code and Codex apps installed and signed in (`claude`, `codex login`). `clippy install` asks once when no
+AI was ever chosen. The same choice is in the web app under *Settings, AI*; it applies from the next request.
 
 ## Clipping: `clippy clip`
 
@@ -59,7 +69,7 @@ Every stage is cached, so re-runs are fast.
 | `--captions en` | language of the captions and the opening text; one different from the spoken language is translated |
 | `--vocab "DESH, Young Fly"` | names and slang to spell right; the video title is added automatically (`--no-title-vocab` leaves it out) |
 | `--whisper large-v3-turbo`, `--device cpu` | faster transcription (default: `auto` = large-v3 on the GPU); the device to transcribe on (`auto`, `cuda`, `cpu`) |
-| `--llm ollama/openai/none`, `--model <name>` | hook picker and its model (also settable in `.env`) |
+| `--llm ollama/openrouter/claude/codex/openai/none`, `--model <name>` | hook picker and its model for this run (the default is the AI set with `clippy llm`) |
 | `--layout auto/face/center/blur/stream` | `auto`: decides per shot (speaking face → tracking, otherwise blur) |
 | `--facecam x,y,w,h` | facecam for the stream layout (estimated automatically otherwise) |
 | `--no-tighten` | keep dead air and filler words |

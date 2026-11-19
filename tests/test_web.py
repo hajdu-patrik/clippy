@@ -1,3 +1,4 @@
+import json
 import re
 from pathlib import Path
 
@@ -483,6 +484,52 @@ def test_profile_links_are_saved_locally_and_checked(env):
     assert many.json()["detail"]["key"] == "error.too_many_links"
     assert client.get("/api/settings").json() == saved
     assert TestClient(client.app).put("/api/settings", json={"profile_links": ""}).status_code == 403
+
+
+def test_the_ai_is_chosen_in_settings_and_its_key_never_leaves_the_computer(env, monkeypatch):
+    from clippy import llm_setup
+
+    here, _, storage = env
+    client = TestClient(here.app, headers=CSRF, client=("127.0.0.1", 50000))
+    other = TestClient(here.app, headers=CSRF, client=("192.168.1.20", 50000))
+    for name in ("BACKEND", "MODEL", "BASE_URL", "API_KEY"):
+        monkeypatch.delenv(f"CLIPPY_LLM_{name}", raising=False)
+    monkeypatch.setattr(llm_setup, "unload_all", lambda: [])
+    first = client.get("/api/llm").json()
+    assert first["mode"] == "ollama" and first["chosen"] is False and first["here"] is True
+    assert [m["id"] for m in first["modes"]] == ["ollama", "openrouter", "claude", "codex", "none"]
+
+    key = "sk-or-v1-0123456789abcdef"
+    saved = client.put("/api/llm", json={"mode": "openrouter", "model": "qwen/qwen3-235b-a22b:free", "key": key}).json()
+    assert saved["mode"] == "openrouter" and saved["chosen"] is True
+    assert key not in client.get("/api/llm").text and key not in json.dumps(saved) and "…cdef" in client.get("/api/llm").text
+    assert key in storage.llm_file.read_text(encoding="utf-8")
+    assert key not in client.get("/api/settings").text
+
+    bad = client.put("/api/llm", json={"mode": "claude", "model": "x; rm -rf /"})
+    assert bad.status_code == 400 and bad.json()["detail"]["key"] == "error.llm_model_name"
+    assert client.get("/api/llm").json()["mode"] == "openrouter"
+
+    assert client.get("/api/llm/problem", params={"mode": "openrouter"}).json() == {"problem": None}
+    monkeypatch.setattr("clippy.llm.shutil.which", lambda name: None)
+    missing = client.get("/api/llm/problem", params={"mode": "claude"}).json()["problem"]
+    assert missing["key"] == "error.claude_missing" and "npm install" in missing["message"]
+    assert client.get("/api/llm/problem", params={"mode": "gemini"}).json()["detail"]["key"] == "error.llm_backend"
+
+    seen = []
+    monkeypatch.setattr(llm_setup, "probe", lambda llm: seen.append(llm) or {"ok": True, "seconds": 0.1, "llm": "x"})
+    assert client.post("/api/llm/test", json={"mode": "claude", "model": "haiku"}).json()["ok"] is True
+    client.post("/api/llm/test", json={"mode": "ollama"})
+    assert [type(x).__name__ for x in seen] == ["ClaudeLLM", "GuardedLLM"]
+    typed = client.post("/api/llm/test", json={"mode": "openrouter", "key": "sk-or-typed-123456"})
+    assert typed.status_code == 200 and seen[-1].api_key == "sk-or-typed-123456"
+    assert "sk-or-typed" not in storage.llm_file.read_text(encoding="utf-8")
+
+    away = other.get("/api/llm").json()
+    assert away["here"] is False and key not in json.dumps(away)
+    for refused in (other.put("/api/llm", json={"mode": "none"}), other.post("/api/llm/test", json={"mode": "none"})):
+        assert refused.status_code == 403 and refused.json()["detail"]["key"] == "error.llm_here_only"
+    assert client.get("/api/llm").json()["mode"] == "openrouter"
 
 
 def test_old_clips_get_new_titles_and_descriptions(env, monkeypatch):
