@@ -94,6 +94,12 @@ change, what changed rather than how; dates are ISO 8601.
   profile / channel / playlist link, no video in the post, no sound, each with what helps.
 
 ### Changed
+- Stream clips give the game more room: the streamer's camera takes the top third (a 16:9 box), the gameplay the rest.
+- Gameplay and stream clips (the preset, watched channels and daily picks) get English captions of what the streamer
+  says; other languages are translated.
+- A stream clip's cover shows the game across the whole picture with the streamer as a framed card on it, under a
+  title whose first line is white and the rest yellow.
+- Daily picks only make clips; nothing is posted until the owner approves it.
 - The web job module is split by responsibility (`texts`, `progress`, `handlers`, `jobs`), routes share two error
   handlers and one upload reader, the platform adapters share one wait loop, and the command line's errors (LLM,
   ffmpeg, files) come from the text catalogue.

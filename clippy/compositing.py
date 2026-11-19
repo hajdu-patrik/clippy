@@ -94,7 +94,7 @@ class FitCompositor:
 class StreamCompositor:
     """Facecam on top, gameplay below, a thin separator between them."""
 
-    TOP_H = 730
+    TOP_H = 608
 
     def __init__(self, facecam: tuple[float, float, float, float]):
         self.facecam = facecam

@@ -1,13 +1,16 @@
-"""Covers with text: the clip's title over its first frame (cover A) and the B title for an A/B test (cover B). The
-clean frame is kept beside them, so new titles give new covers."""
+"""Covers with text: the clip's title over a frame of it (cover A) and the B title for an A/B test (cover B). The
+clean frame is kept beside them, so new titles give new covers. A stream clip's cover shows the game across the whole
+picture with the streamer's camera as a framed card over it."""
 
 from __future__ import annotations
 
 import re
 from pathlib import Path
 
-from PIL import Image, ImageDraw, ImageFont
+import numpy as np
+from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
+from .compositing import OUT_H, StreamCompositor
 from .render import system_fonts
 from .text import no_emoji
 from .tools import atomic_path, log
@@ -18,6 +21,11 @@ WIDTH_SHARE = 0.86
 TOP_SHARE = 0.11
 MAX_LINES = 3
 HASHTAG = re.compile(r"\s*#\w+")
+ACCENT = (255, 212, 0)
+CARD_WIDTH = 0.7
+CARD_CENTER = 0.66
+CARD_BORDER = 0.012
+SEPARATOR_DARK = 12
 
 
 def frame_of(cover: Path) -> Path:
@@ -48,10 +56,56 @@ def _wrap(draw, text: str, font, width: float) -> list[str]:
     return lines + ([line] if line else [])
 
 
+def stream_split(frame: Image.Image) -> int | None:
+    """The row where a stream clip's camera ends and its game begins (the black separator line), or None."""
+    w, h = frame.size
+    row = round(StreamCompositor.TOP_H * h / OUT_H)
+    if not 0 < row < h - 2:
+        return None
+    gray = np.asarray(frame.convert("L"), dtype=np.float32)
+    line = gray[max(0, row - 1): row + 2].mean()
+    around = max(gray[: max(1, row - 6)].mean(), gray[row + 6:].mean())
+    return row if line <= SEPARATOR_DARK and around > line + 8 else None
+
+
+def _fill(image: Image.Image, size: tuple[int, int]) -> Image.Image:
+    w, h = size
+    scale = max(w / image.width, h / image.height)
+    resized = image.resize((max(w, round(image.width * scale)), max(h, round(image.height * scale))), Image.LANCZOS)
+    left, top = (resized.width - w) // 2, (resized.height - h) // 2
+    return resized.crop((left, top, left + w, top + h))
+
+
+def stream_cover(frame: Image.Image, split: int) -> Image.Image:
+    """The game fills the picture; the streamer sits on it as a large framed card with a shadow."""
+    w, h = frame.size
+    image = _fill(frame.crop((0, split + 3, w, h)), (w, h))
+    cam = frame.crop((0, 0, w, split - 3))
+    card_w = round(w * CARD_WIDTH)
+    card = cam.resize((card_w, round(card_w * cam.height / cam.width)), Image.LANCZOS)
+    border = max(4, round(w * CARD_BORDER))
+    x = (w - card.width) // 2
+    y = round(h * CARD_CENTER - card.height / 2)
+    box = (x - border, y - border, x + card.width + border, y + card.height + border)
+    shadow = Image.new("L", (w, h), 0)
+    ImageDraw.Draw(shadow).rounded_rectangle((box[0] + border, box[1] + border * 2, box[2] + border, box[3] + border * 2),
+                                             radius=border * 3, fill=170)
+    image = Image.composite(Image.new("RGB", (w, h)), image, shadow.filter(ImageFilter.GaussianBlur(border * 2)))
+    ImageDraw.Draw(image).rounded_rectangle(box, radius=border * 3, fill=(255, 255, 255))
+    mask = Image.new("L", card.size, 0)
+    ImageDraw.Draw(mask).rounded_rectangle((0, 0, *card.size), radius=border * 2, fill=255)
+    image.paste(card, (x, y), mask)
+    return image
+
+
 def draw_title(frame: Image.Image, text: str, fonts: Path | None) -> Image.Image:
-    """Big white capitals with a black outline in the top part, as large as three lines allow; hashtags stay off."""
+    """Big capitals with a black outline in the top part, as large as three lines allow, the first line white and the
+    rest in the accent colour; hashtags stay off. A stream frame becomes the game with the streamer on it first."""
     text = no_emoji(HASHTAG.sub("", text)).upper()
     image = frame.convert("RGB").copy()
+    split = stream_split(image)
+    if split is not None:
+        image = stream_cover(image, split)
     draw = ImageDraw.Draw(image)
     w, h = image.size
     width = WIDTH_SHARE * w
@@ -70,9 +124,9 @@ def draw_title(frame: Image.Image, text: str, fonts: Path | None) -> Image.Image
     ImageDraw.Draw(shade).rectangle((0, y - size // 2, w, y + len(lines) * (size + gap) + size // 2), fill=110)
     image = Image.composite(Image.new("RGB", image.size, (0, 0, 0)), image, shade)
     draw = ImageDraw.Draw(image)
-    for line in lines:
-        draw.text((w / 2, y), line, font=font, fill=(255, 255, 255), anchor="ma", stroke_width=stroke,
-                  stroke_fill=(0, 0, 0))
+    for i, line in enumerate(lines):
+        draw.text((w / 2, y), line, font=font, fill=(255, 255, 255) if i == 0 else ACCENT, anchor="ma",
+                  stroke_width=stroke, stroke_fill=(0, 0, 0))
         y += size + gap
     return image
 

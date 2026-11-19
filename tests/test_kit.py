@@ -113,3 +113,18 @@ def test_the_cover_frame_is_taken_where_nobody_speaks():
     assert quiet_time(words, 20.0) == 2.5
     assert quiet_time(words[:2], 20.0) == round(min(1.0, 20.0 / 3), 2)
     assert quiet_time([], 20.0) == 1.0
+
+
+def test_a_stream_cover_shows_the_game_big_with_the_streamer_on_it():
+    from clippy import covers
+    from clippy.compositing import OUT_H, OUT_W, StreamCompositor
+
+    frame = Image.new("RGB", (OUT_W, OUT_H), (200, 40, 40))
+    frame.paste((40, 200, 40), (0, StreamCompositor.TOP_H + 3, OUT_W, OUT_H))
+    frame.paste((0, 0, 0), (0, StreamCompositor.TOP_H - 3, OUT_W, StreamCompositor.TOP_H + 3))
+    assert covers.stream_split(frame) == StreamCompositor.TOP_H
+    assert covers.stream_split(Image.new("RGB", (OUT_W, OUT_H), (90, 90, 90))) is None
+    cover = covers.stream_cover(frame, StreamCompositor.TOP_H)
+    assert cover.size == frame.size
+    assert cover.getpixel((40, 60))[1] > 150 and cover.getpixel((40, OUT_H - 60))[1] > 150
+    assert cover.getpixel((OUT_W // 2, round(OUT_H * covers.CARD_CENTER)))[0] > 150

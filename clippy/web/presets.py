@@ -32,7 +32,7 @@ PRESETS = (
            "clip, stop right after the payoff."),
     Preset("gameplay", "🎮",
            {"n": 5, "min_len": 20, "max_len": 75, "layout": "stream", "audio": "natural", "tighten": False,
-            "hook": False, "punch": False},
+            "hook": False, "punch": False, "captions": "en"},
            "Gameplay or stream. Pick the peaks: clutch or skilful plays, wins, big fails, unexpected twists, the "
            "streamer's loud reactions, laughter, rage, funny lines, jokes with chat or teammates. Start 1-3 s before "
            "the peak, stop right after the reaction; skip loading, menus and idle talk."),
