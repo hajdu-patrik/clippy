@@ -5,7 +5,7 @@ export const state = {
   clips: new Map(),
   sending: false,
   status: null,
-  settings: { profile_links: [] },
+  settings: { profile_links: [], post_slots: [] },
   accounts: null,
   llm: null,
 };

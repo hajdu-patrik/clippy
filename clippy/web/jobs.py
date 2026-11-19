@@ -131,6 +131,10 @@ class Runner:
                        eta=progress.eta)
         return out
 
+    def jobs_of(self, kind: str) -> list[Job]:
+        with self._lock:
+            return [j for j in self.running + self.pending if j.kind == kind]
+
     def is_running(self, chat_id: int) -> bool:
         with self._lock:
             return any(j.chat_id == chat_id for j in self.running)

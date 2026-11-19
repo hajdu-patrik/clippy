@@ -43,7 +43,7 @@ function changesHtml(m) {
   return `<div class="changes">
     <div class="changes-head"><svg aria-hidden="true"><use href="#i-edit"/></svg>
       <b>${esc(t("changes.title", { n: d.number, v: d.version }))}</b>
-      <button type="button" class="undo" data-number="${Number(d.number)}">
+      <button type="button" class="btn sm ghost undo" data-number="${Number(d.number)}">
         <svg aria-hidden="true"><use href="#i-undo"/></svg>${esc(t("changes.undo"))}</button></div>
     ${m.content ? `<div class="text">${md(m.content)}</div>` : ""}
     <ul>${items}</ul>

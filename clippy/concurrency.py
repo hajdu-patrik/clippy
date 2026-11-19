@@ -94,12 +94,15 @@ GPU = Slots("gpu", 1, rank=30)
 
 
 class GuardedLLM:
-    """An LLM whose calls take the GPU slot, so the model never loads into VRAM next to Whisper or Demucs."""
+    """An LLM whose calls take the GPU slot when it runs on this computer, so the model never loads into VRAM next
+    to Whisper or Demucs; a hosted one or a command line tool needs no GPU and never waits for it."""
 
     def __init__(self, llm):
         self._llm = llm
 
     def chat_json(self, *args, **kwargs):
+        if not getattr(self._llm, "local", True):
+            return self._llm.chat_json(*args, **kwargs)
         with GPU.hold():
             return self._llm.chat_json(*args, **kwargs)
 

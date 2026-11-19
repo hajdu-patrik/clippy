@@ -509,8 +509,10 @@ class PublishJob(JobHandler):
                 else:
                     if result.cover_pending:
                         log(f"[publish] {LABELS[name]} cover: trying again later")
+                    at = ((p.get("options") or {}).get(name) or {}).get("publish_at")
                     ctx.db.add_post(row, name, result.state, result.url, result.remote_id,
-                                    cover_due=cover_retry.first_try(time.time()) if result.cover_pending else 0.0)
+                                    cover_due=cover_retry.first_try(time.time()) if result.cover_pending else 0.0,
+                                    publish_at=float(at or 0.0) if result.state == "scheduled" else 0.0)
                     done[name] = result.state
                 ctx.remember()
             ctx.show(row)

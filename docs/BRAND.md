@@ -32,6 +32,18 @@ symbol in `index.html`).
 - Display and wordmark: Segoe UI Variable Display, 700, tracking −2 %.
 - Interface: Segoe UI Variable Text (system-ui fallback). Logs: Cascadia Mono.
 
+## Components
+
+The app (`clippy/web/static/style.css`) and the project page (`docs/assets/site.css`) share the colour tokens above and
+the same scale: sizes `--fs-2xs` to `--fs-2xl` (11.5, 12.5, 14, 15.5, 18, 20, 24 px), radii `--radius-sm` 10,
+`--radius-md` 14, `--radius` 16 and `--radius-pill`, spacing `--sp-1` to `--sp-5`.
+
+- Buttons are pills (`.btn`, 44 px high, 36 px for `.sm` on a mouse, 44 px on touch): outlined by default, one filled
+  `.primary` per view, `.danger` for removing.
+- Surfaces (cards, rows, fields) are `--bg-elev` with a `--border` line and `--radius-md`.
+- On a phone (up to 560 px) the large dialogs (Settings, Scheduler, Post) fill the screen with their buttons pinned at
+  the bottom; every control is at least 44 px.
+
 ## Motion
 
 Ease-out `cubic-bezier(.2,.8,.2,1)` for movement and a light spring `cubic-bezier(.34,1.4,.64,1)` for pops.

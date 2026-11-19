@@ -50,12 +50,11 @@ export const api = {
   upload,
   undo: (id, number) => request(`/api/chats/${id}/clips/${number}/undo`, { method: "POST" }),
   settings: () => request("/api/settings"),
-  saveSettings: (profileLinks) =>
-    request("/api/settings", { method: "PUT", body: JSON.stringify({ profile_links: profileLinks }) }),
+  saveSettings: (profileLinks, postSlots) =>
+    request("/api/settings", { method: "PUT", body: JSON.stringify({ profile_links: profileLinks, post_slots: postSlots }) }),
   llm: () => request("/api/llm"),
   saveLlm: (body) => request("/api/llm", { method: "PUT", body: JSON.stringify(body) }),
-  llmProblem: (mode, model) =>
-    request(`/api/llm/problem?mode=${encodeURIComponent(mode)}&model=${encodeURIComponent(model)}`),
+  llmProblem: (body) => request("/api/llm/problem", { method: "POST", body: JSON.stringify(body) }),
   testLlm: (body) => request("/api/llm/test", { method: "POST", body: JSON.stringify(body) }),
   accounts: () => request("/api/accounts"),
   connectAccount: (platform) => request(`/api/accounts/${platform}/connect`, { method: "POST" }),
@@ -64,6 +63,8 @@ export const api = {
   publish: (id, number, body) =>
     request(`/api/chats/${id}/clips/${number}/publish`, { method: "POST", body: JSON.stringify(body) }),
   cancelScheduled: (id) => request(`/api/scheduled/${id}`, { method: "DELETE" }),
+  reschedule: (id, at) => request(`/api/scheduled/${id}`, { method: "PATCH", body: JSON.stringify({ at }) }),
+  schedule: () => request("/api/schedule"),
   dictate: async (blob) => {
     const res = await fetch("/api/dictate", {
       method: "POST", body: blob, headers: { "X-Clippy-Request": "1", "Content-Type": "application/octet-stream" } });

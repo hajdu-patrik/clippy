@@ -233,18 +233,18 @@ def test_codex_failures_name_what_to_do(tools):
         made.chat_json("s", "u")
     assert login.value.key == "error.codex_login" and "codex login" in str(login.value) and len(launched) == 1
 
-    queue += [FakeProc(out="Logged in"), FakeProc(err="warning: x\nERROR: You've hit your usage limit. Try later.\n", code=1)]
+    queue += [FakeProc(out="Logged in using ChatGPT"), FakeProc(err="warning: x\nERROR: You've hit your usage limit. Try later.\n", code=1)]
     with pytest.raises(ClippyError) as limit:
         made.chat_json("s", "u")
     assert limit.value.key == "error.llm_cli_limit"
 
-    queue += [FakeProc(out="Logged in"), FakeProc(hang=True)]
+    queue += [FakeProc(out="Logged in using ChatGPT"), FakeProc(hang=True)]
     made.timeout = 3
     with pytest.raises(ClippyError) as slow:
         made.chat_json("s", "u")
     assert slow.value.key == "error.llm_cli_timeout"
 
-    queue += [FakeProc(out="Logged in"), FakeProc(out="", code=0)]
+    queue += [FakeProc(out="Logged in using ChatGPT"), FakeProc(out="", code=0)]
     with pytest.raises(ClippyError) as empty:
         made.chat_json("s", "u")
     assert empty.value.key == "error.llm_failed"
@@ -360,3 +360,205 @@ def test_every_command_line_text_exists():
         assert f"cli.llm_about_{mode}" in i18n.CATALOG
     for backend in ("claude", "codex"):
         assert f"error.{backend}_missing" in i18n.CATALOG and f"error.{backend}_login" in i18n.CATALOG
+
+
+def test_a_command_line_tool_gets_only_the_system_basics_and_never_a_key(tools, monkeypatch):
+    launched, queue = tools
+    for name, value in (("ANTHROPIC_API_KEY", "a"), ("ANTHROPIC_BASE_URL", "b"), ("CLAUDE_CODE_X", "c"),
+                        ("CLIPPY_LLM_API_KEY", "d"), ("OPENAI_API_KEY", "e"), ("CODEX_API_KEY", "f"),
+                        ("SECRET_TOKEN", "g"), ("PATH", "/bin"), ("https_proxy", "http://p:1"), ("LC_ALL", "C"),
+                        ("ProgramFiles(x86)", "/pf"), ("CODEX_HOME", "/ch"), ("CLAUDE_CONFIG_DIR", "/cc")):
+        monkeypatch.setenv(name, value)
+    queue.append(FakeProc(out=json.dumps({"is_error": False, "result": "{}"})))
+    llm.build_llm("claude", "").chat_json("s", "u")
+    env = launched[0][1]["env"]
+    names = {k.upper() for k in env}
+    assert {"PATH", "HTTPS_PROXY", "LC_ALL", "PROGRAMFILES(X86)", "CODEX_HOME", "CLAUDE_CONFIG_DIR", "NO_COLOR"} <= names
+    assert not {n for n in names if n.startswith(("ANTHROPIC", "CLIPPY", "OPENAI", "SECRET")) or n == "CODEX_API_KEY"}
+    assert "CLAUDE_CODE_X" not in env
+
+
+def test_codex_has_no_tools_beyond_the_question(tools):
+    launched, queue = tools
+    holder = {}
+
+    def write_answer():
+        argv = launched[-1][0]
+        holder["schema"] = "--output-schema" in argv
+        llm.Path(argv[argv.index("--output-last-message") + 1]).write_text("{}", encoding="utf-8")
+
+    strict = {"type": "object", "properties": {"a": {"type": "string"}}, "required": ["a"], "additionalProperties": False}
+    for schema, used in ((strict, True), ({"type": "object", "properties": {"a": {}}}, False), (None, False)):
+        queue += [FakeProc(out="Logged in using ChatGPT"), FakeProc(write=write_answer)]
+        llm.build_llm("codex", "").chat_json("s", "u", schema=schema)
+        argv = launched[-1][0]
+        assert holder["schema"] is used
+        disabled = [argv[i + 1] for i, a in enumerate(argv) if a == "--disable"]
+        assert {"apps", "plugins", "remote_plugin", "browser_use", "computer_use", "shell_tool"} <= set(disabled)
+        assert argv[argv.index("-c") + 1] == "web_search=disabled"
+    assert llm.strict_schema(strict) and not llm.strict_schema({"type": "array", "items": {"type": "object"}})
+
+
+def test_codex_signed_in_with_an_api_key_is_not_the_subscription(tools):
+    launched, queue = tools
+    queue.append(FakeProc(out="Logged in using an API key - sk-***abcd"))
+    made = llm.build_llm("codex", "")
+    assert made.problem().key == "error.codex_not_subscription"
+    queue.append(FakeProc(out="Logged in using an API key - sk-***abcd"))
+    with pytest.raises(ClippyError) as err:
+        made.chat_json("s", "u")
+    assert err.value.key == "error.codex_not_subscription" and len(launched) == 2
+
+
+def test_a_key_from_the_environment_only_serves_the_mode_it_is_set_for(clean, monkeypatch):
+    monkeypatch.setenv("CLIPPY_LLM_API_KEY", "env-key-123456")
+    assert llm.create_llm("openrouter", storage=clean).api_key == ""
+    assert llm.create_llm("openrouter", storage=clean).problem().key == "error.llm_openrouter_key"
+    with pytest.raises(ClippyError) as err:
+        llm_setup.save(clean, "openrouter")
+    assert err.value.key == "error.llm_openrouter_key"
+    monkeypatch.setenv("CLIPPY_LLM_BACKEND", "openrouter")
+    assert llm.create_llm(storage=clean).api_key == "env-key-123456"
+    monkeypatch.setenv("CLIPPY_LLM_BACKEND", "openai")
+    monkeypatch.setenv("CLIPPY_LLM_BASE_URL", "https://api.example.com/v1")
+    assert llm.create_llm("openrouter", storage=clean).api_key == ""
+
+
+def test_a_hung_tool_is_killed_even_when_taskkill_fails(monkeypatch):
+    killed = []
+
+    class Stubborn:
+        pid = 4242
+
+        def communicate(self, data=None, timeout=None):
+            raise subprocess.TimeoutExpired("tool", timeout)
+
+        def kill(self):
+            killed.append(self.pid)
+
+    monkeypatch.setattr(llm.shutil, "which", lambda name: f"/bin/{name}")
+    monkeypatch.setattr(llm.subprocess, "Popen", lambda argv, **kw: Stubborn())
+    monkeypatch.setattr(llm.subprocess, "run", lambda *a, **k: subprocess.CompletedProcess(a, 1))
+    monkeypatch.setattr(llm.os, "killpg", lambda *a: (_ for _ in ()).throw(OSError()), raising=False)
+    made = llm.build_llm("claude", "")
+    made.timeout = 1
+    with pytest.raises(ClippyError) as err:
+        made.chat_json("s", "u")
+    assert err.value.key == "error.llm_cli_timeout" and killed == [4242]
+
+
+def test_the_cli_timeout_is_read_at_every_call_and_a_wrong_value_means_the_default(monkeypatch):
+    assert llm.cli_timeout() == 600
+    for value, seconds in (("30", 30), ("abc", 600), ("-5", 600), ("0", 600), ("", 600)):
+        monkeypatch.setenv("CLIPPY_LLM_CLI_TIMEOUT", value)
+        assert llm.cli_timeout() == seconds
+
+
+def test_a_hosted_or_cli_backend_never_waits_for_the_gpu(monkeypatch):
+    from contextlib import contextmanager
+
+    from clippy import concurrency
+
+    held = []
+
+    class Gpu:
+        @contextmanager
+        def hold(self):
+            held.append(1)
+            yield
+
+    monkeypatch.setattr(concurrency, "GPU", Gpu())
+    monkeypatch.setattr(llm.shutil, "which", lambda name: None)
+    assert llm.OllamaLLM.local and not any(c.local for c in (llm.OpenRouterLLM, llm.ClaudeLLM, llm.CodexLLM, llm.NoLLM))
+    for name in ("openrouter", "claude", "codex", "none"):
+        with pytest.raises(ClippyError):
+            GuardedLLM(llm.build_llm(name, "")).chat_json("s", "u")
+    assert held == []
+
+    class Local:
+        def chat_json(self, *a, **k):
+            return {}
+
+    assert GuardedLLM(Local()).chat_json("s", "u") == {} and held == [1]
+
+
+def test_every_model_name_and_tool_argument_is_checked(clean):
+    for bad in ("two words", "a&b", "a|b", "a%PATH%", 'q"q', "a^b", "a<b", "é"):
+        with pytest.raises(ClippyError) as err:
+            llm.build_llm("claude", bad)
+        assert err.value.key == "error.llm_model_name"
+        with pytest.raises(ClippyError):
+            llm.create_llm("codex", bad, clean)
+    with pytest.raises(ClippyError) as arg:
+        llm.build_llm("claude", "").run(["/bin/claude", "x&y"])
+    assert arg.value.key == "error.llm_bad_argument"
+
+
+def test_a_key_must_be_printable_ascii_wherever_it_is_typed(clean):
+    for bad in ("short", "has a space1", "tab\tkey12345", "kéy-123456789", "x" * 301):
+        with pytest.raises(ClippyError) as err:
+            llm_setup.candidate(clean, "openrouter", "m:free", bad)
+        assert err.value.key == "error.llm_key_format"
+        with pytest.raises(ClippyError):
+            llm_setup.save(clean, "openrouter", "m:free", bad)
+    assert llm_setup.candidate(clean, "openrouter", "m:free", "sk-or-v1-0123456789").api_key == "sk-or-v1-0123456789"
+
+
+def test_a_readiness_check_is_reused_for_a_few_seconds_and_runs_once_at_a_time():
+    now, calls = [0.0], []
+    cache = llm_setup.ProblemCache(ttl=10, clock=lambda: now[0])
+
+    def check():
+        calls.append(1)
+        return ClippyError(key="error.claude_login")
+
+    assert cache.get(("claude", "", False), check).key == "error.claude_login"
+    now[0] = 9
+    cache.get(("claude", "", False), check)
+    assert len(calls) == 1
+    cache.get(("codex", "", False), check)
+    assert len(calls) == 2
+    now[0] = 11
+    cache.get(("claude", "", False), check)
+    assert len(calls) == 3
+    cache.clear()
+    cache.get(("claude", "", False), check)
+    assert len(calls) == 4
+
+
+def test_a_saved_choice_drops_the_remembered_readiness(clean, monkeypatch):
+    llm_setup.PROBLEMS.clear()
+    monkeypatch.setattr(llm.shutil, "which", lambda name: None)
+    assert llm_setup.problem(clean, "claude").key == "error.claude_missing"
+    monkeypatch.setattr(llm.shutil, "which", lambda name: "/bin/claude")
+    monkeypatch.setattr(llm.CliLLM, "run", lambda self, *a, **k: (0, json.dumps({"loggedIn": True}), ""))
+    assert llm_setup.problem(clean, "claude").key == "error.claude_missing"
+    llm_setup.save(clean, "none")
+    assert llm_setup.problem(clean, "claude") is None
+    llm_setup.PROBLEMS.clear()
+
+
+def test_odd_answers_from_the_tools_are_errors_not_crashes(clean, tools, monkeypatch):
+    _, queue = tools
+    queue.append(FakeProc(out="[1, 2]"))
+    with pytest.raises(ClippyError) as listed:
+        llm.build_llm("claude", "").chat_json("s", "u")
+    assert listed.value.key == "error.llm_failed"
+
+    class Reply:
+        def json(self):
+            return []
+
+    monkeypatch.setattr(llm.requests, "get", lambda *a, **k: Reply())
+    assert llm.build_llm("ollama", "m").problem().key == "error.ollama_no_model"
+
+
+def test_installing_asks_for_the_ai_only_when_the_install_worked(monkeypatch):
+    from clippy import control, shell
+
+    asked = []
+    monkeypatch.setattr(llm_setup, "first_run", lambda say: asked.append(1))
+    for code in (1, 0):
+        monkeypatch.setattr(shell, "install", lambda say, code=code: code)
+        assert control._install([]) == code
+    assert asked == [1]

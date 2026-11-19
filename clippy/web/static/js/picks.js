@@ -27,8 +27,8 @@ function pickRow(p) {
       <span class="account-state">${esc(`${p.streamer} · ${p.platform} · ${views}`)}</span>
       <p class="pick-text${p.failed ? " failed" : ""}">${esc(p.text || t(p.failed ? "picks.failed" : "picks.making"))}</p></div>
     <div class="watch-btns">
-      <button type="button" class="ghost" data-pick="open">${esc(t("picks.open"))}</button>
-      ${p.text ? `<button type="button" class="ghost" data-pick="copy">${esc(t("picks.copy"))}</button>` : ""}
+      <button type="button" class="btn sm ghost" data-pick="open">${esc(t("picks.open"))}</button>
+      ${p.text ? `<button type="button" class="btn sm ghost" data-pick="copy">${esc(t("picks.copy"))}</button>` : ""}
     </div></li>`;
 }
 
@@ -42,9 +42,9 @@ function dailyRow(d) {
     <div><b>${esc(d.name)}</b><span class="account-state">${esc(state)}</span>
       ${d.error_t ? `<span class="account-error">${esc(tx(d.error_t, ""))}</span>` : ""}</div>
     <div class="watch-btns">
-      <button type="button" class="ghost" data-daily="run">${esc(t("picks.runNow"))}</button>
-      <button type="button" class="ghost" data-daily="toggle">${esc(t(d.enabled ? "picks.pause" : "picks.resume"))}</button>
-      <button type="button" class="ghost" data-daily="delete">${esc(t("picks.delete"))}</button>
+      <button type="button" class="btn sm ghost" data-daily="run">${esc(t("picks.runNow"))}</button>
+      <button type="button" class="btn sm ghost" data-daily="toggle">${esc(t(d.enabled ? "picks.pause" : "picks.resume"))}</button>
+      <button type="button" class="btn sm ghost danger" data-daily="delete">${esc(t("picks.delete"))}</button>
     </div></li>${(d.picks || []).map(pickRow).join("")}`;
 }
 
@@ -52,7 +52,7 @@ function render() {
   const list = $("#picksList");
   if (!list) return;
   list.innerHTML = daily.length ? daily.map(dailyRow).join("")
-    : `<li class="account"><span class="account-state">${esc(t("picks.none"))}</span></li>`;
+    : `<li class="blank">${esc(t("picks.none"))}</li>`;
   const boxes = $("#picksPlatforms");
   if (boxes && !boxes.children.length) {
     boxes.innerHTML = POSTING.map((name) =>

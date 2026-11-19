@@ -326,6 +326,19 @@ def run_all(runner):
         runner.run_one(runner.pending[0])
 
 
+def test_a_timed_upload_keeps_the_time_the_platform_publishes_it(chat_env):
+    storage, db, chat = chat_env
+    store, _ = make_store(storage, {"youtube": None, "tiktok": None})
+    runner = make_runner(storage, db, store)
+    options = {"youtube": {"privacy": "scheduled", "publish_at": 5000.0}, "tiktok": {"publish_at": 7000.0}}
+    runner.submit(chat["id"], "publish", {"clip": 1, "platforms": ["youtube", "tiktok"], "options": options})
+    assert [j.kind for j in runner.jobs_of("publish")] == ["publish"] and runner.jobs_of("generate") == []
+    run_all(runner)
+    posts = {p["platform"]: p for p in db.latest_posts(chat["id"], 1)}
+    assert posts["youtube"]["state"] == "scheduled" and posts["youtube"]["publish_at"] == 5000.0
+    assert posts["tiktok"]["state"] == "public" and posts["tiktok"]["publish_at"] == 0.0
+
+
 def test_one_platform_failing_does_not_stop_the_others(chat_env):
     storage, db, chat = chat_env
     store, platforms = make_store(storage, {

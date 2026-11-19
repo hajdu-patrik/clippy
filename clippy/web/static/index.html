@@ -2,7 +2,7 @@
 <html lang="en" data-theme="dark">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
   <meta name="color-scheme" content="dark light">
   <meta name="theme-color" content="#18171a">
   <title>Clippy</title>
@@ -27,6 +27,8 @@
   <link rel="modulepreload" href="/static/js/llm.js">
   <link rel="modulepreload" href="/static/js/publish.js">
   <link rel="modulepreload" href="/static/js/watches.js">
+  <link rel="modulepreload" href="/static/js/schedule.js">
+  <link rel="modulepreload" href="/static/js/viewport.js">
   <link rel="modulepreload" href="/static/js/picks.js">
   <link rel="modulepreload" href="/static/js/results.js">
   <link rel="modulepreload" href="/static/js/kit.js">
@@ -69,6 +71,7 @@
     <symbol id="i-palette" viewBox="0 0 24 24"><path d="M12 3.5a8.5 8.5 0 1 0 0 17c1.2 0 1.8-.9 1.4-2l-.4-1a1.5 1.5 0 0 1 1.4-2h2.1A4 4 0 0 0 20.5 11.5c0-4.4-3.8-8-8.5-8z" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="7.8" cy="11" r="1.2" fill="currentColor"/><circle cx="10.5" cy="7.5" r="1.2" fill="currentColor"/><circle cx="14.8" cy="7.8" r="1.2" fill="currentColor"/></symbol>
     <symbol id="i-undo" viewBox="0 0 24 24"><path d="M9 7L4.5 11.5 9 16M5 11.5h9a5 5 0 0 1 0 10h-2" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></symbol>
     <symbol id="i-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 2.8v2.4M12 18.8v2.4M2.8 12h2.4M18.8 12h2.4M5.5 5.5l1.7 1.7M16.8 16.8l1.7 1.7M5.5 18.5l1.7-1.7M16.8 7.2l1.7-1.7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+    <symbol id="i-calendar" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15.5" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M3.5 10h17M8 3v4M16 3v4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
     <symbol id="i-mic" viewBox="0 0 24 24"><rect x="9" y="3.5" width="6" height="11" rx="3" fill="none" stroke="currentColor" stroke-width="1.9"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5v3" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></symbol>
     <symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 8v5M12 16.5v.5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></symbol>
   </svg>
@@ -88,17 +91,21 @@
       <button class="new-chat" id="newChat">
         <svg aria-hidden="true"><use href="#i-plus"/></svg><span data-i18n="side.newChat">New chat</span><kbd>Ctrl Shift O</kbd>
       </button>
+      <nav class="side-nav" aria-label="Clippy" data-i18n-attr="aria-label:side.menu">
+        <button type="button" class="nav-item" id="scheduleBtn">
+          <svg aria-hidden="true"><use href="#i-calendar"/></svg><span data-i18n="side.scheduler">Scheduler</span>
+        </button>
+        <button type="button" class="nav-item" id="settingsBtn">
+          <svg aria-hidden="true"><use href="#i-gear"/></svg><span data-i18n="side.settings">Settings</span>
+        </button>
+      </nav>
       <div class="chat-list-label" data-i18n="side.chats">Chats</div>
-      <nav class="chat-list" id="chatList" aria-label="Chats" data-i18n-attr="aria-label:side.chats" role="list"></nav>
+      <div class="chat-list" id="chatList" aria-label="Chats" data-i18n-attr="aria-label:side.chats" role="list"></div>
       <div class="side-footer">
         <div class="worker" id="worker" role="status" aria-live="polite">
           <span class="dot" aria-hidden="true"></span>
           <span class="worker-text"><span id="workerText">Idle</span><span class="worker-bar" aria-hidden="true"><i id="workerBar"></i></span></span>
         </div>
-        <button class="icon-btn" id="settingsBtn" aria-label="Settings" title="Settings"
-          data-i18n-attr="aria-label:side.settings;title:side.settings">
-          <svg aria-hidden="true"><use href="#i-gear"/></svg>
-        </button>
         <button class="icon-btn" id="themeBtn" aria-label="Light / dark theme" title="Light / dark theme"
           data-i18n-attr="aria-label:side.theme;title:side.theme">
           <svg aria-hidden="true"><use href="#i-theme"/></svg>
@@ -165,10 +172,10 @@
     <p class="hint" data-i18n="copy.hint">Copying is blocked here; select the text and copy it yourself.</p>
     <textarea id="copyText" rows="10" readonly aria-labelledby="copyTitle"></textarea>
     <div class="dialog-btns">
-      <button type="button" class="primary" id="copyClose" data-i18n="copy.close">Close</button>
+      <button type="button" class="btn primary" id="copyClose" data-i18n="copy.close">Close</button>
     </div>
   </dialog>
-  <dialog class="settings-dialog" id="settingsDialog" aria-labelledby="settingsTitle">
+  <dialog class="settings-dialog sheet" id="settingsDialog" aria-labelledby="settingsTitle">
     <form method="dialog" id="settingsForm">
       <h2 id="settingsTitle" data-i18n="settings.title">Settings</h2>
       <div class="settings-tabs" role="tablist" aria-labelledby="settingsTitle" id="settingsTabs">
@@ -184,6 +191,10 @@
       <p class="hint" id="profileLinksHint" data-i18n="settings.hint">One per line. They go under every clip's post text.</p>
       <textarea id="profileLinks" rows="4" maxlength="2000" aria-describedby="profileLinksHint"
         placeholder="TikTok: https://www.tiktok.com/@…&#10;Instagram: https://www.instagram.com/…/"></textarea>
+      <label for="postSlots" data-i18n="settings.slots">Your posting times</label>
+      <p class="hint" id="postSlotsHint" data-i18n="settings.slotsHint">Daily times you like to post at, like 11:00, 16:00, 20:00. The Scheduler offers the next free one.</p>
+      <input class="field" id="postSlots" maxlength="120" autocomplete="off" inputmode="text" placeholder="11:00, 16:00, 20:00, 23:30"
+        aria-describedby="postSlotsHint">
       <section class="notify" aria-labelledby="notifyTitle">
         <h3 id="notifyTitle" data-i18n="notify.title">Notifications</h3>
         <label class="check inline"><input type="checkbox" id="notifyToggle"><span data-i18n="notify.toggle">Tell me when a job is done (also when this window is in the background)</span></label>
@@ -209,8 +220,8 @@
         <p class="hint" id="llmStatus" role="status"></p>
         <p class="hint" data-i18n="llm.note">A change applies from the next request, no restart needed.</p>
         <div class="watch-btns">
-          <button type="button" class="ghost small-btn" id="llmTest" data-i18n="llm.test">Test</button>
-          <button type="button" class="small-btn" id="llmSave" data-i18n="llm.save">Save AI</button>
+          <button type="button" class="btn sm ghost" id="llmTest" data-i18n="llm.test">Test</button>
+          <button type="button" class="btn sm primary" id="llmSave" data-i18n="llm.save">Save AI</button>
         </div>
       </section>
       </div>
@@ -226,7 +237,7 @@
           <div class="token-row">
             <input id="igToken" type="password" autocomplete="off" spellcheck="false" maxlength="2000"
               aria-describedby="igTokenHint">
-            <button type="button" class="primary" id="igSave" data-i18n="accounts.tokenSave">Connect</button>
+            <button type="button" class="btn primary" id="igSave" data-i18n="accounts.tokenSave">Connect</button>
           </div>
         </div>
       </section>
@@ -251,22 +262,22 @@
         <ul class="account-list kit-files">
           <li class="account"><div><b data-i18n="kit.logo">Logo</b><span class="account-state" id="kit-logo-name"></span></div>
             <div class="watch-btns">
-              <label class="small-btn file-btn"><span data-i18n="kit.choose">Choose file</span><input type="file" id="kit-logo-file" accept="image/*" hidden></label>
-              <button type="button" class="small-btn" id="kit-logo-remove" data-i18n="kit.remove" hidden>Remove</button>
+              <label class="btn sm ghost file-btn"><span data-i18n="kit.choose">Choose file</span><input type="file" id="kit-logo-file" accept="image/*" hidden></label>
+              <button type="button" class="btn sm ghost" id="kit-logo-remove" data-i18n="kit.remove" hidden>Remove</button>
             </div></li>
           <li class="account"><div><b data-i18n="kit.intro">Intro</b><span class="account-state" id="kit-intro-name"></span>
             <span class="hint kit-note" data-i18n="kit.introHint">Keep it under 1.5 s: a slow start loses viewers.</span></div>
             <div class="watch-btns">
-              <label class="small-btn file-btn"><span data-i18n="kit.choose">Choose file</span><input type="file" id="kit-intro-file" accept="video/*,image/*" hidden></label>
-              <button type="button" class="small-btn" id="kit-intro-remove" data-i18n="kit.remove" hidden>Remove</button>
+              <label class="btn sm ghost file-btn"><span data-i18n="kit.choose">Choose file</span><input type="file" id="kit-intro-file" accept="video/*,image/*" hidden></label>
+              <button type="button" class="btn sm ghost" id="kit-intro-remove" data-i18n="kit.remove" hidden>Remove</button>
             </div></li>
           <li class="account"><div><b data-i18n="kit.outro">Outro</b><span class="account-state" id="kit-outro-name"></span></div>
             <div class="watch-btns">
-              <label class="small-btn file-btn"><span data-i18n="kit.choose">Choose file</span><input type="file" id="kit-outro-file" accept="video/*,image/*" hidden></label>
-              <button type="button" class="small-btn" id="kit-outro-remove" data-i18n="kit.remove" hidden>Remove</button>
+              <label class="btn sm ghost file-btn"><span data-i18n="kit.choose">Choose file</span><input type="file" id="kit-outro-file" accept="video/*,image/*" hidden></label>
+              <button type="button" class="btn sm ghost" id="kit-outro-remove" data-i18n="kit.remove" hidden>Remove</button>
             </div></li>
         </ul>
-        <button type="button" class="small-btn" id="kitSave" data-i18n="kit.save">Save style</button>
+        <button type="button" class="btn primary" id="kitSave" data-i18n="kit.save">Save style</button>
       </section>
       </div>
       <div class="settings-page" role="tabpanel" id="page-results" aria-labelledby="tab-results" hidden>
@@ -275,7 +286,7 @@
         <p class="hint" id="resultsSummary" data-i18n="results.hint">Clippy reads back how your posted clips do and picks more of what works.</p>
         <p class="hint warn" id="resultsAnalytics" hidden data-i18n="results.reconnect">Connect YouTube again so Clippy can also read how much of each clip people watch.</p>
         <ul class="findings" id="resultsList"></ul>
-        <button type="button" class="ghost small-btn" id="resultsRefresh" data-i18n="results.refresh">Read the numbers now</button>
+        <button type="button" class="btn sm ghost" id="resultsRefresh" data-i18n="results.refresh">Read the numbers now</button>
       </section>
       </div>
       <div class="settings-page" role="tabpanel" id="page-auto" aria-labelledby="tab-auto" hidden>
@@ -309,7 +320,7 @@
           </fieldset>
           <p class="hint" data-i18n="picks.autopostHint">YouTube gets the clip right away and makes it public at its time, so it goes out even while this computer is off.</p>
           <div class="dialog-btns">
-            <button type="button" class="primary" id="picksSave" data-i18n="picks.save">Start</button>
+            <button type="button" class="btn primary" id="picksSave" data-i18n="picks.save">Start</button>
           </div>
         </details>
       </section>
@@ -359,18 +370,18 @@
           <p class="hint" id="watchSlotsHint" data-i18n="watch.slotsHint">YouTube goes public, TikTok to your drafts. Leave both empty to post by hand.</p>
           <label class="check inline"><input type="checkbox" id="watchLatest"><span data-i18n="watch.latest">Clip the newest video now too</span></label>
           <div class="dialog-btns">
-            <button type="button" class="primary" id="watchSave" data-i18n="watch.save">Start watching</button>
+            <button type="button" class="btn primary" id="watchSave" data-i18n="watch.save">Start watching</button>
           </div>
         </details>
       </section>
       </div>
       <div class="dialog-btns">
-        <button type="button" class="ghost" id="settingsCancel" data-i18n="settings.cancel">Cancel</button>
-        <button type="submit" class="primary" id="settingsSave" data-i18n="settings.save">Save</button>
+        <button type="button" class="btn ghost" id="settingsCancel" data-i18n="settings.cancel">Cancel</button>
+        <button type="submit" class="btn primary" id="settingsSave" data-i18n="settings.save">Save</button>
       </div>
     </form>
   </dialog>
-  <dialog class="settings-dialog" id="postDialog" aria-labelledby="postTitle">
+  <dialog class="settings-dialog sheet" id="postDialog" aria-labelledby="postTitle">
     <form method="dialog" id="postForm">
       <h2 id="postTitle" data-i18n="publish.titlePlain">Post clip</h2>
       <fieldset class="post-platforms">
@@ -409,15 +420,76 @@
         <div id="postAtBox" hidden>
           <label for="postAt" data-i18n="publish.at">Date and time</label>
           <input class="field" id="postAt" type="datetime-local">
+          <button type="button" class="link-btn" id="postPlanned" data-i18n="publish.seePlanned">See everything planned</button>
         </div>
       </div>
       <label for="postCaption" data-i18n="publish.caption">Post text</label>
       <textarea id="postCaption" rows="7" readonly></textarea>
       <p class="hint" id="postNote"></p>
       <div class="dialog-btns">
-        <button type="button" class="ghost" id="postSettings" hidden data-i18n="publish.toSettings">Settings</button>
-        <button type="button" class="ghost" id="postCancel" data-i18n="settings.cancel">Cancel</button>
-        <button type="submit" class="primary" id="postSend" data-i18n="publish.send">Post</button>
+        <button type="button" class="btn ghost" id="postSettings" hidden data-i18n="publish.toSettings">Settings</button>
+        <button type="button" class="btn ghost" id="postCancel" data-i18n="settings.cancel">Cancel</button>
+        <button type="submit" class="btn primary" id="postSend" data-i18n="publish.send">Post</button>
+      </div>
+    </form>
+  </dialog>
+  <dialog class="settings-dialog sheet" id="scheduleDialog" aria-labelledby="scheduleTitle">
+    <header class="sheet-head">
+      <h2 id="scheduleTitle" data-i18n="sched.title">Scheduler</h2>
+      <button type="button" class="icon-btn" id="scheduleClose" aria-label="Close" data-i18n-attr="aria-label:sched.close">
+        <svg aria-hidden="true"><use href="#i-close"/></svg>
+      </button>
+    </header>
+    <section id="schedList" aria-labelledby="scheduleTitle">
+      <div class="sched-bar">
+        <p class="hint" data-i18n="sched.hint">Every post that waits for its time, on YouTube or here in Clippy.</p>
+        <button type="button" class="btn primary" id="schedNew" data-i18n="sched.new">Schedule a clip</button>
+      </div>
+      <div class="notice" role="note">
+        <svg aria-hidden="true"><use href="#i-calendar"/></svg>
+        <div>
+          <p data-i18n="sched.rule">YouTube keeps the time itself: the video is uploaded now and goes public at its time, even when Clippy and this computer are off. The other platforms wait here, so Clippy has to be running at their time.</p>
+          <p data-i18n="sched.studioWhy">Clippy's YouTube access can upload videos but cannot change or delete them. To move or remove one, use YouTube Studio.</p>
+        </div>
+      </div>
+      <div id="schedItems" aria-live="polite"></div>
+    </section>
+    <form id="schedForm" hidden aria-labelledby="schedFormTitle">
+      <h3 id="schedFormTitle" data-i18n="sched.formTitle">Schedule a clip</h3>
+      <div class="field-box">
+        <label for="schedChat" data-i18n="sched.chat">Chat</label>
+        <select id="schedChat"></select>
+      </div>
+      <fieldset class="post-platforms">
+        <legend data-i18n="sched.clip">Clip</legend>
+        <div class="clip-picks" id="schedClips" role="radiogroup" aria-labelledby="schedFormTitle"></div>
+      </fieldset>
+      <fieldset class="post-platforms">
+        <legend data-i18n="publish.where">Where to</legend>
+        <div class="platform-picks" id="schedPlatforms"></div>
+      </fieldset>
+      <div class="field-box" id="schedTtBox" hidden>
+        <label for="schedTt" data-i18n="publish.ttMode">TikTok</label>
+        <select id="schedTt">
+          <option value="draft" data-i18n="publish.draft">To drafts, I post it in the TikTok app</option>
+          <option value="private" data-i18n="publish.selfOnly">Posted, visible only to me</option>
+        </select>
+      </div>
+      <fieldset class="post-platforms">
+        <legend data-i18n="sched.when">When</legend>
+        <div class="quick" id="schedQuick"></div>
+        <div class="post-options">
+          <div><label for="schedDate" data-i18n="sched.date">Date</label><input class="field" id="schedDate" type="date" required></div>
+          <div><label for="schedTime" data-i18n="sched.time">Time</label><input class="field" id="schedTime" type="time" required></div>
+        </div>
+        <p class="hint" id="schedZone"></p>
+      </fieldset>
+      <p class="hint note" id="schedYoutube" hidden data-i18n="sched.youtube">YouTube: uploaded now, public at that time. YouTube keeps the time, so it goes out even when Clippy and this computer are off.</p>
+      <p class="hint note" id="schedOwn" hidden data-i18n="sched.own">Other platforms: Clippy posts at that time, so it has to be running then. A post whose time passed while it was off goes out when it starts again.</p>
+      <p class="hint warn" id="schedError" role="alert" hidden></p>
+      <div class="dialog-btns">
+        <button type="button" class="btn ghost" id="schedBack" data-i18n="sched.back">Back</button>
+        <button type="submit" class="btn primary" id="schedSend" data-i18n="publish.schedule">Schedule</button>
       </div>
     </form>
   </dialog>

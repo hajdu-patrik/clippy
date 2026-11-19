@@ -472,7 +472,7 @@ def test_a_failed_job_is_fixed_and_tried_again_and_a_bad_clip_is_skipped(env, mo
 
 def test_profile_links_are_saved_locally_and_checked(env):
     client, runner, storage = env
-    assert client.get("/api/settings").json() == {"profile_links": []}
+    assert client.get("/api/settings").json() == {"profile_links": [], "post_slots": []}
     saved = client.put("/api/settings", json={"profile_links": "https://www.tiktok.com/@someone?lang=hu-HU\n\n"
                                                              "Insta: https://www.instagram.com/someone/"}).json()
     assert saved["profile_links"] == ["TikTok: https://www.tiktok.com/@someone?lang=hu-HU",
@@ -510,17 +510,22 @@ def test_the_ai_is_chosen_in_settings_and_its_key_never_leaves_the_computer(env,
     assert bad.status_code == 400 and bad.json()["detail"]["key"] == "error.llm_model_name"
     assert client.get("/api/llm").json()["mode"] == "openrouter"
 
-    assert client.get("/api/llm/problem", params={"mode": "openrouter"}).json() == {"problem": None}
+    ask = "/api/llm/problem"
+    assert client.post(ask, json={"mode": "openrouter"}).json() == {"problem": None}
     monkeypatch.setattr("clippy.llm.shutil.which", lambda name: None)
-    missing = client.get("/api/llm/problem", params={"mode": "claude"}).json()["problem"]
+    missing = client.post(ask, json={"mode": "claude"}).json()["problem"]
     assert missing["key"] == "error.claude_missing" and "npm install" in missing["message"]
-    assert client.get("/api/llm/problem", params={"mode": "gemini"}).json()["detail"]["key"] == "error.llm_backend"
+    assert client.post(ask, json={"mode": "gemini"}).json()["detail"]["key"] == "error.llm_backend"
+    assert client.get(ask).status_code == 405
+    assert TestClient(here.app, client=("127.0.0.1", 50000)).post(ask, json={"mode": "none"}).status_code == 403
+    assert other.post(ask, json={"mode": "none"}).json()["detail"]["key"] == "error.llm_here_only"
+    assert client.post("/api/llm/test", json={"mode": "claude", "key": "has a space"}).json()["detail"]["key"] == "error.llm_key_format"
 
     seen = []
     monkeypatch.setattr(llm_setup, "probe", lambda llm: seen.append(llm) or {"ok": True, "seconds": 0.1, "llm": "x"})
     assert client.post("/api/llm/test", json={"mode": "claude", "model": "haiku"}).json()["ok"] is True
     client.post("/api/llm/test", json={"mode": "ollama"})
-    assert [type(x).__name__ for x in seen] == ["ClaudeLLM", "GuardedLLM"]
+    assert [type(x._llm).__name__ for x in seen] == ["ClaudeLLM", "OllamaLLM"]
     typed = client.post("/api/llm/test", json={"mode": "openrouter", "key": "sk-or-typed-123456"})
     assert typed.status_code == 200 and seen[-1].api_key == "sk-or-typed-123456"
     assert "sk-or-typed" not in storage.llm_file.read_text(encoding="utf-8")

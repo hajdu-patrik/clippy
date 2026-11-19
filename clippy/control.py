@@ -468,7 +468,8 @@ def _install(args: list[str]) -> int:
     from .shell import install
 
     code = install(say=say)
-    first_run(say)
+    if code == 0:
+        first_run(say)
     return code
 
 

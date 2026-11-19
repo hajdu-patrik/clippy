@@ -31,6 +31,7 @@ from ..publish.registry import LABELS, PLATFORMS, POSTING
 from ..publish.oauth import OAuthFlows
 from ..settings import Settings
 from ..storage import Storage
+from . import agenda, results, schedule
 from .chats import ChatService, NotFound
 from .clips import ClipLibrary, ClipPresenter, rewrite_post_texts
 from .db import DB
@@ -40,7 +41,6 @@ from .jobs import Runner
 from .media import MediaStore
 from .lan import Lan, is_loopback
 from .security import SecurityMiddleware
-from . import results
 from .kit import StyleKit
 from .daily import Daily, daily_settings, present_daily
 from .watch import EVERY_MINUTES, Watcher, present_watch, watch_settings
@@ -97,6 +97,7 @@ class ChatPatch(BaseModel):
 
 class SettingsPatch(BaseModel):
     profile_links: str = Field(max_length=2000)
+    post_slots: str | None = Field(default=None, max_length=120)
 
 
 Platform = Literal[PLATFORMS]
@@ -109,6 +110,10 @@ class PublishRequest(BaseModel):
     tiktok_mode: Literal["draft", "private"] = "draft"
     variant: Literal["a", "b"] = "a"
     at: float | None = Field(default=None, gt=0)
+
+
+class ScheduledPatch(BaseModel):
+    at: float = Field(gt=0)
 
 
 class NewWatch(BaseModel):
@@ -290,6 +295,8 @@ def create_app(storage: Storage | None = None, db_path: Path | None = None, runn
     @app.put("/api/settings")
     def put_settings(body: SettingsPatch):
         saved = settings.set_profile_links(body.profile_links)
+        if body.post_slots is not None:
+            saved = settings.set_post_slots(schedule.clean_slots(body.post_slots))
         rewrite_post_texts(db, runner.library, saved["profile_links"])
         hub.publish(None, {"type": "settings", "settings": saved})
         return saved
@@ -305,17 +312,18 @@ def create_app(storage: Storage | None = None, db_path: Path | None = None, runn
         hub.publish(None, {"type": "llm", "llm": saved})
         return saved
 
-    @app.get("/api/llm/problem")
-    def llm_problem(mode: Annotated[str, Query(max_length=20)], model: Annotated[str, Query(max_length=100)] = ""):
+    @app.post("/api/llm/problem")
+    def llm_problem(body: LLMChoice, request: Request):
         """Whether a mode can answer right now, and if not, what the user has to do."""
-        problem = llm_setup.candidate(storage, mode, model).problem()
+        from_this_computer(request, "error.llm_here_only")
+        problem = llm_setup.problem(storage, body.mode, body.model, body.key)
         return {"problem": None if problem is None else error_detail(problem)}
 
     @app.post("/api/llm/test")
     def test_llm(body: LLMChoice, request: Request):
         from_this_computer(request, "error.llm_here_only")
         llm = llm_setup.candidate(storage, body.mode, body.model, body.key)
-        return llm_setup.probe(GuardedLLM(llm) if llm.backend == "ollama" else llm)
+        return llm_setup.probe(GuardedLLM(llm))
 
     @app.get("/api/i18n")
     def catalog():
@@ -383,6 +391,17 @@ def create_app(storage: Storage | None = None, db_path: Path | None = None, runn
         options = {"youtube": {"privacy": body.youtube_privacy}, "tiktok": {"mode": body.tiktok_mode},
                    **({"variant": "b"} if body.variant == "b" else {})}
         return chats.publish(chat_id, number, list(dict.fromkeys(body.platforms)), options, body.at)
+
+    @app.get("/api/schedule")
+    def get_schedule():
+        return agenda.view(db, media, runner.jobs_of("publish"), settings.load()["post_slots"], time.time())
+
+    @app.patch("/api/scheduled/{item_id}")
+    def reschedule_scheduled(item_id: int, body: ScheduledPatch):
+        item = chats.reschedule_scheduled(item_id, body.at)
+        if item is None:
+            raise HTTPException(404, "Not planned")
+        return item
 
     @app.delete("/api/scheduled/{item_id}")
     def cancel_scheduled(item_id: int):

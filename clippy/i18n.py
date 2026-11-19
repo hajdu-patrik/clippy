@@ -318,6 +318,8 @@ CATALOG: dict[str, str] = {
     "error.llm_auth": "The AI service refused the API key ({status}). Check the key in Settings, under AI.",
     "error.llm_model_name": "That model name has characters Clippy does not accept.",
     "error.llm_key_format": "That does not look like an API key. Copy the whole key.",
+    "error.codex_not_subscription": "Codex is signed in with an API key, but this mode uses your ChatGPT subscription. Open a terminal, run codex logout, then codex login and sign in with your ChatGPT account.",
+    "error.llm_bad_argument": "The AI tool was given a value it cannot pass safely: {arg}",
     "error.llm_here_only": "The AI can be changed only on the computer that runs Clippy.",
     "cli.llm_line": "{mark} {mode:<11} {state}",
     "cli.llm_ready": "ready",

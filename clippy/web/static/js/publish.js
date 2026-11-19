@@ -67,7 +67,6 @@ function renderPlatforms() {
       ${a.connected ? "checked" : "disabled"}><span>${platformLabel(name)}${who}</span></label>`;
   }).join("");
   const any = POSTING.some((name) => accounts[name]?.connected);
-  $("#postNote").textContent = any ? t("publish.note") : t("publish.noAccount");
   $("#postSend").disabled = !any;
   $("#postSettings").hidden = any;
   syncOptions();
@@ -79,8 +78,11 @@ function chosen() {
 
 function syncOptions() {
   const picked = new Set(chosen());
-  $("#ytOption").hidden = !picked.has("youtube");
+  const timed = picked.has("youtube") && $("#postWhen").value === "later";
+  const any = POSTING.some((name) => state.accounts?.accounts?.[name]?.connected);
+  $("#ytOption").hidden = !picked.has("youtube") || timed;
   $("#ttOption").hidden = !picked.has("tiktok");
+  $("#postNote").textContent = timed ? t("sched.youtube") : state.accounts ? t(any ? "publish.note" : "publish.noAccount") : "";
   if (state.accounts) $("#postSend").disabled = !picked.size;
 }
 
@@ -148,12 +150,17 @@ function syncWhen() {
     $("#postAt").value = new Date(soon.getTime() - soon.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
   }
   $("#postSend").textContent = t(later ? "publish.schedule" : "publish.send");
+  syncOptions();
 }
 
 export function bindPublish() {
   $("#postWhen").addEventListener("change", syncWhen);
   $("#postCancel").addEventListener("click", () => $("#postDialog").close());
   $("#postForm").addEventListener("submit", send);
+  $("#postPlanned").addEventListener("click", () => {
+    $("#postDialog").close();
+    document.dispatchEvent(new CustomEvent("clippy:schedule"));
+  });
   $("#postPlatforms").addEventListener("change", syncOptions);
   $("#postSettings").addEventListener("click", () => {
     $("#postDialog").close();

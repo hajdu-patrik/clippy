@@ -71,6 +71,19 @@ def plan(db, chat_id: int, number: int, platforms: list[str], options: dict, due
     return db.add_scheduled(chat_id, number, platforms, options, due)
 
 
+def replan(db, item_id: int, due: float, now: float | None = None) -> dict | None:
+    """A new time for a post waiting in Clippy's plan; None when it is not planned (any more)."""
+    if due < (now or time.time()) + MIN_AHEAD:
+        raise ClippyError(key="error.schedule_past")
+    return db.get_scheduled(item_id) if db.reschedule(item_id, due) else None
+
+
+def taken_times(db, now: float) -> set[float]:
+    """The slot times that already hold a post: planned here, or timed on a platform that keeps them."""
+    dues = [item["due"] for item in db.planned()] + [p["publish_at"] for p in db.timed_posts(now) if p["publish_at"]]
+    return {float(int(due // 60) * 60) for due in dues}
+
+
 def post_at(db, runner, chat_id: int, number: int, platforms: list[str], options: dict, at: float,
             now: float | None = None) -> dict:
     """One clip at a set time on each platform: uploaded now with its time where the platform keeps it, planned here
@@ -91,8 +104,7 @@ def post_at(db, runner, chat_id: int, number: int, platforms: list[str], options
 def plan_in_slots(db, chat_id: int, numbers: list[int], autopost: dict, now: float | None = None) -> list[dict]:
     """New clips of a watched channel: one per free slot, the best (lowest number) first."""
     now = now or time.time()
-    taken = {round(item["due"], 3) for item in db.planned()}
-    dues = next_slots(autopost.get("slots") or [], len(numbers), taken, now)
+    dues = next_slots(autopost.get("slots") or [], len(numbers), taken_times(db, now), now)
     return [db.add_scheduled(chat_id, number, autopost["platforms"], autopost.get("options") or {}, due)
             for number, due in zip(sorted(numbers), dues)]
 

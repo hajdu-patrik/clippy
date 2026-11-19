@@ -23,9 +23,9 @@ function watchRow(w) {
     <div><b>${esc(w.title || w.url)}</b><span class="account-state">${esc(parts.join(" · ") + paused)}</span>
       ${w.error_t ? `<span class="account-error">${esc(tx(w.error_t, ""))}</span>` : ""}</div>
     <div class="watch-btns">
-      <button type="button" class="ghost" data-watch="check">${esc(t("watch.checkNow"))}</button>
-      <button type="button" class="ghost" data-watch="toggle">${esc(t(w.enabled ? "watch.pause" : "watch.resume"))}</button>
-      <button type="button" class="ghost" data-watch="delete" aria-label="${esc(t("watch.delete"))}">${esc(t("watch.delete"))}</button>
+      <button type="button" class="btn sm ghost" data-watch="check">${esc(t("watch.checkNow"))}</button>
+      <button type="button" class="btn sm ghost" data-watch="toggle">${esc(t(w.enabled ? "watch.pause" : "watch.resume"))}</button>
+      <button type="button" class="btn sm ghost danger" data-watch="delete" aria-label="${esc(t("watch.delete"))}">${esc(t("watch.delete"))}</button>
     </div></li>`;
 }
 
@@ -44,7 +44,7 @@ function renderWatches() {
   const list = $("#watchList");
   if (!list) return;
   list.innerHTML = watches.length ? watches.map(watchRow).join("")
-    : `<li class="account"><span class="account-state">${esc(t("watch.none"))}</span></li>`;
+    : `<li class="blank">${esc(t("watch.none"))}</li>`;
 }
 
 async function onWatch(event) {

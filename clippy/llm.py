@@ -8,6 +8,7 @@ import json
 import os
 import re
 import shutil
+import signal
 import subprocess
 import sys
 import tempfile
@@ -25,7 +26,13 @@ OPENROUTER_URL = "https://openrouter.ai/api/v1"
 OPENROUTER_MODEL = "qwen/qwen3-235b-a22b:free"
 MODES = ("ollama", "openrouter", "claude", "codex", "none")
 DEFAULT_MODELS = {"ollama": DEFAULT_MODEL, "openrouter": OPENROUTER_MODEL}
-MODEL_NAME = re.compile(r"[\w./:@+-]{0,100}")
+MODEL_NAME = re.compile(r"[\w./:@+-]{0,100}", re.ASCII)
+UNSAFE_ARGUMENT = re.compile(r'[%^&|<>"]')
+CLI_TIMEOUT = 600
+CLI_ENV = frozenset(("PATH PATHEXT SYSTEMROOT SYSTEMDRIVE COMSPEC WINDIR USERPROFILE HOMEDRIVE HOMEPATH HOME APPDATA "
+                     "LOCALAPPDATA PROGRAMDATA TEMP TMP USERNAME LANG CLAUDE_CONFIG_DIR CODEX_HOME HTTP_PROXY "
+                     "HTTPS_PROXY NO_PROXY").split())
+CLI_ENV_PREFIXES = ("PROGRAMFILES", "LC_")
 OLLAMA_SERVER_ENV = {"OLLAMA_FLASH_ATTENTION": "1", "OLLAMA_KV_CACHE_TYPE": "q8_0",
                      "OLLAMA_NUM_PARALLEL": "1", "OLLAMA_MAX_LOADED_MODELS": "1"}
 
@@ -38,6 +45,22 @@ def think_enabled() -> bool:
     return setting("THINK", "1") != "0"
 
 
+def cli_timeout() -> int:
+    """Seconds a command line tool may take, read at every call; a wrong value means the default."""
+    try:
+        seconds = int(setting("CLI_TIMEOUT", str(CLI_TIMEOUT)))
+    except ValueError:
+        return CLI_TIMEOUT
+    return seconds if seconds > 0 else CLI_TIMEOUT
+
+
+def cli_env() -> dict[str, str]:
+    """What a command line tool gets of the server's environment: the system basics, the tool's own home and the
+    proxy; never a Clippy setting or any API key."""
+    env = {k: v for k, v in os.environ.items() if k.upper() in CLI_ENV or k.upper().startswith(CLI_ENV_PREFIXES)}
+    return {**env, "NO_COLOR": "1"}
+
+
 def stored(storage: Storage | None = None) -> dict:
     """The user's choice from Settings or `clippy llm`: {"mode", "models": {mode: name}, "keys": {mode: key}}."""
     try:
@@ -45,6 +68,18 @@ def stored(storage: Storage | None = None) -> dict:
     except (OSError, ValueError):
         return {}
     return data if isinstance(data, dict) else {}
+
+
+def strict_schema(schema) -> bool:
+    """Whether a JSON Schema meets the strict structured-output rules (every object closed and fully required)."""
+    if isinstance(schema, list):
+        return all(strict_schema(item) for item in schema)
+    if not isinstance(schema, dict):
+        return True
+    if schema.get("type") == "object" and (schema.get("additionalProperties") is not False
+                                           or set(schema.get("required") or ()) != set(schema.get("properties") or ())):
+        return False
+    return all(strict_schema(value) for value in schema.values())
 
 
 def json_prompt(user: str, schema: dict | None) -> str:
@@ -57,6 +92,7 @@ def json_prompt(user: str, schema: dict | None) -> str:
 
 class LLM(ABC):
     backend = ""
+    local = False
 
     def __init__(self, model: str, base_url: str = "", api_key: str = ""):
         self.model, self.base_url, self.api_key = model, base_url.rstrip("/"), api_key
@@ -84,6 +120,7 @@ class LLM(ABC):
 
 class OllamaLLM(LLM):
     backend = "ollama"
+    local = True
     SAMPLING = {
         True: {"temperature": 0.6, "top_p": 0.95, "top_k": 20, "min_p": 0.0},
         False: {"temperature": 0.7, "top_p": 0.8, "top_k": 20, "min_p": 0.0},
@@ -122,10 +159,11 @@ class OllamaLLM(LLM):
 
     def problem(self) -> ClippyError | None:
         try:
-            tags = requests.get(f"{self.base_url}/api/tags", timeout=3).json().get("models", [])
+            body = requests.get(f"{self.base_url}/api/tags", timeout=3).json()
         except (requests.RequestException, ValueError):
             return ClippyError(key="error.ollama_unreachable", url=self.base_url, model=self.model)
-        names = {m.get("name") for m in tags}
+        models = body.get("models") if isinstance(body, dict) else None
+        names = {m.get("name") for m in models or [] if isinstance(m, dict)}
         if self.model in names or f"{self.model}:latest" in names:
             return None
         return ClippyError(key="error.ollama_no_model", model=self.model)
@@ -188,8 +226,7 @@ class CliLLM(LLM):
     """A subscription used through the vendor's own command line tool, signed in by the user, with no API key."""
 
     tool = ""
-    drop_env: tuple[str, ...] = ()
-    timeout = int(setting("CLI_TIMEOUT", "600"))
+    timeout: int | None = None
 
     def describe(self) -> str:
         return f"{self.backend}:{self.model or 'default'}"
@@ -202,27 +239,31 @@ class CliLLM(LLM):
 
     def problem(self) -> ClippyError | None:
         try:
-            signed_in = self._signed_in(self.executable())
+            return self._sign_in_problem(self.executable())
         except ClippyError as exc:
             return exc
-        return None if signed_in else ClippyError(key=f"error.{self.backend}_login")
 
     def run(self, argv: list[str], text: str = "", timeout: float | None = None,
             cwd: str | None = None) -> tuple[int, str, str]:
         """Run the tool without a shell and without a window; a tool that hangs is stopped with its children."""
-        env = {k: v for k, v in os.environ.items() if k not in self.drop_env}
+        for arg in argv[1:]:
+            if UNSAFE_ARGUMENT.search(arg):
+                raise ClippyError(key="error.llm_bad_argument", arg=arg[:40])
         extra = {"creationflags": subprocess.CREATE_NO_WINDOW} if sys.platform == "win32" else {"start_new_session": True}
         try:
             proc = subprocess.Popen(argv, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                                    cwd=cwd, env={**env, "NO_COLOR": "1"}, **extra)
+                                    cwd=cwd, env=cli_env(), **extra)
         except OSError as exc:
             raise ClippyError(key=f"error.{self.backend}_missing") from exc
-        wait = timeout or self.timeout
+        wait = timeout or self.timeout or cli_timeout()
         try:
             out, err = proc.communicate(text.encode("utf-8"), timeout=wait)
         except subprocess.TimeoutExpired:
             _kill_tree(proc)
-            proc.communicate()
+            try:
+                proc.communicate(timeout=10)
+            except subprocess.TimeoutExpired:
+                pass
             raise ClippyError(key="error.llm_cli_timeout", tool=self.tool, seconds=int(wait)) from None
         return proc.returncode, out.decode("utf-8", "replace"), err.decode("utf-8", "replace")
 
@@ -235,7 +276,7 @@ class CliLLM(LLM):
         return ClippyError(key="error.llm_failed", detail=detail[:300])
 
     @abstractmethod
-    def _signed_in(self, exe: str) -> bool: ...
+    def _sign_in_problem(self, exe: str) -> ClippyError | None: ...
 
 
 class ClaudeLLM(CliLLM):
@@ -243,18 +284,18 @@ class ClaudeLLM(CliLLM):
 
     backend = "claude"
     tool = "claude"
-    drop_env = ("ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN")
 
-    def _signed_in(self, exe: str) -> bool:
+    def _sign_in_problem(self, exe: str) -> ClippyError | None:
         code, out, _ = self.run([exe, "auth", "status"], timeout=20)
         try:
-            return bool(json.loads(out).get("loggedIn"))
+            signed_in = bool(json.loads(out).get("loggedIn"))
         except (ValueError, AttributeError):
-            return code == 0
+            signed_in = code == 0
+        return None if signed_in else ClippyError(key="error.claude_login")
 
     def _complete(self, system: str, user: str, think: bool, schema: dict | None) -> str:
         exe = self.executable()
-        with tempfile.TemporaryDirectory(prefix="clippy-") as scratch:
+        with tempfile.TemporaryDirectory(prefix="clippy-", ignore_cleanup_errors=True) as scratch:
             prompt = Path(scratch, "system.txt")
             prompt.write_text(system, encoding="utf-8")
             argv = [exe, "-p", "--output-format", "json", "--tools", "", "--no-session-persistence",
@@ -267,30 +308,45 @@ class ClaudeLLM(CliLLM):
             reply = json.loads(out)
         except ValueError:
             raise self.refused(err or out) from None
+        if not isinstance(reply, dict):
+            raise self.refused(err or out)
         if code != 0 or reply.get("is_error"):
             raise self.refused(str(reply.get("result") or err or out))
         return str(reply.get("result") or "")
 
 
 class CodexLLM(CliLLM):
-    """Codex in exec mode: read-only sandbox, no saved session, no user config, the last message read from a file.
+    """Codex in exec mode: read-only sandbox, no saved session, no user config, and every tool that reaches beyond
+    the question switched off (shell, apps, plugins, browser, computer, search). The last message is the answer.
     Signed out, `codex exec` waits for a login that never comes, so the sign-in is checked first."""
 
     backend = "codex"
     tool = "codex"
-    drop_env = ("OPENAI_API_KEY", "CODEX_API_KEY")
+    FEATURES = ("apps", "plugins", "remote_plugin", "browser_use", "computer_use", "shell_tool", "image_generation",
+                "multi_agent")
 
-    def _signed_in(self, exe: str) -> bool:
-        return self.run([exe, "login", "status"], timeout=20)[0] == 0
+    def _sign_in_problem(self, exe: str) -> ClippyError | None:
+        code, out, _ = self.run([exe, "login", "status"], timeout=20)
+        if code != 0:
+            return ClippyError(key="error.codex_login")
+        return None if "chatgpt" in out.lower() else ClippyError(key="error.codex_not_subscription")
 
     def _complete(self, system: str, user: str, think: bool, schema: dict | None) -> str:
         exe = self.executable()
-        if not self._signed_in(exe):
-            raise ClippyError(key="error.codex_login")
-        with tempfile.TemporaryDirectory(prefix="clippy-") as scratch:
+        problem = self._sign_in_problem(exe)
+        if problem is not None:
+            raise problem
+        with tempfile.TemporaryDirectory(prefix="clippy-", ignore_cleanup_errors=True) as scratch:
             answer = Path(scratch, "answer.txt")
             argv = [exe, "exec", "--skip-git-repo-check", "--sandbox", "read-only", "--ephemeral",
-                    "--ignore-user-config", "--ignore-rules", "--color", "never", "--output-last-message", str(answer)]
+                    "--ignore-user-config", "--ignore-rules", "--color", "never", "-c", "web_search=disabled",
+                    "--output-last-message", str(answer)]
+            for feature in self.FEATURES:
+                argv += ["--disable", feature]
+            if schema and strict_schema(schema):
+                shape = Path(scratch, "schema.json")
+                shape.write_text(json.dumps(schema), encoding="utf-8")
+                argv += ["--output-schema", str(shape)]
             if self.model:
                 argv += ["--model", self.model]
             prompt = (f"{system}\n\n---\n\n{json_prompt(user, schema)}\n\n"
@@ -329,13 +385,16 @@ def model_of(name: str, config: dict) -> str:
 
 
 def key_of(name: str, config: dict) -> str:
-    env = setting("API_KEY") if name in ("openai", "openrouter") else ""
+    """The user's key for a mode, else the environment's (only for the mode CLIPPY_LLM_BACKEND configures)."""
+    env = setting("API_KEY") if name in ("openai", "openrouter") and name == setting("BACKEND").lower() else ""
     return (config.get("keys") or {}).get(name) or env
 
 
 def build_llm(name: str, model: str, key: str = "") -> LLM:
     if name not in BACKENDS:
         raise ClippyError(key="error.llm_backend", name=name, choices=", ".join(MODES))
+    if not MODEL_NAME.fullmatch(model):
+        raise ClippyError(key="error.llm_model_name")
     base_url = {"ollama": setting("BASE_URL", OLLAMA_URL), "openai": setting("BASE_URL"),
                 "openrouter": OPENROUTER_URL}.get(name, "")
     if name == "openai" and not base_url:
@@ -351,14 +410,18 @@ def create_llm(backend: str | None = None, model: str | None = None, storage: St
 
 def _kill_tree(proc: subprocess.Popen) -> None:
     """Stop a tool and everything it started (the npm shims start node under cmd.exe)."""
-    if sys.platform == "win32":
-        subprocess.run(["taskkill", "/PID", str(proc.pid), "/T", "/F"], capture_output=True,
-                       creationflags=subprocess.CREATE_NO_WINDOW)
-    else:
-        try:
-            os.killpg(proc.pid, 9)
-        except OSError:
-            proc.kill()
+    try:
+        if sys.platform == "win32":
+            done = subprocess.run(["taskkill", "/PID", str(proc.pid), "/T", "/F"], capture_output=True,
+                                  creationflags=subprocess.CREATE_NO_WINDOW, timeout=20)
+            if done.returncode == 0:
+                return
+        else:
+            os.killpg(proc.pid, signal.SIGKILL)
+            return
+    except (OSError, subprocess.SubprocessError):
+        pass
+    proc.kill()
 
 
 def _failed(exc: Exception) -> ClippyError:

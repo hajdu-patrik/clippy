@@ -38,7 +38,10 @@ function chatItem(chat, busy) {
   const title = document.createElement("a");
   title.className = "t";
   title.href = `#/chat/${chat.id}`;
-  title.textContent = chatTitle(chat.title);
+  const label = document.createElement("span");
+  label.className = "t-text";
+  label.textContent = chatTitle(chat.title);
+  title.append(label);
   const actions = document.createElement("span");
   actions.className = "actions";
   for (const [act, label, icon] of [["rename", t("side.rename"), "#i-edit"], ["delete", t("side.delete"), "#i-trash"]]) {

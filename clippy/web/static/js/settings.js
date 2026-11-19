@@ -24,13 +24,13 @@ function accountButton(name, a, here) {
   const aria = esc(t("accounts.pasteTokenFor", { platform: a.label }));
   if (!here) return "";
   if (a.connected) {
-    return `<button type="button" class="ghost" data-account="disconnect" data-platform="${name}" aria-label="${label("accounts.disconnect")} ${esc(a.label)}">${platformIcon(name, "sm")}${label("accounts.disconnect")}</button>`;
+    return `<button type="button" class="btn ghost" data-account="disconnect" data-platform="${name}" aria-label="${label("accounts.disconnect")} ${esc(a.label)}">${platformIcon(name, "sm")}${label("accounts.disconnect")}</button>`;
   }
   if (!a.oauth) {
-    return `<button type="button" class="primary" data-account="token" data-platform="${name}" aria-label="${aria}">${platformIcon(name, "sm")}${label("accounts.pasteToken")}</button>`;
+    return `<button type="button" class="btn ghost" data-account="token" data-platform="${name}" aria-label="${aria}">${platformIcon(name, "sm")}${label("accounts.pasteToken")}</button>`;
   }
   return a.configured
-    ? `<button type="button" class="primary" data-account="connect" data-platform="${name}" aria-label="${label("accounts.connect")} ${esc(a.label)}">${platformIcon(name, "sm")}${label("accounts.connect")}</button>`
+    ? `<button type="button" class="btn ghost" data-account="connect" data-platform="${name}" aria-label="${label("accounts.connect")} ${esc(a.label)}">${platformIcon(name, "sm")}${label("accounts.connect")}</button>`
     : "";
 }
 
@@ -79,6 +79,9 @@ function showPage(name, focus = false) {
     if (on) tab.scrollIntoView({ block: "nearest", inline: "nearest" });
     if (on && focus) tab.focus();
   }
+  const general = page === "general";
+  $("#settingsSave").hidden = !general;
+  $("#settingsCancel").textContent = t(general ? "settings.cancel" : "settings.close");
   $("#settingsDialog").scrollTop = 0;
 }
 
@@ -92,6 +95,7 @@ function onTabKey(event) {
 
 function open(event) {
   $("#profileLinks").value = (state.settings.profile_links || []).join("\n");
+  $("#postSlots").value = (state.settings.post_slots || []).join(", ");
   $("#igTokenBox").hidden = true;
   renderAccounts();
   showPage(event?.detail?.page || page);
@@ -111,7 +115,7 @@ async function save(event) {
   const button = $("#settingsSave");
   button.disabled = true;
   try {
-    state.settings = await api.saveSettings($("#profileLinks").value);
+    state.settings = await api.saveSettings($("#profileLinks").value, $("#postSlots").value);
     $("#settingsDialog").close();
     toast(t("settings.saved"));
   } catch (err) {

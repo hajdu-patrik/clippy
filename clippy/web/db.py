@@ -131,6 +131,8 @@ class DB:
             if "cover_due" not in {r[1] for r in self.conn.execute("PRAGMA table_info(posts)")}:
                 self.conn.execute("ALTER TABLE posts ADD COLUMN cover_due REAL NOT NULL DEFAULT 0")
                 self.conn.execute("ALTER TABLE posts ADD COLUMN cover_tries INTEGER NOT NULL DEFAULT 0")
+            if "publish_at" not in {r[1] for r in self.conn.execute("PRAGMA table_info(posts)")}:
+                self.conn.execute("ALTER TABLE posts ADD COLUMN publish_at REAL NOT NULL DEFAULT 0")
             try:
                 self.conn.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_clip_version ON clips(chat_id, number, version)")
             except sqlite3.IntegrityError:
@@ -260,13 +262,14 @@ class DB:
         return cur.rowcount
 
     def add_post(self, clip: dict, platform: str, state: str, url: str = "", remote_id: str = "",
-                 problem: dict | None = None, cover_due: float = 0.0) -> dict:
-        """`cover_due`: when to try the cover again that the platform turned down at posting (0: nothing to do)."""
+                 problem: dict | None = None, cover_due: float = 0.0, publish_at: float = 0.0) -> dict:
+        """`cover_due`: when to try the cover again that the platform turned down at posting (0: nothing to do).
+        `publish_at`: when the platform itself makes an uploaded video public (0: not timed)."""
         cur = self._exec(
-            "INSERT INTO posts (chat_id, clip_id, number, platform, state, url, remote_id, problem, created, cover_due) "
-            "VALUES (?,?,?,?,?,?,?,?,?,?)",
+            "INSERT INTO posts (chat_id, clip_id, number, platform, state, url, remote_id, problem, created, cover_due, "
+            "publish_at) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
             (clip["chat_id"], clip["id"], clip["number"], platform, state, url, remote_id,
-             json.dumps(problem or {}, ensure_ascii=False), time.time(), cover_due))
+             json.dumps(problem or {}, ensure_ascii=False), time.time(), cover_due, publish_at))
         return self._one("SELECT * FROM posts WHERE id = ?", (cur.lastrowid,))
 
     def covers_due(self, now: float) -> list[dict]:
@@ -337,6 +340,18 @@ class DB:
         if number is not None:
             sql, args = sql + " AND number = ?", [*args, number]
         return self._all(sql + " ORDER BY due", tuple(args))
+
+    def reschedule(self, item_id: int, due: float) -> bool:
+        """A new time for a post that is still planned; False when it was not planned any more."""
+        return self._exec("UPDATE scheduled SET due = ? WHERE id = ? AND state = 'planned'", (due, item_id)).rowcount > 0
+
+    def timed_posts(self, since: float) -> list[dict]:
+        """Videos a platform keeps and publishes at their time, with their clip: those timed from `since` on, and
+        the ones from before times were recorded that went up since then (time 0)."""
+        return self._all(
+            "SELECT p.*, c.clip AS clip, c.jpg AS jpg FROM posts p JOIN clips c ON c.id = p.clip_id "
+            "WHERE p.state = 'scheduled' AND p.remote_id != '' AND (p.publish_at >= ? OR (p.publish_at = 0 AND "
+            "p.created >= ?)) ORDER BY p.publish_at, p.id", (since, since))
 
     def due_posts(self, now: float) -> list[dict]:
         return self._all("SELECT * FROM scheduled WHERE state = 'planned' AND due <= ? ORDER BY due", (now,))

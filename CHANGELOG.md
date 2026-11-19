@@ -6,6 +6,10 @@ change, what changed rather than how; dates are ISO 8601.
 ## [Unreleased]
 
 ### Added
+- The Scheduler (sidebar): every planned post by day with its cover, chat, platforms and time, scheduling a clip from
+  one place (chat, clip, platforms, date and time, your posting times and the next free slot), moving or removing the
+  posts that wait in Clippy, and a link to YouTube Studio for videos YouTube holds, which Clippy's upload access cannot
+  change; your posting times are set in Settings, General.
 - The AI is chosen at the first start, in Settings, AI, or with `clippy llm <mode>`: Ollama on this computer
   (default), OpenRouter with your key, your Claude subscription through Claude Code, your ChatGPT subscription
   through Codex, or none; it applies from the next request.
@@ -97,6 +101,11 @@ change, what changed rather than how; dates are ISO 8601.
   profile / channel / playlist link, no video in the post, no sound, each with what helps.
 
 ### Changed
+- The web app follows the project page's look (shared type scale, radii, pill buttons with one filled button per view)
+  and works better on a phone: Settings, Scheduler and Post fill the screen with their buttons pinned, every control is
+  at least 44 px, and the sidebar lists the Scheduler and Settings by name.
+- A clip posted at a set time to YouTube no longer offers a visibility choice: YouTube makes it public at that time.
+- A clip's planned YouTube time is remembered (`posts.publish_at`), and free posting times skip it.
 - A streamer's camera is found even when the game shows faces of its own: the face that stays put the longest is the
   camera, so GTA clips keep the stream layout.
 - Stream clips give the game more room: the streamer's camera takes the top third (a 16:9 box), the gameplay the rest.

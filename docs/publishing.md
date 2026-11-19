@@ -250,6 +250,17 @@ Kick uses OAuth 2.1 with PKCE; Clippy asks for `user:read` and `channel:read`.
 
 Clippy has to be running at the planned time; a post whose time passed while it was off goes out when it starts again.
 
+**The Scheduler** (sidebar) shows every planned post in one list, grouped by day: videos YouTube holds for their
+publish time (state *Scheduled on YouTube*, and *Uploading* while the file is still on its way) and posts waiting in
+Clippy's own plan, each with the clip's cover, its chat, the platforms and the time in your time zone. *Schedule a clip*
+picks a chat, a clip, the platforms and a date and time; the quick picks are your posting times (*Settings, General*, or
+the daily times of your watched channels) and *Next free slot*, which skips times that already hold a post. Posts in
+Clippy's plan can be moved (*Change time*) or removed. A YouTube video goes up at once, private, and YouTube makes it
+public at its time, so its visibility choice does not apply to a timed video. Its time cannot be changed from
+Clippy: YouTube's `videos.update` and `videos.delete` need the `youtube` or `youtube.force-ssl` scope, and Clippy asks
+only for `youtube.upload` (plus read-only scopes), so the Scheduler links the video in YouTube Studio instead. Nothing is
+posted without your own action: scheduling is the click on *Schedule*.
+
 ## Learning from the results
 
 Every few hours Clippy reads back how the clips it posted are doing: views, likes, comments, shares and, where the

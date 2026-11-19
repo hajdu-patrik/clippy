@@ -32,6 +32,7 @@ function placeholderOf(mode) {
 
 function renderFields() {
   const mode = current();
+  if (!mode) return;
   const here = state.llm.here;
   const hasModel = WITH_MODEL.includes(draft.mode);
   $("#llmModelBox").hidden = !hasModel;
@@ -64,7 +65,7 @@ async function check() {
   if (draft.mode === "openai") return say("");
   say(t("llm.checking"));
   try {
-    const { problem } = await api.llmProblem(draft.mode, draft.models[draft.mode] || "");
+    const { problem } = await api.llmProblem(body());
     if (ticket === checking) say(problem ? tx(problem, problem.message) : t("llm.ready"), Boolean(problem));
   } catch (err) {
     if (ticket === checking) say(tx(err.t, err.message), true);
@@ -125,6 +126,7 @@ export async function loadLlm() {
 export async function askOnce() {
   if (store.get(ASKED_KEY)) return;
   await loadLlm();
+  if (state.llm?.chosen) store.set(ASKED_KEY, "1");
   if (!state.llm || state.llm.chosen || !state.llm.here) return;
   store.set(ASKED_KEY, "1");
   document.dispatchEvent(new CustomEvent("clippy:settings", { detail: { page: "ai" } }));
@@ -134,6 +136,7 @@ export function bindLlm() {
   $("#llmModes").addEventListener("change", pick);
   $("#llmModel").addEventListener("input", (e) => { draft.models[draft.mode] = e.target.value; });
   $("#llmModel").addEventListener("change", check);
+  $("#llmKey").addEventListener("change", check);
   $("#llmTest").addEventListener("click", test);
   $("#llmSave").addEventListener("click", save);
   onLive((event) => {

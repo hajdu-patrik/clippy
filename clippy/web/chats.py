@@ -131,10 +131,19 @@ class ChatService:
         item = self.db.get_scheduled(item_id)
         if item is None or not self.db.set_scheduled_state(item_id, "cancelled"):
             return False
-        row = self.db.current_clip(item["chat_id"], item["number"])
-        if row is not None:
-            self.hub.publish(item["chat_id"], {"type": "clip", "clip": self.presenter.present(row, current=True)})
+        self._show_clip(item["chat_id"], item["number"])
         return True
+
+    def reschedule_scheduled(self, item_id: int, at: float) -> dict | None:
+        item = schedule.replan(self.db, item_id, at)
+        if item is not None:
+            self._show_clip(item["chat_id"], item["number"])
+        return None if item is None else schedule.present(item)
+
+    def _show_clip(self, chat_id: int, number: int) -> None:
+        row = self.db.current_clip(chat_id, number)
+        if row is not None:
+            self.hub.publish(chat_id, {"type": "clip", "clip": self.presenter.present(row, current=True)})
 
     def post_message(self, chat_id: int, text: str, attachments: tuple[str, ...] = ()) -> dict:
         chat = self.get(chat_id)
