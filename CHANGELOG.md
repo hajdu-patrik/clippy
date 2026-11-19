@@ -94,6 +94,8 @@ change, what changed rather than how; dates are ISO 8601.
   profile / channel / playlist link, no video in the post, no sound, each with what helps.
 
 ### Changed
+- A streamer's camera is found even when the game shows faces of its own: the face that stays put the longest is the
+  camera, so GTA clips keep the stream layout.
 - Stream clips give the game more room: the streamer's camera takes the top third (a 16:9 box), the gameplay the rest.
 - Gameplay and stream clips (the preset, watched channels and daily picks) get English captions of what the streamer
   says; other languages are translated.

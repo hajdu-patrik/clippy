@@ -215,15 +215,23 @@ FACECAM_MAX_WIDTH = 0.2
 
 
 def guess_facecam(an: ClipAnalysis) -> tuple[float, float, float, float] | None:
-    """For stream layouts: a 16:9 box (normalised) around the usually small, static streamer face. Faces that move
-    around (game characters, a cutscene) are not a facecam: then there is none, and the frame is shown whole."""
+    """For stream layouts: a 16:9 box (normalised) around the usually small, static streamer face: the spot where a face
+    is found in the most frames, so the faces of game characters around it do not pull it away. A spot without a face
+    in enough frames (only moving faces, a cutscene) is no facecam: then there is none, and the frame is shown whole."""
     flat = [f for fl in an.faces for f in fl]
     if len(flat) < max(3, an.n_frames * 0.3):
         return None
-    cx = float(np.median([f.cx for f in flat]))
-    cy = float(np.median([f.cy for f in flat]))
-    fw = float(np.median([f.w for f in flat]))
-    steady = sum(any(abs(f.cx - cx) <= FACECAM_DRIFT and abs(f.cy - cy) <= FACECAM_DRIFT for f in fl) for fl in an.faces)
+
+    def near(f, c) -> bool:
+        return abs(f.cx - c.cx) <= FACECAM_DRIFT and abs(f.cy - c.cy) <= FACECAM_DRIFT
+
+    step = max(1, len(flat) // 200)
+    anchor = max(flat[::step], key=lambda c: sum(any(near(f, c) for f in fl) for fl in an.faces))
+    held = [f for f in flat if near(f, anchor)]
+    cx = float(np.median([f.cx for f in held]))
+    cy = float(np.median([f.cy for f in held]))
+    fw = float(np.median([f.w for f in held]))
+    steady = sum(any(near(f, anchor) for f in fl) for fl in an.faces)
     if steady < FACECAM_PRESENCE * an.n_frames or fw > FACECAM_MAX_WIDTH:
         return None
     bw = min(1.0, fw * 3.4)

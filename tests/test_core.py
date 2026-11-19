@@ -158,6 +158,10 @@ def test_a_facecam_is_a_face_that_stays_put():
     assert guess_facecam(roaming) is None
     close_up = _fake_analysis(100, lambda i: [FaceObs(0.35, 0.2, 0.3, 0.5, 0.9, 0.35)])
     assert guess_facecam(close_up) is None
+    crowded = _fake_analysis(100, lambda i: [FaceObs(0.04, 0.8, 0.05, 0.09, 0.9, 0.82)] + [
+        FaceObs(0.3 + 0.004 * i + 0.1 * k, 0.3, 0.06, 0.1, 0.9, 0.33) for k in range(3)])
+    x, y, w, h = guess_facecam(crowded)
+    assert x < 0.065 < x + w and y < 0.845 < y + h
 
 
 def test_plan_switches_to_active_speaker_with_hard_cut():
