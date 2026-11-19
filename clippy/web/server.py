@@ -530,7 +530,7 @@ def create_app(storage: Storage | None = None, db_path: Path | None = None, runn
 
         async def stream():
             try:
-                hello = {"type": "hello", "chat_id": None, "status": runner.status()}
+                hello = {"type": "hello", "chat_id": None, "status": runner.status(), "build": build}
                 yield f"data: {json.dumps(hello, ensure_ascii=False)}\n\n"
                 while not await request.is_disconnected():
                     try:

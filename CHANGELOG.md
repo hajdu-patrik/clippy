@@ -101,6 +101,8 @@ change, what changed rather than how; dates are ISO 8601.
   profile / channel / playlist link, no video in the post, no sound, each with what helps.
 
 ### Changed
+- Open pages pick up a new version of the app by themselves after a restart (once no dialog is open and nothing
+  is typed), and the Scheduler follows changes made in any other tab or by a job as they happen.
 - The web app follows the project page's look (shared type scale, radii, pill buttons with one filled button per view)
   and works better on a phone: Settings, Scheduler and Post fill the screen with their buttons pinned, every control is
   at least 44 px, and the sidebar lists the Scheduler and Settings by name.

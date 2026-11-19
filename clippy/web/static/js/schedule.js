@@ -9,7 +9,7 @@ import { $, esc, toast } from "./util.js";
 const MIN_AHEAD_MS = 60 * 1000;
 const QUICK_MORE = 5;
 const RELOAD_MS = 300;
-const LIVE_EVENTS = new Set(["clip", "accounts", "watches", "settings"]);
+const LIVE_EVENTS = new Set(["clip", "accounts", "watches", "settings", "status", "publish", "daily", "chat_deleted", "hello"]);
 const NOTES = { planned: "sched.note.planned", uploading: "sched.note.uploading", scheduled: "sched.note.scheduled",
   live: "sched.note.live", kept: "sched.note.kept" };
 

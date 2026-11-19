@@ -8,7 +8,26 @@ export function onLive(fn) {
   listeners.add(fn);
 }
 
+const PARTS = new URL(import.meta.url).pathname.split("/");
+const BUILD = PARTS.length === 5 ? PARTS[2] : "";
+const SAFE_CHECK_MS = 2000;
+let reloading = false;
+
+function quiet() {
+  const input = document.getElementById("input");
+  return document.hidden || (!document.querySelector("dialog[open]") && !input?.value.trim());
+}
+
+function reloadWhenQuiet() {
+  if (reloading) return;
+  reloading = true;
+  const tick = () => (quiet() ? location.reload() : setTimeout(tick, SAFE_CHECK_MS));
+  document.addEventListener("visibilitychange", () => { if (document.hidden) location.reload(); });
+  tick();
+}
+
 function dispatch(event) {
+  if (event.type === "hello" && event.build && BUILD && event.build !== BUILD) reloadWhenQuiet();
   for (const fn of listeners) {
     try { fn(event); } catch (err) { console.error(err); }
   }
