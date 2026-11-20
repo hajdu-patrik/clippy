@@ -56,9 +56,13 @@ def _video_id(info: dict) -> str:
     return raw if re.fullmatch(r"[\w-]{1,64}", raw) else slugify(raw or str(info.get("title") or "video"), 64)
 
 
+LANDSCAPE = "[format_id!*=portrait]"
+
+
 def _ydl_options(target: Path, max_height: int, cookies_from_browser: str | None, vid: str = "%(id)s") -> dict:
     opts = {
-        "format": f"bv*[height<={max_height}]+ba/b[height<={max_height}]/b",
+        "format": f"bv*[height<={max_height}]{LANDSCAPE}+ba/b[height<={max_height}]{LANDSCAPE}/bv*[height<={max_height}]+ba/"
+                  f"b[height<={max_height}]/b",
         "format_sort": ["hdr:sdr", f"res:{max_height}", "fps", "vcodec:vp9", "acodec:opus"],
         "merge_output_format": "mkv",
         "outtmpl": str(target / f"{vid}.%(ext)s"),

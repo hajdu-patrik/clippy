@@ -101,6 +101,8 @@ change, what changed rather than how; dates are ISO 8601.
   profile / channel / playlist link, no video in the post, no sound, each with what helps.
 
 ### Changed
+- Twitch clips are downloaded in their landscape version, not the portrait one Twitch also offers, so the streamer's
+  camera is found and the stream layout works.
 - Open pages pick up a new version of the app by themselves after a restart (once no dialog is open and nothing
   is typed), and the Scheduler follows changes made in any other tab or by a job as they happen.
 - The web app follows the project page's look (shared type scale, radii, pill buttons with one filled button per view)
