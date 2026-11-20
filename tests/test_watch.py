@@ -239,3 +239,20 @@ def test_the_chat_watches_a_channel_only_when_asked():
     assert asked.validate(raw) == [{"type": "watch", "url": "https://www.youtube.com/@pod", "n": 0,
                                     "preset": "podcast"}]
     assert agent.ActionValidator(set(), chat, "make clips https://www.youtube.com/@pod").validate(raw) == []
+
+
+def test_an_editor_base_unused_for_a_week_is_removed(env):
+    import os
+
+    from clippy.web import watch
+
+    watcher, _, now = env
+    old, fresh = watcher.db.create_chat("old"), watcher.db.create_chat("fresh")
+    storage = watcher.runner.storage
+    for chat, age in ((old, watch.BASE_MAX_AGE + 60), (fresh, 60)):
+        f = storage.chat_base(chat["id"]) / "k.mkv"
+        f.write_bytes(b"x")
+        os.utime(f, (now[0] - age, now[0] - age))
+    assert watcher.sweep_bases(now[0]) == 1
+    assert not (storage.data / "chats" / str(old["id"]) / "base").exists()
+    assert (storage.chat_base(fresh["id"]) / "k.mkv").exists()

@@ -6,6 +6,9 @@ change, what changed rather than how; dates are ISO 8601.
 ## [Unreleased]
 
 ### Added
+- Each finished job keeps how long each of its steps took (on the progress card's data and as a `[timing]` line in the
+  server log).
+- A chat's editor base, its largest file, is removed after a week without use; its next edit makes it again.
 - The Scheduler (sidebar): every planned post by day with its cover, chat, platforms and time, scheduling a clip from
   one place (chat, clip, platforms, date and time, your posting times and the next free slot), moving or removing the
   posts that wait in Clippy, and a link to YouTube Studio for videos YouTube holds, which Clippy's upload access cannot
@@ -101,6 +104,12 @@ change, what changed rather than how; dates are ISO 8601.
   profile / channel / playlist link, no video in the post, no sound, each with what helps.
 
 ### Changed
+- Final clips are capped at 18 Mbit/s: about half the size and upload time, with no visible loss after the platforms'
+  own re-encode.
+- The daily picks ask Twitch and Kick again after a timeout before skipping them for the day, and downloads wait longer
+  and retry more on slow connections.
+- The server log no longer fills with tracebacks for browser tabs that close their connection, nor with yt-dlp's
+  warning about a missing ffprobe.
 - Twitch clips are downloaded in their landscape version, not the portrait one Twitch also offers, so the streamer's
   camera is found and the stream layout works.
 - Open pages pick up a new version of the app by themselves after a restart (once no dialog is open and nothing

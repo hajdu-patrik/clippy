@@ -254,3 +254,15 @@ def test_a_refused_link_is_asked_for_again(tmp_path, monkeypatch):
     with pytest.raises(ClippyError):
         download._download(remote, again, "vid1", {}, 1)
     assert len(calls) == 2
+
+
+def test_yt_dlp_keeps_its_warnings_but_not_the_missing_ffprobe(capsys):
+    from clippy.download import YdlLog, _ydl_options
+
+    opts = _ydl_options(Path("."), 1080, None)
+    assert opts["socket_timeout"] >= 30 and opts["extractor_retries"] > 0 and isinstance(opts["logger"], YdlLog)
+    opts["logger"].warning("Unable to extract metadata: ffprobe not found. Please install")
+    opts["logger"].warning("Falling back to generic")
+    opts["logger"].error("ERROR: broken")
+    err = capsys.readouterr().err
+    assert "ffprobe" not in err and "WARNING: Falling back to generic" in err and "ERROR: broken" in err

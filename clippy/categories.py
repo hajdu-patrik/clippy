@@ -4,6 +4,7 @@ biggest live reactions, as the source of the daily picks."""
 from __future__ import annotations
 
 import re
+import time
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Callable
@@ -23,6 +24,7 @@ MIN_SECONDS, MAX_SECONDS = 8.0, 90.0
 TWITCH_FIRST = 40
 LATIN_SHARE = 0.85
 KICK_CHANNELS_CHECKED = 12
+RETRY_PAUSES = (5.0, 20.0)
 ADULT = re.compile(r"(\+ ?18|18 ?\+|\bnsfw\b)", re.I)
 
 
@@ -160,13 +162,24 @@ def kick_moments(g: Game, language: str = "en", get: Callable = _get_kick) -> li
     return found
 
 
-def top_moments(g: Game, language: str = "en", sources: tuple[Callable, ...] = (twitch_moments, kick_moments)
-                ) -> list[Moment]:
+def _asked(source: Callable, g: Game, language: str, wait: Callable) -> list[Moment]:
+    """A platform that times out or drops the connection is asked again after a pause before it is skipped."""
+    for pause in RETRY_PAUSES:
+        try:
+            return source(g, language)
+        except requests.RequestException as exc:
+            log(f"[daily] {g.name} on {source.__name__}: {type(exc).__name__}, asking again in {pause:.0f} s")
+            wait(pause)
+    return source(g, language)
+
+
+def top_moments(g: Game, language: str = "en", sources: tuple[Callable, ...] = (twitch_moments, kick_moments),
+                wait: Callable = time.sleep) -> list[Moment]:
     """Both platforms' best clips of the day, most viewed first; a platform that does not answer is skipped."""
     found = []
     for source in sources:
         try:
-            found += source(g, language)
+            found += _asked(source, g, language, wait)
         except (requests.RequestException, ValueError, KeyError, TypeError) as exc:
             log(f"[daily] {g.name} on {source.__name__}: {type(exc).__name__}: {exc}")
     found = [m for m in found if MIN_SECONDS <= m.duration <= MAX_SECONDS and not ADULT.search(m.title)

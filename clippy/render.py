@@ -55,8 +55,14 @@ class RenderSettings:
     base_out: Path | None = None
 
 
+MAX_RATE, BUFFER = "18M", "36M"
+
+
 @dataclass(frozen=True)
 class Encoder:
+    """Final clips are capped well above what the platforms keep after their own re-encode (YouTube: about 12 Mbit/s
+    for 1080p60), so uploads stay small without a visible loss."""
+
     kind: str
 
     @classmethod
@@ -68,10 +74,11 @@ class Encoder:
     def args(self, fps: float) -> list[str]:
         gop = str(int(round(fps * 2)))
         if self.kind == "nvenc":
-            return ["-c:v", "h264_nvenc", "-preset", "p7", "-tune", "hq", "-rc", "vbr", "-cq", "17", "-b:v", "0",
-                    "-maxrate", "40M", "-bufsize", "80M", "-spatial-aq", "1", "-temporal-aq", "1",
+            return ["-c:v", "h264_nvenc", "-preset", "p7", "-tune", "hq", "-rc", "vbr", "-cq", "19", "-b:v", "0",
+                    "-maxrate", MAX_RATE, "-bufsize", BUFFER, "-spatial-aq", "1", "-temporal-aq", "1",
                     "-rc-lookahead", "32", "-bf", "3", "-profile:v", "high", "-g", gop]
-        return ["-c:v", "libx264", "-preset", "slow", "-crf", "16", "-tune", "film", "-profile:v", "high", "-g", gop]
+        return ["-c:v", "libx264", "-preset", "slow", "-crf", "18", "-maxrate", MAX_RATE, "-bufsize", BUFFER,
+                "-tune", "film", "-profile:v", "high", "-g", gop]
 
     def mezzanine_args(self, fps: float) -> list[str]:
         """Near-lossless intermediate for the editor's base render: re-encoded once more by the finishing pass."""

@@ -124,7 +124,22 @@ def test_top_moments_skip_a_silent_platform_long_clips_and_adult_titles():
         return [moment("a", "a", 10), moment("b", "b", 99), moment("c", "c", 50, duration=600),
                 Moment("d", "https://www.twitch.tv/d/clip/d", "+18 stuff", "d", "Twitch", 70, 30.0)]
 
-    assert [m.vid for m in categories.top_moments(GTA6, "en", sources=(broken, twitch))] == ["b", "a"]
+    waits = []
+    assert [m.vid for m in categories.top_moments(GTA6, "en", sources=(broken, twitch), wait=waits.append)] == ["b", "a"]
+    assert waits == list(categories.RETRY_PAUSES)
+
+
+def test_a_platform_that_times_out_once_is_asked_again():
+    calls = []
+
+    def flaky(game, language):
+        calls.append(1)
+        if len(calls) == 1:
+            raise requests.Timeout("slow")
+        return [moment("a", "a", 10)]
+
+    assert [m.vid for m in categories.top_moments(GTA6, "en", sources=(flaky,), wait=lambda s: None)] == ["a"]
+    assert len(calls) == 2
 
 
 @pytest.fixture

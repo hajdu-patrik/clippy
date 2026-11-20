@@ -585,3 +585,19 @@ def test_captions_follow_the_video_unless_the_user_asks():
     assert "captions" not in plain[0]["options"] and "lang" not in plain[0]["options"]
     asked = agent.ActionValidator(set(), {}, "https://youtu.be/a 3 klip magyar felirattal").validate(raw)
     assert asked[0]["options"]["captions"] == "hu"
+
+
+def test_a_connection_closed_by_the_browser_is_not_logged_as_an_error():
+    import logging
+    import sys
+
+    from clippy.web.server import ClosedByPeer
+
+    def record(exc):
+        try:
+            raise exc
+        except Exception:
+            return logging.LogRecord("asyncio", logging.ERROR, "", 0, "callback failed", None, sys.exc_info())
+
+    assert not ClosedByPeer().filter(record(ConnectionResetError(10054, "closed")))
+    assert ClosedByPeer().filter(record(ValueError("real")))

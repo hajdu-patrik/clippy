@@ -9,6 +9,7 @@ import os
 import re
 import shutil
 import socket
+import sys
 import tempfile
 import threading
 import time
@@ -57,6 +58,25 @@ def _video_id(info: dict) -> str:
 
 
 LANDSCAPE = "[format_id!*=portrait]"
+SOCKET_TIMEOUT = 60
+UNNEEDED_WARNINGS = ("ffprobe not found",)
+
+
+class YdlLog:
+    """yt-dlp's own messages as before (errors and warnings on stderr), minus the warning that the bundled ffmpeg has
+    no ffprobe: Clippy reads the file's details with ffmpeg itself."""
+
+    def debug(self, msg: str) -> None:
+        pass
+
+    info = debug
+
+    def warning(self, msg: str) -> None:
+        if not any(w in msg for w in UNNEEDED_WARNINGS):
+            print(f"WARNING: {msg}", file=sys.stderr)
+
+    def error(self, msg: str) -> None:
+        print(msg, file=sys.stderr)
 
 
 def _ydl_options(target: Path, max_height: int, cookies_from_browser: str | None, vid: str = "%(id)s") -> dict:
@@ -72,6 +92,10 @@ def _ydl_options(target: Path, max_height: int, cookies_from_browser: str | None
         "quiet": True,
         "noprogress": True,
         "http_chunk_size": CHUNK_BYTES,
+        "socket_timeout": SOCKET_TIMEOUT,
+        "retries": 10,
+        "extractor_retries": 5,
+        "logger": YdlLog(),
     }
     runtimes = {name: {} for name in ("deno", "node") if shutil.which(name)}
     if runtimes:

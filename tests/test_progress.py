@@ -91,3 +91,19 @@ def test_render_weight_scales_with_the_clip_count(tmp_path):
     p.begin()
     p.line("[render] 1/4  #3")
     assert p.weight["render"] == 20
+
+
+def test_each_stage_keeps_its_own_time_and_the_log_gets_a_summary(tmp_path, monkeypatch):
+    now = [100.0]
+    monkeypatch.setattr("clippy.web.progress.time.time", lambda: now[0])
+    lines = []
+    monkeypatch.setattr("clippy.web.progress.log", lines.append)
+    p, db = make(tmp_path, ("select", "render"))
+    p.begin()
+    now[0] = 130.0
+    p.line("[render] 1/1  #1")
+    now[0] = 175.0
+    p.finish({"key": "done.more", "params": {"n": 1}})
+    stages = {s["key"]: s.get("seconds") for s in db.get_message(p.message["id"])["data"]["stages"]}
+    assert stages == {"select": 30.0, "render": 45.0}
+    assert lines[-1] == "[timing] select 30 s, render 45 s"

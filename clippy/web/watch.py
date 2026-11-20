@@ -15,6 +15,8 @@ from .presets import PRESETS
 
 TICK = 30.0
 MEASURE_EVERY = 600.0
+BASE_SWEEP_EVERY = 3600.0
+BASE_MAX_AGE = 7 * 86400.0
 EVERY_MINUTES = (15, 30, 60, 180, 360, 1440)
 DEFAULT_EVERY = 60
 LIST_LIMIT = 10
@@ -59,7 +61,7 @@ class Watcher:
         self.db, self.runner, self.hub, self.clock = db, runner, hub, clock
         self.lister = lister or (lambda url, limit: latest_uploads(url, limit))
         self._lock = threading.Lock()
-        self._measured = 0.0
+        self._measured = self._swept = 0.0
         self.daily = None
 
     def start(self) -> None:
@@ -81,6 +83,9 @@ class Watcher:
             if now - self._measured >= MEASURE_EVERY:
                 self._measured = now
                 self.measure()
+            if now - self._swept >= BASE_SWEEP_EVERY:
+                self._swept = now
+                self.sweep_bases(now)
             for w in self.db.list_watches():
                 every = 60 * int((w.get("settings") or {}).get("every") or DEFAULT_EVERY)
                 if w["enabled"] and now - float(w["checked"] or 0) >= every:
@@ -101,6 +106,14 @@ class Watcher:
                 started += 1
             self.refresh_clip(item["chat_id"], item["number"])
         return started
+
+    def sweep_bases(self, now: float) -> int:
+        """Frees the disk: a chat's editor base (the largest file it keeps) goes after a week without use."""
+        idle = [c["id"] for c in self.db.list_chats() if not self.runner.is_running(c["id"])]
+        gone = self.runner.storage.drop_old_bases(idle, now, BASE_MAX_AGE)
+        if gone:
+            log(f"[cleanup] editor bases of {gone} chat(s) unused for a week removed")
+        return gone
 
     def measure(self) -> int:
         """Reads how the recent posts are doing; the open windows refresh their cards when something changed."""

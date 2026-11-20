@@ -20,8 +20,9 @@ def main() -> None:
 
     from ..storage import Storage
     from .lan import Lan
-    from .server import create_app
+    from .server import create_app, quiet_closed_connections
 
+    quiet_closed_connections()
     storage = Storage()
     lan = Lan(storage.web / "devices.json", args.port) if args.lan else None
     app = create_app(storage, lan=lan)

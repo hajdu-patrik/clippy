@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 import hashlib
 import json
 import re
@@ -158,6 +159,17 @@ class LLMChoice(BaseModel):
 
 class InstagramToken(BaseModel):
     token: str = Field(min_length=20, max_length=2000)
+
+
+class ClosedByPeer(logging.Filter):
+    """Windows reports every browser tab that closes its connection as a long asyncio traceback; that is no error."""
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        return not (record.exc_info and isinstance(record.exc_info[1], ConnectionResetError))
+
+
+def quiet_closed_connections() -> None:
+    logging.getLogger("asyncio").addFilter(ClosedByPeer())
 
 
 def create_app(storage: Storage | None = None, db_path: Path | None = None, runner: Runner | None = None,

@@ -53,6 +53,17 @@ class Storage:
     def chat_base(self, chat_id: int) -> Path:
         return self._dir("chats", int(chat_id), "base")
 
+    def drop_old_bases(self, chat_ids, now: float, max_age: float) -> int:
+        """Editor base renders of chats left alone for `max_age`: removed (the next edit renders its base again)."""
+        gone = 0
+        for chat_id in chat_ids:
+            folder = self.data / "chats" / str(int(chat_id)) / "base"
+            files = [f for f in folder.iterdir() if f.is_file()] if folder.is_dir() else []
+            if files and now - max(f.stat().st_mtime for f in files) > max_age:
+                shutil.rmtree(folder, ignore_errors=True)
+                gone += not folder.exists()
+        return gone
+
     def chat_work(self, chat_id: int) -> Path:
         return self._dir("chats", int(chat_id), "work")
 

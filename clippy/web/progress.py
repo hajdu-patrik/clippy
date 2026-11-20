@@ -9,6 +9,7 @@ import time
 from dataclasses import dataclass
 
 from .. import recovery
+from ..tools import log
 from .hub import Hub
 from .texts import english, tx
 
@@ -56,6 +57,7 @@ class Progress:
         self.state = {st.key: "pending" for st in self.plan}
         self.fraction = {st.key: 0.0 for st in self.plan}
         self.entered: dict[str, float] = {}
+        self.spent: dict[str, float] = {}
         self.cached_time = 0.0
         self.active: str | None = None
         self.queue_position: int | None = None
@@ -77,7 +79,8 @@ class Progress:
             "queue_position": self.queue_position,
             "stage": self.stage_label(),
             "stages": [{"key": st.key, "label": st.label, "state": self.state[st.key],
-                        "fraction": round(self.fraction[st.key], 4)} for st in self.plan],
+                        "fraction": round(self.fraction[st.key], 4),
+                        **({"seconds": round(self.spent[st.key], 1)} if st.key in self.spent else {})} for st in self.plan],
             "percent": round(100 * (1.0 if done else self.overall()), 1),
             "eta": None if done or self.eta is None else round(self.eta),
             "detail": self.detail, "detail_t": self.detail_t, "label_t": self.label_t, "lines": self.lines, "done": done,
@@ -155,6 +158,7 @@ class Progress:
 
     def _finish(self, summary_t: dict, error: bool) -> None:
         now = time.time()
+        self._close(now)
         if error:
             if self.active:
                 self.state[self.active] = "failed"
@@ -169,8 +173,16 @@ class Progress:
         msg = self.db.update_message(self.message["id"], content=english(summary_t), kind="error" if error else None,
                                      data=data)
         self.hub.publish(self.chat_id, {"type": "message", "message": msg})
+        if self.spent:
+            log("[timing] " + ", ".join(f"{k} {v:.0f} s" for k, v in self.spent.items()))
+
+    def _close(self, now: float) -> None:
+        """The active stage's time so far goes into its total (a stage entered again after a retry adds up)."""
+        if self.active and self.active in self.entered:
+            self.spent[self.active] = self.spent.get(self.active, 0.0) + now - self.entered[self.active]
 
     def _enter(self, key: str) -> None:
+        self._close(time.time())
         self.active = key
         self.state[key] = "active"
         self.entered[key] = time.time()
