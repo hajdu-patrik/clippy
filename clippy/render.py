@@ -20,7 +20,7 @@ from . import audio as aud
 from .analysis import ClipAnalysis, analyze, decode_cmd
 from .captions import CaptionStyle, TextEvent, write_ass
 from .compositing import OUT_H, OUT_W, CropCompositor, LayoutCompositor, Prebuilt, StreamCompositor
-from .director import guess_facecam, plan_frames, reaction_windows
+from .director import guess_facecam, mostly_faces, plan_frames, reaction_windows
 from .edit import EditPlan, build_edit
 from .tools import (ROOT, ClippyError, atomic_path, ffmpeg_features, ffmpeg_path, fps_rational, log, probe_video,
                     read_exact, report, report_span)
@@ -159,7 +159,7 @@ class ClipRenderer:
         with report_span(0.0, 0.3):
             an = analysis or analyze(self.video, self.start, self.span)
         facecam = self._facecam(an) if self.s.layout == "stream" else None
-        layout = self.s.layout if facecam or self.s.layout != "stream" else "blur"
+        layout = self.s.layout if facecam or self.s.layout != "stream" else ("face" if mostly_faces(an) else "blur")
         reactions = reaction_windows(an, env, aud.HOP, facecam) if self.s.reactions else []
         plans, shots = plan_frames(an, layout, edit.join_frames, edit.sentence_frames, punch=self.s.punch,
                                    facecam=facecam, reactions=reactions)
@@ -213,15 +213,15 @@ class ClipRenderer:
                 "intervals": [(round(self.start + a, 4), round(self.start + b, 4)) for a, b in edit.intervals]}
 
     def _facecam(self, an: ClipAnalysis) -> tuple[float, float, float, float] | None:
-        """The streamer's camera: given, or found as a face that stays put. Without one the stream layout shows the
-        whole frame on a blurred copy of itself."""
+        """The streamer's camera: given, or found as a face that stays put at an edge. Without one the stream layout
+        follows the face of a full-screen camera, or shows the whole frame on a blurred copy of itself."""
         if self.s.facecam:
             x, y, w, h = self.s.facecam
             W, H = self.meta["width"], self.meta["height"]
             return x / W, y / H, w / W, h / H
         cam = guess_facecam(an)
         if not cam:
-            log("[render] no facecam found: the whole frame on a blurred background instead")
+            log("[render] no facecam overlay found: following the face, or the whole frame on a blurred background")
         return cam or None
 
     def _needed_height(self, plans, facecam) -> float:

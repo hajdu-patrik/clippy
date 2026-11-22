@@ -379,3 +379,13 @@ def test_a_stream_without_a_cut_shows_the_whole_frame_while_the_camera_spot_is_e
     an = _fake_analysis(250, lambda i: [FaceObs(0.82, 0.1, 0.05, 0.09, 0.9, 0.12)] if i < 150 else [])
     plans, shots = plan_frames(an, "stream", punch=False, facecam=cam)
     assert len(shots) == 1 and plans[50].mode == "stream" and plans[230].mode == "fit"
+
+
+def test_a_face_in_the_middle_is_a_full_screen_camera_not_a_facecam_overlay():
+    from clippy.director import guess_facecam, mostly_faces
+
+    middle = _fake_analysis(100, lambda i: [FaceObs(0.45, 0.4, 0.1, 0.18, 0.9, 0.45)])
+    corner = _fake_analysis(100, lambda i: [FaceObs(0.05, 0.75, 0.06, 0.1, 0.9, 0.78)])
+    assert guess_facecam(middle) is None and mostly_faces(middle)
+    assert guess_facecam(corner) is not None
+    assert not mostly_faces(_fake_analysis(100, lambda i: []))

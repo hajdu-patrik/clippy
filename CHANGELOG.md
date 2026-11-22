@@ -114,6 +114,8 @@ change, what changed rather than how; dates are ISO 8601.
   profile / channel / playlist link, no video in the post, no sound, each with what helps.
 
 ### Changed
+- A face in the middle of a stream is a full-screen camera, not a facecam overlay: the clip follows that face instead
+  of showing the same person twice.
 - Your posting times live in the Scheduler, where they are used, and are edited there in place; Settings, General
   keeps the profile links and notifications, and no panel sends you to another one to change them.
 - Every field has an example and says what it is for; the posting times of daily picks and watched channels say they

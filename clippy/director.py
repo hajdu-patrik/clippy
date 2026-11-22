@@ -303,12 +303,22 @@ def plan_frames(an: ClipAnalysis, layout: str = "auto", join_frames=(), sentence
 FACECAM_DRIFT = 0.05
 FACECAM_PRESENCE = 0.4
 FACECAM_MAX_WIDTH = 0.2
+FACECAM_CENTRE = (0.3, 0.7)
+FACECAM_MIDDLE = (0.25, 0.75)
+FACE_SHOT_SHARE, FACE_SHOT_HEIGHT = 0.5, 0.07
+
+
+def mostly_faces(an: ClipAnalysis) -> bool:
+    """A clip that mostly shows a face big enough to follow (an IRL stream, a full-screen camera)."""
+    sizes = [max(f.h for f in fl) for fl in an.faces if fl]
+    return len(sizes) >= FACE_SHOT_SHARE * an.n_frames and float(np.median(sizes)) >= FACE_SHOT_HEIGHT
 
 
 def guess_facecam(an: ClipAnalysis) -> tuple[float, float, float, float] | None:
     """For stream layouts: a 16:9 box (normalised) around the usually small, static streamer face: the spot where a face
     is found in the most frames, so the faces of game characters around it do not pull it away. A spot without a face
-    in enough frames (only moving faces, a cutscene) is no facecam: then there is none, and the frame is shown whole."""
+    in enough frames (only moving faces, a cutscene) is no facecam, and neither is a face in the middle of the picture:
+    a camera overlay sits at an edge or in a corner, a face in the middle is a full-screen camera."""
     flat = [f for fl in an.faces for f in fl]
     if len(flat) < max(3, an.n_frames * 0.3):
         return None
@@ -324,6 +334,8 @@ def guess_facecam(an: ClipAnalysis) -> tuple[float, float, float, float] | None:
     fw = float(np.median([f.w for f in held]))
     steady = sum(any(near(f, anchor) for f in fl) for fl in an.faces)
     if steady < FACECAM_PRESENCE * an.n_frames or fw > FACECAM_MAX_WIDTH:
+        return None
+    if FACECAM_CENTRE[0] < cx < FACECAM_CENTRE[1] and FACECAM_MIDDLE[0] < cy < FACECAM_MIDDLE[1]:
         return None
     bw = min(1.0, fw * 3.4)
     bh = min(1.0, bw * an.width / an.height * 9 / 16)
