@@ -22,8 +22,8 @@ function postRow(c, p) {
   return `<li class="camp-post">
     <span class="camp-clipper">${esc(p.clipper || "-")}</span>
     <span class="camp-link">${label}${problem}</span>
-    <span class="camp-num">${count(p.views)}</span>
-    <span class="camp-num">${money(p.payout)}</span>
+    <span class="camp-num" data-label="${esc(t("camp.views"))}">${count(p.views)}</span>
+    <span class="camp-num" data-label="${esc(t("camp.payout"))}">${money(p.payout)}</span>
     <button type="button" class="btn sm ghost" data-camp="removePost" data-id="${c.id}" data-post="${p.id}">${esc(t("camp.removePost"))}</button>
   </li>`;
 }

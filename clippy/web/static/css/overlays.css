@@ -1,0 +1,52 @@
+.skip-link { position: fixed; left: var(--sp-4); top: var(--sp-3); z-index: 100; padding: 12px 18px; background: var(--accent);
+  color: var(--on-accent); font-weight: 700; text-decoration: none; border: 2px solid var(--line); transform: translateY(-200%); }
+.skip-link:focus { transform: translateY(0); }
+.file-input:focus-visible + .file-btn { outline: 3px solid var(--focus); outline-offset: 3px; }
+.file-input:disabled + .file-btn { opacity: .6; cursor: not-allowed; }
+.toast { position: fixed; left: 50%; bottom: calc(96px + env(safe-area-inset-bottom)); z-index: 50; max-width: calc(100vw - 2 * var(--sp-4));
+  transform: translateX(-50%) translateY(16px); background: var(--surface); color: var(--fg); padding: 12px 18px;
+  border: 2px solid var(--line); border-radius: 0; box-shadow: var(--shadow-press); font-size: var(--fs-sm); font-weight: 600;
+  line-height: 1.4; overflow-wrap: anywhere; opacity: 0; pointer-events: none;
+  transition: opacity var(--dur-state) var(--ease), transform var(--dur-state) var(--ease); }
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+.settings-dialog { width: min(560px, calc(100vw - 2 * var(--sp-4))); max-height: calc(100dvh - 2 * var(--sp-4)); overflow-y: auto;
+  overscroll-behavior: contain; border: 2px solid var(--line); border-radius: 0; background: var(--surface); color: var(--fg);
+  padding: var(--sp-5) var(--sp-5) 0; box-shadow: var(--shadow-card); opacity: 0; transform: translateY(8px);
+  transition: opacity var(--dur-state) var(--ease), transform var(--dur-state) var(--ease), overlay var(--dur-state) allow-discrete,
+    display var(--dur-state) allow-discrete; }
+.settings-dialog[open] { opacity: 1; transform: none; }
+@starting-style { .settings-dialog[open] { opacity: 0; transform: translateY(8px); } }
+.settings-dialog::backdrop { background: rgb(0 0 0 / .6); opacity: 0; transition: opacity var(--dur-state) var(--ease),
+  overlay var(--dur-state) allow-discrete, display var(--dur-state) allow-discrete; }
+.settings-dialog[open]::backdrop { opacity: 1; }
+@starting-style { .settings-dialog[open]::backdrop { opacity: 0; } }
+html:has(.settings-dialog[open]) { overflow: hidden; }
+.settings-dialog h2 { margin: 0 0 var(--sp-4); font: 400 var(--fs-xl)/1.1 var(--font-display); text-transform: uppercase;
+  letter-spacing: -.01em; text-wrap: balance; font-synthesis-weight: none; overflow-wrap: anywhere; }
+.settings-dialog form { margin: 0; }
+.settings-dialog .post-options { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--sp-3) var(--sp-4);
+  margin-bottom: var(--sp-3); }
+.settings-dialog fieldset { min-width: 0; margin: 0 0 var(--sp-3); padding: 0; border: 0; }
+.settings-dialog legend { padding: 0; margin-bottom: 6px; font-weight: 700; font-size: var(--fs-sm); }
+#postCaption, #copyText { min-height: 120px; }
+.settings-dialog .dialog-btns { position: sticky; bottom: 0; z-index: 2; margin: var(--sp-5) calc(-1 * var(--sp-5)) 0;
+  padding: var(--sp-3) var(--sp-5); background: var(--surface); border-top: 2px solid var(--line); }
+@media (max-width: 559.98px) {
+  .settings-dialog { width: 100%; max-width: 100%; max-height: 88dvh; margin: auto 0 0; padding: var(--sp-4) var(--sp-4) 0;
+    border-width: 2px 0 0; box-shadow: none; transform: translateY(100%); }
+  .settings-dialog .dialog-btns { margin: var(--sp-4) calc(-1 * var(--sp-4)) 0;
+    padding: var(--sp-3) var(--sp-4) calc(var(--sp-3) + env(safe-area-inset-bottom)); }
+  .settings-dialog .dialog-btns .btn { flex: 1 1 0; }
+}
+.pair-body { overflow: auto; display: grid; place-items: center; min-height: 100dvh; padding: var(--sp-5) var(--sp-4); background: var(--page); }
+.pair { width: min(420px, 100%); padding: var(--sp-5); background: var(--surface); border: 2px solid var(--line);
+  box-shadow: var(--shadow-card); text-align: center; }
+.pair img { width: 56px; height: 56px; }
+.pair h1 { margin: var(--sp-3) 0 var(--sp-2); font: 400 var(--fs-xl)/1.1 var(--font-display); text-transform: uppercase;
+  letter-spacing: -.01em; text-wrap: balance; font-synthesis-weight: none; }
+.pair p { margin: 0 0 var(--sp-3); color: var(--fg-muted); overflow-wrap: anywhere; }
+.pair-button { width: 100%; margin-top: var(--sp-3); }
+.pair-button:not(.btn) { display: inline-flex; align-items: center; justify-content: center; min-height: var(--btn-h); padding: 0 20px;
+  border: 2px solid var(--line); background: var(--accent); color: var(--on-accent); font: 700 var(--fs-md) var(--font);
+  box-shadow: var(--shadow-press); cursor: pointer; }
+.pair-button:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }

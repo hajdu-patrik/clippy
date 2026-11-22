@@ -50,11 +50,11 @@ export function cardHtml(id) {
       ${whyHtml(d)}
       ${postsHtml(c)}
       <div class="btns">
-        <a class="btn sm ghost" href="${esc(c.mp4 || "#")}" download>${esc(t("card.download"))}</a>
-        ${c.jpg ? `<a class="btn sm ghost" href="${esc(c.jpg)}" download>${esc(t("card.cover"))}</a>` : ""}
-        ${c.jpg_b ? `<a class="btn sm ghost" href="${esc(c.jpg_b)}" download>${esc(t("card.coverB"))}</a>` : ""}
-        <button type="button" class="btn sm ghost" data-act="copy">${esc(t("card.copy"))}</button>
-        <button type="button" class="btn sm ghost" data-act="edit">${esc(t("card.edit"))}</button>
+        <a class="btn sm" href="${esc(c.mp4 || "#")}" download>${esc(t("card.download"))}</a>
+        ${c.jpg ? `<a class="btn sm" href="${esc(c.jpg)}" download>${esc(t("card.cover"))}</a>` : ""}
+        ${c.jpg_b ? `<a class="btn sm" href="${esc(c.jpg_b)}" download>${esc(t("card.coverB"))}</a>` : ""}
+        <button type="button" class="btn sm" data-act="copy">${esc(t("card.copy"))}</button>
+        <button type="button" class="btn sm" data-act="edit">${esc(t("card.edit"))}</button>
         ${old || c.deleted ? "" : `<button type="button" class="btn sm primary post-btn" data-act="post">${esc(t("card.post"))}</button>`}
       </div>
     </div>

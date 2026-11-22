@@ -51,19 +51,23 @@ def _host_of(value: str) -> str:
 
 
 PAIR_CODE = re.compile(r"[A-Za-z0-9_-]{8,64}")
-PAIR_PAGE_FILES = ("/static/style.css", "/static/brand/mark.svg")
+PAIR_PAGE_FILES = ("/static/style.css", "/static/css/base.css", "/static/css/shell.css", "/static/css/chat.css",
+                   "/static/css/pages.css", "/static/css/overlays.css", "/static/fonts/space-grotesk.woff2",
+                   "/static/fonts/archivo-black-latin.woff2", "/static/fonts/archivo-black-latin-ext.woff2",
+                   "/static/brand/mark.svg")
 
 
 def pair_page(code: str) -> str:
     """The pairing confirmation; the code goes back with the button's POST."""
     t = {k: html.escape(i18n.t(f"lan.page_{k}")) for k in ("title", "text", "button")}
     return (f'<!doctype html><html lang="en" data-theme="dark"><head><meta charset="utf-8">'
-            f'<meta name="viewport" content="width=device-width, initial-scale=1"><title>Clippy</title>'
+            f'<meta name="viewport" content="width=device-width, initial-scale=1"><meta name="color-scheme" content="dark light">'
+            f'<meta name="robots" content="noindex, nofollow"><title>Clippy</title>'
             f'<link rel="stylesheet" href="/static/style.css"></head><body class="pair-body"><main class="pair">'
             f'<img src="/static/brand/mark.svg" alt="" width="56" height="56">'
             f'<h1>{t["title"]}</h1><p>{t["text"]}</p>'
             f'<form method="post" action="/pair?code={html.escape(code)}">'
-            f'<button class="pair-button" type="submit">{t["button"]}</button>'
+            f'<button class="btn primary pair-button" type="submit">{t["button"]}</button>'
             f'</form></main></body></html>')
 
 

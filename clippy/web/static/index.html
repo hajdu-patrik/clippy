@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
   <meta name="color-scheme" content="dark light">
-  <meta name="theme-color" content="#18171a">
+  <meta name="theme-color" content="#131110">
   <title>Clippy</title>
   <meta name="description" content="Clippy is a free, open-source AI clipper that runs on your own computer: long videos in, vertical 9:16 clips with captions and a post text out.">
   <meta name="robots" content="noindex, nofollow">
@@ -46,6 +46,7 @@
   <link rel="modulepreload" href="/static/js/attachments.js">
 </head>
 <body>
+  <a class="skip-link" href="#main" data-i18n="a11y.skip">Skip to content</a>
   <svg class="sprite" aria-hidden="true" focusable="false">
     <defs>
       <linearGradient id="markTile" x1="6" y1="2" x2="58" y2="62" gradientUnits="userSpaceOnUse">
@@ -126,7 +127,7 @@
       </div>
     </aside>
 
-    <main class="main">
+    <main class="main" id="main" tabindex="-1">
       <header class="topbar">
         <button class="icon-btn only-mobile" id="openSide" aria-label="Open sidebar" data-i18n-attr="aria-label:side.open" aria-controls="sidebar" aria-expanded="false">
           <svg aria-hidden="true"><use href="#i-menu"/></svg>
@@ -159,14 +160,13 @@
       <div class="page" id="view-projects" hidden>
         <header class="page-head"><div><h1 id="projectsTitle" data-i18n="page.projects">Projects</h1><p class="page-lead" data-i18n="page.projectsLead">Every chat with its clips, newest first.</p></div></header>
         <div class="page-body">
-<input class="field" id="projectSearch" type="search" placeholder="xQc GTA" aria-label="Search projects" data-i18n-attr="aria-label:projects.search"><ul class="project-grid" id="projectList"></ul>
+<input class="field" id="projectSearch" type="search" autocomplete="off" enterkeyhint="search" placeholder="xQc GTA" aria-label="Search projects" data-i18n-attr="aria-label:projects.search"><ul class="project-grid" id="projectList"></ul>
         </div>
       </div>
       <div class="page" id="view-calendar" hidden>
         <header class="page-head"><div><h1 id="scheduleTitle" data-i18n="sched.title">Calendar</h1><p class="page-lead" data-i18n="sched.hint">Every post that waits for its time, on YouTube or here in Clippy.</p></div><button type="button" class="btn primary" id="schedNew" data-i18n="sched.new">Schedule a clip</button></header>
         <div class="page-body">
 <section id="schedList" aria-labelledby="scheduleTitle">
-      
       <div class="notice" role="note">
         <svg aria-hidden="true"><use href="#i-calendar"/></svg>
         <div>
@@ -228,8 +228,7 @@
       <div class="page" id="view-results" hidden>
         <header class="page-head"><div><h1 id="resultsPageTitle" data-i18n="results.title">Results</h1><p class="page-lead" data-i18n="results.lead">How your posted clips do, and what Clippy learns from them.</p></div></header>
         <div class="page-body">
-<section class="results" aria-labelledby="resultsTitle">
-        
+<section class="results" aria-labelledby="resultsPageTitle">
         <p class="hint" id="resultsSummary" data-i18n="results.hint">Clippy reads back how your posted clips do and picks more of what works.</p>
         <p class="hint warn" id="resultsAnalytics" hidden data-i18n="results.reconnect">Connect YouTube again so Clippy can also read how much of each clip people watch.</p>
         <ul class="findings" id="resultsList"></ul>
@@ -242,7 +241,6 @@
         <div class="page-body">
 <section class="watches" aria-labelledby="picksTitle">
         
-        
         <ul class="account-list" id="picksList"></ul>
         <details class="watch-add" id="picksAdd">
           <summary data-i18n="picks.add">Start daily picks</summary>
@@ -253,7 +251,7 @@
             </div>
             <div>
               <label for="picksN" data-i18n="picks.n">Clips a day</label>
-              <input class="field" id="picksN" type="number" min="1" max="5" value="3">
+              <input class="field" id="picksN" type="number" inputmode="numeric" min="1" max="5" value="3">
             </div>
             <div>
               <label for="picksAt" data-i18n="picks.at">Pick them at</label>
@@ -281,12 +279,11 @@
         <div class="page-body">
 <section class="watches" aria-labelledby="watchesTitle">
         
-        
         <ul class="account-list" id="watchList"></ul>
         <details class="watch-add" id="watchAdd">
           <summary data-i18n="watch.add">Watch a channel</summary>
           <label for="watchUrl" data-i18n="watch.url">Channel or playlist link</label>
-          <input class="field" id="watchUrl" type="url" maxlength="500" autocomplete="off" spellcheck="false"
+          <input class="field" id="watchUrl" type="url" inputmode="url" maxlength="500" autocomplete="off" spellcheck="false"
             placeholder="https://www.youtube.com/@… · https://www.twitch.tv/…">
           <div class="post-options">
             <div>
@@ -301,7 +298,7 @@
             </div>
             <div>
               <label for="watchN" data-i18n="watch.n">Clips per video (0: as the kind says)</label>
-              <input class="field" id="watchN" type="number" min="0" max="12" value="0" placeholder="3">
+              <input class="field" id="watchN" type="number" inputmode="numeric" min="0" max="12" value="0" placeholder="3">
             </div>
             <div>
               <label for="watchEvery" data-i18n="watch.everyLabel">Look for new videos</label>
@@ -335,7 +332,6 @@
         <header class="page-head"><div><h1 id="campaignsTitle" data-i18n="camp.title">Campaigns</h1><p class="page-lead" data-i18n="camp.hint">Clipping campaigns for a streamer, a podcast or a brand: the brief, the moments to clip, the clippers' posts and what each one earns.</p></div><button type="button" class="btn primary" id="campNew" data-i18n="camp.new">New campaign</button></header>
         <div class="page-body">
 <section id="campList" aria-labelledby="campaignsTitle">
-      
       <div class="notice" role="note">
         <svg aria-hidden="true"><use href="#i-flag"/></svg>
         <div>
@@ -348,10 +344,10 @@
     <form id="campForm" hidden aria-labelledby="campFormTitle">
       <h3 id="campFormTitle" data-i18n="camp.formTitle">Campaign</h3>
       <div class="field-box"><label for="campName" data-i18n="camp.name">Name</label>
-        <input class="field" id="campName" maxlength="80" required placeholder="xQc GTA VI, December" aria-describedby="campNameHint">
+        <input class="field" id="campName" maxlength="80" required autocomplete="off" placeholder="xQc GTA VI, December" aria-describedby="campNameHint">
         <p class="hint" id="campNameHint" data-i18n="camp.nameHint">Your own name for it; the chats it makes start with it.</p></div>
       <div class="field-box"><label for="campClient" data-i18n="camp.client">Client (streamer, podcast or brand)</label>
-        <input class="field" id="campClient" maxlength="80" placeholder="xQc"></div>
+        <input class="field" id="campClient" maxlength="80" autocomplete="off" placeholder="xQc"></div>
       <div class="field-box"><label for="campPreset" data-i18n="camp.preset">Kind of clips</label>
         <select id="campPreset" aria-describedby="campPresetHint"></select>
         <p class="hint" id="campPresetHint" data-i18n="camp.presetHint">The same ready-made prompts as on the start screen: layout, length and style of the clips.</p></div>
@@ -360,9 +356,9 @@
         <p class="hint" id="campBriefHint" data-i18n="camp.briefHint">Clippy picks the moments by this; write it as the client gave it.</p></div>
       <div class="post-options">
         <div><label for="campCpm" data-i18n="camp.cpm">Rate per 1,000 views</label>
-          <input class="field" id="campCpm" type="number" min="0" max="1000" step="0.01" value="0" placeholder="1.50"></div>
+          <input class="field" id="campCpm" type="number" inputmode="decimal" min="0" max="1000" step="0.01" value="0" placeholder="1.50"></div>
         <div><label for="campCap" data-i18n="camp.cap">Cap per post (0 = none)</label>
-          <input class="field" id="campCap" type="number" min="0" step="1" value="0" placeholder="100"></div>
+          <input class="field" id="campCap" type="number" inputmode="numeric" min="0" step="1" value="0" placeholder="100"></div>
       </div>
       <div class="field-box"><label for="campSources" data-i18n="camp.sources">Moments to clip (one video link per line)</label>
         <textarea class="field" id="campSources" rows="4" placeholder="https://www.twitch.tv/xqc/clip/…&#10;https://youtu.be/…" aria-describedby="campSourcesHint"></textarea>
@@ -380,7 +376,6 @@
         <div class="page-body">
 <section class="kit" aria-labelledby="kitTitle">
         
-        
         <div class="post-options">
           <div><label for="kitFont" data-i18n="kit.font">Caption font</label><select id="kitFont"></select></div>
           <div><label for="kitHighlight" data-i18n="kit.highlight">Highlight colour</label><select id="kitHighlight"></select></div>
@@ -395,20 +390,23 @@
           <div><label for="kitPosition" data-i18n="kit.position">Logo position</label><select id="kitPosition"></select></div>
         </div>
         <ul class="account-list kit-files">
-          <li class="account"><div><b data-i18n="kit.logo">Logo</b><span class="account-state" id="kit-logo-name"></span></div>
+          <li class="account"><div><b id="kit-logo-title" data-i18n="kit.logo">Logo</b><span class="account-state" id="kit-logo-name"></span></div>
             <div class="watch-btns">
-              <label class="btn sm ghost file-btn"><span data-i18n="kit.choose">Choose file</span><input type="file" id="kit-logo-file" accept="image/*" hidden></label>
+              <input type="file" class="sr-only file-input" id="kit-logo-file" accept="image/*" aria-labelledby="kit-logo-title kit-logo-choose" aria-describedby="kit-logo-name">
+              <label class="btn sm file-btn" for="kit-logo-file" id="kit-logo-choose" data-i18n="kit.choose">Choose file</label>
               <button type="button" class="btn sm ghost" id="kit-logo-remove" data-i18n="kit.remove" hidden>Remove</button>
             </div></li>
-          <li class="account"><div><b data-i18n="kit.intro">Intro</b><span class="account-state" id="kit-intro-name"></span>
+          <li class="account"><div><b id="kit-intro-title" data-i18n="kit.intro">Intro</b><span class="account-state" id="kit-intro-name"></span>
             <span class="hint kit-note" data-i18n="kit.introHint">Keep it under 1.5 s: a slow start loses viewers.</span></div>
             <div class="watch-btns">
-              <label class="btn sm ghost file-btn"><span data-i18n="kit.choose">Choose file</span><input type="file" id="kit-intro-file" accept="video/*,image/*" hidden></label>
+              <input type="file" class="sr-only file-input" id="kit-intro-file" accept="video/*,image/*" aria-labelledby="kit-intro-title kit-intro-choose" aria-describedby="kit-intro-name">
+              <label class="btn sm file-btn" for="kit-intro-file" id="kit-intro-choose" data-i18n="kit.choose">Choose file</label>
               <button type="button" class="btn sm ghost" id="kit-intro-remove" data-i18n="kit.remove" hidden>Remove</button>
             </div></li>
-          <li class="account"><div><b data-i18n="kit.outro">Outro</b><span class="account-state" id="kit-outro-name"></span></div>
+          <li class="account"><div><b id="kit-outro-title" data-i18n="kit.outro">Outro</b><span class="account-state" id="kit-outro-name"></span></div>
             <div class="watch-btns">
-              <label class="btn sm ghost file-btn"><span data-i18n="kit.choose">Choose file</span><input type="file" id="kit-outro-file" accept="video/*,image/*" hidden></label>
+              <input type="file" class="sr-only file-input" id="kit-outro-file" accept="video/*,image/*" aria-labelledby="kit-outro-title kit-outro-choose" aria-describedby="kit-outro-name">
+              <label class="btn sm file-btn" for="kit-outro-file" id="kit-outro-choose" data-i18n="kit.choose">Choose file</label>
               <button type="button" class="btn sm ghost" id="kit-outro-remove" data-i18n="kit.remove" hidden>Remove</button>
             </div></li>
         </ul>
@@ -416,7 +414,7 @@
       </section>
 <section class="links" aria-labelledby="linksTitle"><h3 id="linksTitle" data-i18n="settings.links">Your profile links</h3>
 <p class="hint" id="profileLinksHint" data-i18n="settings.hint">One per line. They go under every clip's post text.</p>
-      <textarea id="profileLinks" rows="4" maxlength="2000" aria-describedby="profileLinksHint"
+      <textarea class="field" id="profileLinks" rows="4" maxlength="2000" autocomplete="off" spellcheck="false" aria-labelledby="linksTitle" aria-describedby="profileLinksHint"
         placeholder="TikTok: https://www.tiktok.com/@…&#10;Instagram: https://www.instagram.com/…/"></textarea>
 <button type="button" class="btn" id="linksSave" data-i18n="settings.linksSave">Save links</button></section>
         </div>
@@ -434,7 +432,7 @@
           <div id="llmModelBox"><label for="llmModel" data-i18n="llm.model">Model</label>
             <input class="field" id="llmModel" autocomplete="off" spellcheck="false" maxlength="100"></div>
           <div id="llmKeyBox" hidden><label for="llmKey" data-i18n="llm.key">OpenRouter API key</label>
-            <input class="field" id="llmKey" type="password" autocomplete="off" spellcheck="false" maxlength="300"
+            <input class="field" id="llmKey" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" maxlength="300"
               aria-describedby="llmKeyHint"></div>
         </div>
         <p class="hint" id="llmKeyHint" data-i18n="llm.keyHint">The key stays on this computer and is never shown again.</p>
@@ -455,7 +453,7 @@
           <label for="igToken" data-i18n="accounts.tokenLabel">Instagram access token</label>
           <p class="hint" id="igTokenHint" data-i18n="accounts.tokenHint">From your Meta app: Instagram, API setup with Instagram login, Generate token.</p>
           <div class="token-row">
-            <input id="igToken" type="password" autocomplete="off" spellcheck="false" maxlength="2000" placeholder="IGAA…"
+            <input class="field" id="igToken" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" maxlength="2000" placeholder="IGAA…"
               aria-describedby="igTokenHint">
             <button type="button" class="btn primary" id="igSave" data-i18n="accounts.tokenSave">Connect</button>
           </div>
@@ -495,8 +493,8 @@
   </div>
   <dialog class="settings-dialog" id="copyDialog" aria-labelledby="copyTitle">
     <h2 id="copyTitle" data-i18n="copy.title">Post text</h2>
-    <p class="hint" data-i18n="copy.hint">Copying is blocked here; select the text and copy it yourself.</p>
-    <textarea id="copyText" rows="10" readonly aria-labelledby="copyTitle"></textarea>
+    <p class="hint" id="copyHint" data-i18n="copy.hint">Copying is blocked here; select the text and copy it yourself.</p>
+    <textarea id="copyText" rows="10" readonly aria-labelledby="copyTitle" aria-describedby="copyHint"></textarea>
     <div class="dialog-btns">
       <button type="button" class="btn primary" id="copyClose" data-i18n="copy.close">Close</button>
     </div>
@@ -543,8 +541,8 @@
         </div>
       </div>
       <label for="postCaption" data-i18n="publish.caption">Post text</label>
-      <textarea id="postCaption" rows="7" readonly></textarea>
-      <p class="hint" id="postNote"></p>
+      <textarea id="postCaption" rows="7" readonly aria-describedby="postNote"></textarea>
+      <p class="hint" id="postNote" role="status"></p>
       <div class="dialog-btns">
         <button type="button" class="btn ghost" id="postSettings" hidden data-i18n="publish.toSettings">Settings</button>
         <button type="button" class="btn ghost" id="postCancel" data-i18n="settings.cancel">Cancel</button>

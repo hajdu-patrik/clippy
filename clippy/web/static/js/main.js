@@ -30,7 +30,7 @@ function applyTheme(theme, animate = false) {
     setTimeout(() => root.classList.remove("theme-anim"), 350);
   }
   root.dataset.theme = theme;
-  document.querySelector('meta[name="theme-color"]').content = theme === "dark" ? "#18171a" : "#f4f3f5";
+  document.querySelector('meta[name="theme-color"]').content = theme === "dark" ? "#131110" : "#f3ede2";
   store.set(THEME_KEY, theme);
 }
 
