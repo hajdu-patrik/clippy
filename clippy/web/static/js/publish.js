@@ -157,10 +157,6 @@ export function bindPublish() {
   $("#postWhen").addEventListener("change", syncWhen);
   $("#postCancel").addEventListener("click", () => $("#postDialog").close());
   $("#postForm").addEventListener("submit", send);
-  $("#postPlanned").addEventListener("click", () => {
-    $("#postDialog").close();
-    document.dispatchEvent(new CustomEvent("clippy:schedule"));
-  });
   $("#postPlatforms").addEventListener("change", syncOptions);
   $("#postSettings").addEventListener("click", () => {
     $("#postDialog").close();

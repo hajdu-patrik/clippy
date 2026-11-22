@@ -50,8 +50,10 @@ export const api = {
   upload,
   undo: (id, number) => request(`/api/chats/${id}/clips/${number}/undo`, { method: "POST" }),
   settings: () => request("/api/settings"),
-  saveSettings: (profileLinks, postSlots) =>
-    request("/api/settings", { method: "PUT", body: JSON.stringify({ profile_links: profileLinks, post_slots: postSlots }) }),
+  saveProfileLinks: (profileLinks) =>
+    request("/api/settings", { method: "PUT", body: JSON.stringify({ profile_links: profileLinks }) }),
+  savePostSlots: (postSlots) =>
+    request("/api/settings", { method: "PUT", body: JSON.stringify({ post_slots: postSlots }) }),
   llm: () => request("/api/llm"),
   saveLlm: (body) => request("/api/llm", { method: "PUT", body: JSON.stringify(body) }),
   llmProblem: (body) => request("/api/llm/problem", { method: "POST", body: JSON.stringify(body) }),

@@ -232,7 +232,7 @@ known by name (`clippy/categories.py`).
 Posts can wait for their time: choose *At a set time* in the Post dialog, and the card shows the planned post with a
 *cancel* link. The **Scheduler** (in the sidebar) lists everything that waits, day by day, with each clip's cover, chat,
 platforms and time, and schedules a clip from one place: pick the chat and clip, the platforms, a date and time (or your
-saved posting times, *Settings, General*, and the next free one). YouTube keeps its time itself, so that video goes out
+posting times you keep at the top of the Scheduler, and the next free one). YouTube keeps its time itself, so that video goes out
 even while this computer is off; the other platforms wait in Clippy's plan, which has to be running, and can be moved
 or removed in the Scheduler. A YouTube video's time is changed or removed in YouTube Studio (Clippy's YouTube access can
 upload but not edit), and the Scheduler links there. A watched channel can also post its new clips by itself: give it the platforms and the daily times

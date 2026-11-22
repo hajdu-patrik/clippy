@@ -370,3 +370,12 @@ def test_the_camera_compositor_and_the_title_bar():
     assert title_bar("", 10, True) == ()
     [bar] = title_bar("He did it", 12.0, True)
     assert bar.end == 12.0 and bar.y < 400 and bar.box
+
+
+def test_a_stream_without_a_cut_shows_the_whole_frame_while_the_camera_spot_is_empty():
+    from clippy.director import plan_frames
+
+    cam = (0.75, 0.05, 0.2, 0.2)
+    an = _fake_analysis(250, lambda i: [FaceObs(0.82, 0.1, 0.05, 0.09, 0.9, 0.12)] if i < 150 else [])
+    plans, shots = plan_frames(an, "stream", punch=False, facecam=cam)
+    assert len(shots) == 1 and plans[50].mode == "stream" and plans[230].mode == "fit"

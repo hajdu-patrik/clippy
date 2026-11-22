@@ -29,6 +29,7 @@ def max_zoom(an: ClipAnalysis) -> float:
 
 
 CAM_PRESENCE = 0.3
+CAM_GONE_SECONDS = 2.0
 REACTION_GAP = 8.0
 REACTION_EVERY = 15.0
 REACTION_MAX = 3
@@ -55,6 +56,26 @@ def _stream_mode(an: ClipAnalysis, s: int, e: int, facecam) -> str:
     if len(sizes) >= 0.5 * (e - s) and float(np.median(sizes)) >= 0.07:
         return "crop"
     return "fit"
+
+
+def cam_gone(an: ClipAnalysis, s: int, e: int, facecam) -> list[tuple[int, int]]:
+    """Stretches inside a stream shot (at least CAM_GONE_SECONDS) with no face in the camera's spot: the stream
+    changed scene without a cut the analysis saw, so those frames show the whole picture instead of an empty corner."""
+    if facecam is None:
+        return []
+    win = max(1, int(CAM_GONE_SECONDS * an.fps))
+    seen = np.array([any(in_box(f, facecam) for f in an.faces[i]) for i in range(s, e)], dtype=float)
+    share = np.convolve(seen, np.ones(win) / win, mode="same")
+    gone = share < CAM_PRESENCE
+    out, start = [], None
+    for k, g in enumerate(list(gone) + [False]):
+        if g and start is None:
+            start = k
+        elif not g and start is not None:
+            if k - start >= win:
+                out.append((s + start, s + k))
+            start = None
+    return out
 
 
 def reaction_windows(an: ClipAnalysis, env_db, hop: float, facecam) -> list[tuple[int, int]]:
@@ -241,6 +262,9 @@ def plan_frames(an: ClipAnalysis, layout: str = "auto", join_frames=(), sentence
                 for a, b in reactions:
                     for i in range(max(a, s), min(b, e)):
                         plans[i] = FramePlan("cam")
+                for a, b in cam_gone(an, s, e, facecam):
+                    for i in range(a, b):
+                        plans[i] = FramePlan("fit")
             continue
 
         face_h = [max(f.h for f in an.faces[i]) for i in range(s, e) if an.faces[i]]

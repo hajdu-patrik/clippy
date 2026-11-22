@@ -95,7 +95,6 @@ function onTabKey(event) {
 
 function open(event) {
   $("#profileLinks").value = (state.settings.profile_links || []).join("\n");
-  $("#postSlots").value = (state.settings.post_slots || []).join(", ");
   $("#igTokenBox").hidden = true;
   renderAccounts();
   showPage(event?.detail?.page || page);
@@ -115,7 +114,7 @@ async function save(event) {
   const button = $("#settingsSave");
   button.disabled = true;
   try {
-    state.settings = await api.saveSettings($("#profileLinks").value, $("#postSlots").value);
+    state.settings = await api.saveProfileLinks($("#profileLinks").value);
     $("#settingsDialog").close();
     toast(t("settings.saved"));
   } catch (err) {

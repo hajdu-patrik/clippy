@@ -15,6 +15,7 @@ const NOTES = { planned: "sched.note.planned", uploading: "sched.note.uploading"
 
 let data = { items: [], choices: [], slots: [], free: [], saved: false };
 let editing = null;
+let editingSlots = false;
 let timer = 0;
 
 const dialog = () => $("#scheduleDialog");
@@ -118,6 +119,7 @@ async function loadSchedule() {
     return;
   }
   if (!dialog().open) return;
+  renderSlotsBox();
   renderList();
   if (!$("#schedForm").hidden) renderForm(false);
 }
@@ -161,10 +163,23 @@ function renderPlatforms(keep) {
   }).join("");
 }
 
+function slotsEditor(id) {
+  return `<div class="token-row slots-inline">
+    <input class="field" id="${id}" maxlength="120" autocomplete="off" placeholder="11:00, 16:00, 20:00, 23:30"
+      value="${esc(data.saved ? data.slots.join(", ") : "")}" aria-label="${esc(t("sched.slotsTitle"))}">
+    <button type="button" class="btn sm primary" data-sched="saveSlots" data-input="${id}">${esc(t("sched.slotsSave"))}</button></div>`;
+}
+
+function renderSlotsBox() {
+  $("#schedSlotsSummary").textContent = data.saved && data.slots.length
+    ? t("sched.yourSlots", { times: data.slots.join(", ") }) : t("sched.slotsTitle");
+  $("#schedSlotsInput").value = data.saved ? data.slots.join(", ") : "";
+}
+
 function renderQuick() {
   const box = $("#schedQuick");
-  if (!data.slots.length) {
-    box.innerHTML = `<p class="hint">${esc(t("sched.noSlots"))} <button type="button" class="link-btn" data-sched="slots">${esc(t("sched.addSlots"))}</button></p>`;
+  if (!data.slots.length || editingSlots) {
+    box.innerHTML = `<p class="hint">${esc(t("sched.noSlots"))}</p>${slotsEditor("schedQuickSlots")}`;
     return;
   }
   const [next, ...more] = data.free;
@@ -173,7 +188,7 @@ function renderQuick() {
   box.innerHTML = [next ? chip(next, t("sched.nextFree", { when: label(next) }), "chip-next") : "",
     ...more.slice(0, QUICK_MORE).map((ts) => chip(ts, label(ts)))].join("")
     + `<span class="hint quick-note">${esc(t(data.saved ? "sched.yourSlots" : "sched.watchSlots", { times: data.slots.join(", ") }))}
-    <button type="button" class="link-btn" data-sched="slots">${esc(t("sched.editSlots"))}</button></span>`;
+    <button type="button" class="link-btn" data-sched="editSlots">${esc(t("sched.editSlots"))}</button></span>`;
 }
 
 function setAt(ts) {
@@ -307,9 +322,18 @@ async function onItemAction(event) {
   }
 }
 
-function toSlots() {
-  dialog().close();
-  document.dispatchEvent(new CustomEvent("clippy:settings", { detail: { page: "general" } }));
+async function saveSlots(input, button) {
+  button.disabled = true;
+  try {
+    state.settings = await api.savePostSlots(input.value);
+    editingSlots = false;
+    toast(t("sched.slotsSaved"));
+    await loadSchedule();
+  } catch (err) {
+    toast(tx(err.t, err.message));
+  } finally {
+    button.disabled = false;
+  }
 }
 
 export function bindSchedule() {
@@ -326,10 +350,16 @@ export function bindSchedule() {
   $("#schedForm").addEventListener("input", (e) => { if (e.target.type === "date" || e.target.type === "time") syncForm(); });
   $("#schedForm").addEventListener("click", (e) => {
     const chip = e.target.closest("button[data-at]");
+    const save = e.target.closest('button[data-sched="saveSlots"]');
     if (chip) setAt(Number(chip.dataset.at));
-    else if (e.target.closest('button[data-sched="slots"]')) toSlots();
+    else if (save) saveSlots($(`#${save.dataset.input}`), save);
+    else if (e.target.closest('button[data-sched="editSlots"]')) {
+      editingSlots = true;
+      renderQuick();
+    }
   });
   $("#schedItems").addEventListener("click", onItemAction);
+  $("#schedSlotsSave").addEventListener("click", (e) => saveSlots($("#schedSlotsInput"), e.currentTarget));
   dialog().addEventListener("close", () => { editing = null; });
   onLive((event) => {
     if (!LIVE_EVENTS.has(event.type) || !dialog().open || editing !== null) return;

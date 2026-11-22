@@ -253,7 +253,7 @@ Clippy has to be running at the planned time; a post whose time passed while it 
 **The Scheduler** (sidebar) shows every planned post in one list, grouped by day: videos YouTube holds for their
 publish time (state *Scheduled on YouTube*, and *Uploading* while the file is still on its way) and posts waiting in
 Clippy's own plan, each with the clip's cover, its chat, the platforms and the time in your time zone. *Schedule a clip*
-picks a chat, a clip, the platforms and a date and time; the quick picks are your posting times (*Settings, General*, or
+picks a chat, a clip, the platforms and a date and time; the quick picks are your posting times (*Your posting times* at the top of the Scheduler, or
 the daily times of your watched channels) and *Next free slot*, which skips times that already hold a post. Posts in
 Clippy's plan can be moved (*Change time*) or removed. A YouTube video goes up at once, private, and YouTube makes it
 public at its time, so its visibility choice does not apply to a timed video. Its time cannot be changed from

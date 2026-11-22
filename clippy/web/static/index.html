@@ -197,10 +197,6 @@
       <p class="hint" id="profileLinksHint" data-i18n="settings.hint">One per line. They go under every clip's post text.</p>
       <textarea id="profileLinks" rows="4" maxlength="2000" aria-describedby="profileLinksHint"
         placeholder="TikTok: https://www.tiktok.com/@…&#10;Instagram: https://www.instagram.com/…/"></textarea>
-      <label for="postSlots" data-i18n="settings.slots">Your posting times</label>
-      <p class="hint" id="postSlotsHint" data-i18n="settings.slotsHint">Daily times you like to post at, like 11:00, 16:00, 20:00. The Scheduler offers the next free one.</p>
-      <input class="field" id="postSlots" maxlength="120" autocomplete="off" inputmode="text" placeholder="11:00, 16:00, 20:00, 23:30"
-        aria-describedby="postSlotsHint">
       <section class="notify" aria-labelledby="notifyTitle">
         <h3 id="notifyTitle" data-i18n="notify.title">Notifications</h3>
         <label class="check inline"><input type="checkbox" id="notifyToggle"><span data-i18n="notify.toggle">Tell me when a job is done (also when this window is in the background)</span></label>
@@ -241,7 +237,7 @@
           <label for="igToken" data-i18n="accounts.tokenLabel">Instagram access token</label>
           <p class="hint" id="igTokenHint" data-i18n="accounts.tokenHint">From your Meta app: Instagram, API setup with Instagram login, Generate token.</p>
           <div class="token-row">
-            <input id="igToken" type="password" autocomplete="off" spellcheck="false" maxlength="2000"
+            <input id="igToken" type="password" autocomplete="off" spellcheck="false" maxlength="2000" placeholder="IGAA…"
               aria-describedby="igTokenHint">
             <button type="button" class="btn primary" id="igSave" data-i18n="accounts.tokenSave">Connect</button>
           </div>
@@ -352,7 +348,7 @@
             </div>
             <div>
               <label for="watchN" data-i18n="watch.n">Clips per video (0: as the kind says)</label>
-              <input class="field" id="watchN" type="number" min="0" max="12" value="0">
+              <input class="field" id="watchN" type="number" min="0" max="12" value="0" placeholder="3">
             </div>
             <div>
               <label for="watchEvery" data-i18n="watch.everyLabel">Look for new videos</label>
@@ -426,7 +422,6 @@
         <div id="postAtBox" hidden>
           <label for="postAt" data-i18n="publish.at">Date and time</label>
           <input class="field" id="postAt" type="datetime-local">
-          <button type="button" class="link-btn" id="postPlanned" data-i18n="publish.seePlanned">See everything planned</button>
         </div>
       </div>
       <label for="postCaption" data-i18n="publish.caption">Post text</label>
@@ -458,6 +453,15 @@
           <p data-i18n="sched.studioWhy">Clippy's YouTube access can upload videos but cannot change or delete them. To move or remove one, use YouTube Studio.</p>
         </div>
       </div>
+      <details class="watch-add" id="schedSlotsBox">
+        <summary id="schedSlotsSummary" data-i18n="sched.slotsTitle">Your posting times</summary>
+        <p class="hint" id="schedSlotsHint" data-i18n="sched.slotsHint">The daily times you like to post at. When you schedule a clip, Clippy offers the next free one.</p>
+        <div class="token-row">
+          <input class="field" id="schedSlotsInput" maxlength="120" autocomplete="off" placeholder="11:00, 16:00, 20:00, 23:30"
+            aria-labelledby="schedSlotsSummary" aria-describedby="schedSlotsHint">
+          <button type="button" class="btn primary" id="schedSlotsSave" data-i18n="sched.slotsSave">Save times</button>
+        </div>
+      </details>
       <div id="schedItems" aria-live="polite"></div>
     </section>
     <form id="schedForm" hidden aria-labelledby="schedFormTitle">
@@ -523,21 +527,25 @@
     <form id="campForm" hidden aria-labelledby="campFormTitle">
       <h3 id="campFormTitle" data-i18n="camp.formTitle">Campaign</h3>
       <div class="field-box"><label for="campName" data-i18n="camp.name">Name</label>
-        <input class="field" id="campName" maxlength="80" required></div>
+        <input class="field" id="campName" maxlength="80" required placeholder="xQc GTA VI, December" aria-describedby="campNameHint">
+        <p class="hint" id="campNameHint" data-i18n="camp.nameHint">Your own name for it; the chats it makes start with it.</p></div>
       <div class="field-box"><label for="campClient" data-i18n="camp.client">Client (streamer, podcast or brand)</label>
-        <input class="field" id="campClient" maxlength="80"></div>
+        <input class="field" id="campClient" maxlength="80" placeholder="xQc"></div>
       <div class="field-box"><label for="campPreset" data-i18n="camp.preset">Kind of clips</label>
-        <select id="campPreset"></select></div>
+        <select id="campPreset" aria-describedby="campPresetHint"></select>
+        <p class="hint" id="campPresetHint" data-i18n="camp.presetHint">The same ready-made prompts as on the start screen: layout, length and style of the clips.</p></div>
       <div class="field-box"><label for="campBrief" data-i18n="camp.brief">Brief (what to clip, what to avoid)</label>
-        <textarea class="field" id="campBrief" rows="3" maxlength="400"></textarea></div>
+        <textarea class="field" id="campBrief" rows="3" maxlength="400" placeholder="Only the loud rage and laugh moments in GTA VI. No sponsor reads, no slurs, no other games." aria-describedby="campBriefHint"></textarea>
+        <p class="hint" id="campBriefHint" data-i18n="camp.briefHint">Clippy picks the moments by this; write it as the client gave it.</p></div>
       <div class="post-options">
         <div><label for="campCpm" data-i18n="camp.cpm">Rate per 1,000 views</label>
-          <input class="field" id="campCpm" type="number" min="0" max="1000" step="0.01" value="0"></div>
+          <input class="field" id="campCpm" type="number" min="0" max="1000" step="0.01" value="0" placeholder="1.50"></div>
         <div><label for="campCap" data-i18n="camp.cap">Cap per post (0 = none)</label>
-          <input class="field" id="campCap" type="number" min="0" step="1" value="0"></div>
+          <input class="field" id="campCap" type="number" min="0" step="1" value="0" placeholder="100"></div>
       </div>
       <div class="field-box"><label for="campSources" data-i18n="camp.sources">Moments to clip (one video link per line)</label>
-        <textarea class="field" id="campSources" rows="4"></textarea></div>
+        <textarea class="field" id="campSources" rows="4" placeholder="https://www.twitch.tv/xqc/clip/…&#10;https://youtu.be/…" aria-describedby="campSourcesHint"></textarea>
+        <p class="hint" id="campSourcesHint" data-i18n="camp.sourcesHint">Each link becomes its own chat with clips when you press Clip the sources.</p></div>
       <p class="hint warn" id="campError" role="alert" hidden></p>
       <div class="dialog-btns">
         <button type="button" class="btn ghost" id="campBack" data-i18n="sched.back">Back</button>

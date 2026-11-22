@@ -99,7 +99,7 @@ class ChatPatch(BaseModel):
 
 
 class SettingsPatch(BaseModel):
-    profile_links: str = Field(max_length=2000)
+    profile_links: str | None = Field(default=None, max_length=2000)
     post_slots: str | None = Field(default=None, max_length=120)
 
 
@@ -326,10 +326,12 @@ def create_app(storage: Storage | None = None, db_path: Path | None = None, runn
 
     @app.put("/api/settings")
     def put_settings(body: SettingsPatch):
-        saved = settings.set_profile_links(body.profile_links)
+        saved = settings.load()
+        if body.profile_links is not None:
+            saved = settings.set_profile_links(body.profile_links)
+            rewrite_post_texts(db, runner.library, saved["profile_links"])
         if body.post_slots is not None:
             saved = settings.set_post_slots(schedule.clean_slots(body.post_slots))
-        rewrite_post_texts(db, runner.library, saved["profile_links"])
         hub.publish(None, {"type": "settings", "settings": saved})
         return saved
 

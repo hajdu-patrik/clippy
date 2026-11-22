@@ -114,6 +114,11 @@ change, what changed rather than how; dates are ISO 8601.
   profile / channel / playlist link, no video in the post, no sound, each with what helps.
 
 ### Changed
+- Your posting times live in the Scheduler, where they are used, and are edited there in place; Settings, General
+  keeps the profile links and notifications, and no panel sends you to another one to change them.
+- Every field has an example and says what it is for; the posting times of daily picks and watched channels say they
+  apply only there.
+- A stream clip shows the whole frame while the camera's spot stays empty for 2 seconds, also without a cut.
 - A stream clip follows the stream's scene switches: when the camera is not where it was found, the shot follows the
   face or shows the whole frame; without any facecam the whole frame sits on a blurred copy of itself.
 - Captions already burned into a video are found, and Clippy leaves its own out instead of doubling them.
