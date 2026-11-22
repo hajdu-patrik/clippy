@@ -31,8 +31,8 @@
   .nav-item:hover { background: var(--surface-2); border-color: var(--line-soft); }
   .nav-item:hover svg { color: var(--fg); }
 }
-.nav-item[aria-current="page"] { background: var(--fg); border-color: var(--fg); color: var(--page); }
-.nav-item[aria-current="page"] svg { color: var(--page); }
+.nav-item[aria-current="page"] { background: var(--selected); border-color: var(--selected); color: var(--on-selected); }
+.nav-item[aria-current="page"] svg { color: var(--on-selected); }
 .chat-list-label { padding: 20px 12px 6px; }
 .chat-list { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 2px; padding-right: 2px;
   overscroll-behavior: contain; }

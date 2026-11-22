@@ -17,9 +17,9 @@
   font: 600 var(--fs-sm)/1.2 var(--font); text-align: center; cursor: pointer; max-width: 100%;
   transition: background-color var(--dur-press) var(--ease), color var(--dur-press) var(--ease);
   animation: rise .4s var(--ease) both; }
-.empty .chips .chip:active { background: var(--fg); color: var(--page); transform: none; }
+.empty .chips .chip:active { background: var(--selected); border-color: var(--selected); color: var(--on-selected); transform: none; }
 @media (hover: hover) {
-  .empty .chips .chip:hover { background: var(--fg); color: var(--page); border-color: var(--line); transform: none; }
+  .empty .chips .chip:hover { background: var(--surface-2); border-color: var(--accent-text); transform: none; }
 }
 
 .msg { display: flex; gap: 12px; align-items: flex-start; animation: msg-in .24s var(--ease) both; }

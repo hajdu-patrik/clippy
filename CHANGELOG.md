@@ -114,8 +114,9 @@ change, what changed rather than how; dates are ISO 8601.
   profile / channel / playlist link, no video in the post, no sound, each with what helps.
 
 ### Changed
-- New look in the poster style of makoncert.hu: Archivo Black titles in capitals, Space Grotesk text (both bundled, no
-  network), paper and ink colours with Clippy's wine as the accent, square 2 px ink lines, hard offset shadows and buttons
+- New look built like makoncert.hu but in Clippy's own black and wine colours: Archivo Black titles in capitals, Space
+  Grotesk text (both bundled, no network), graphite (dark) or fog (light) surfaces, wine for the filled button, the
+  selected item and focus, square 2 px ink lines, hard offset shadows and buttons
   that sink when pressed; boxed platform choices, proper file buttons and disclosures, responsive down to 320 px. The
   stylesheet is split into one file per area under `css/`.
 - The app is organised like the big clipping platforms: a sidebar grouped into Clip (Projects), Post (Calendar,

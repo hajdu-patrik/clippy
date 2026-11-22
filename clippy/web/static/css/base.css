@@ -15,28 +15,26 @@
   --wine-400: #d9577a;
   --wine-300: #eb8da6;
   --wine-200: #f6c3d1;
-  --ink: #151313;
-  --paper: #f3ede2;
-  --amber: #f2c14e;
-
-  --page: #131110;
-  --surface: #1d1a18;
-  --surface-2: #26221f;
-  --fg: #f3ede2;
-  --fg-muted: #b8afa2;
-  --line: #a1988b;
-  --line-soft: #3a342f;
-  --accent: var(--wine-500);
-  --accent-hover: var(--wine-400);
+  --page: #121113;
+  --surface: #1b1a1d;
+  --surface-2: #262428;
+  --fg: #ecebee;
+  --fg-muted: #a7a3ac;
+  --line: #5c5762;
+  --line-soft: #322f35;
+  --accent: var(--wine-600);
+  --accent-hover: var(--wine-500);
   --on-accent: #ffffff;
   --accent-text: var(--wine-300);
-  --focus: var(--amber);
-  --danger: #ff9d8f;
-  --danger-bg: #3a1713;
-  --warn-bg: #3a2f10;
-  --info-bg: #1b2342;
-  --ok: #7fd7a8;
-  --offset: var(--line);
+  --focus: var(--wine-300);
+  --danger: #ff6b6b;
+  --danger-bg: #3a1218;
+  --warn-bg: color-mix(in srgb, var(--wine-600) 22%, var(--surface));
+  --info-bg: var(--surface-2);
+  --ok: #4fc58f;
+  --offset: #000000;
+  --selected: var(--accent);
+  --on-selected: var(--on-accent);
   --lift: 4px;
   --shadow-press: 4px 4px 0 var(--offset);
   --shadow-card: 5px 5px 0 var(--offset);
@@ -108,22 +106,23 @@
 :root { color-scheme: dark; }
 [data-theme="light"] {
   color-scheme: light;
-  --page: #f3ede2;
-  --surface: #fbf8f1;
-  --surface-2: #eae2d3;
-  --fg: #151313;
-  --fg-muted: #4f4943;
-  --line: #151313;
-  --line-soft: #cdc3b1;
+  --page: #f4f3f5;
+  --surface: #ffffff;
+  --surface-2: #ece9ed;
+  --fg: #1d1b1f;
+  --fg-muted: #5f5a63;
+  --line: #1d1b1f;
+  --line-soft: #dad6db;
   --accent: var(--wine-600);
   --accent-hover: var(--wine-700);
   --accent-text: var(--wine-700);
-  --focus: #1d3a8a;
-  --danger: #a3210f;
-  --danger-bg: #fbe1dc;
-  --warn-bg: #fbebc0;
-  --info-bg: #dfe5f7;
-  --ok: #1b6b45;
+  --focus: var(--wine-700);
+  --danger: #c0293a;
+  --danger-bg: #fbe3e6;
+  --warn-bg: color-mix(in srgb, var(--wine-600) 10%, var(--surface));
+  --info-bg: var(--surface-2);
+  --ok: #1b7a50;
+  --offset: var(--line);
 }
 @media (pointer: coarse) {
   :root { --btn-h-sm: 44px; }
@@ -163,7 +162,7 @@ kbd { font: var(--fs-xs) var(--mono); color: var(--fg); background: var(--surfac
   .chip:hover { background: var(--surface-2); }
 }
 .chip:active { transform: translate(1px, 1px); }
-.chip[aria-pressed="true"], .chip.on { background: var(--fg); color: var(--page); }
+.chip[aria-pressed="true"], .chip.on { background: var(--selected); border-color: var(--selected); color: var(--on-selected); }
 .hint { max-width: 840px; margin: 7px auto 0; text-align: center; color: var(--fg-muted); font-size: var(--fs-xs); }
 .only-mobile { display: none !important; }
 @media (max-width: 900px) {

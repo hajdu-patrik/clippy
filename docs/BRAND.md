@@ -23,9 +23,9 @@ symbol in `index.html`).
 | wine-400 | `#d9577a` | progress fills, CLI accent |
 | wine-300 | `#eb8da6` | accent text on dark |
 | wine-200 | `#f6c3d1` | tints |
-| paper / ink | `#f3ede2` `#fbf8f1` `#eae2d3` / `#151313` | light theme page, surfaces, lines |
-| night | `#131110` `#1d1a18` `#26221f` / `#a1988b` | dark theme page, surfaces, lines |
-| ok / danger | `#7fd7a8` / `#ff9d8f` (dark), `#1b6b45` / `#a3210f` (light) | status only |
+| graphite | `#121113` `#1b1a1d` `#262428` / `#5c5762` `#322f35` | dark theme page, surfaces, lines |
+| fog | `#f4f3f5` `#ffffff` `#ece9ed` / `#1d1b1f` `#dad6db` | light theme page, surfaces, lines |
+| ok / danger | `#4fc58f` / `#ff6b6b` (dark), `#1b7a50` / `#c0293a` (light) | status only |
 
 ## Type
 
@@ -35,7 +35,9 @@ symbol in `index.html`).
 
 ## Components
 
-The app follows the poster style of makoncert.hu with Clippy's wine as the accent. Its stylesheet is
+The app borrows the build of makoncert.hu (square 2 px lines, offset shadows, sinking buttons, display titles in
+capitals) but keeps Clippy's own black and wine colours: graphite or fog surfaces, wine for the filled button, the
+selected item and focus. Its stylesheet is
 `clippy/web/static/style.css`, which imports one file per area from `css/`: `base.css` (tokens, fonts, controls),
 `shell.css` (sidebar, page frame), `chat.css`, `pages.css`, `overlays.css` (dialogs, toast). Square corners, 2 px ink
 lines (`--line`), hard offset shadows (`--shadow-press` 4 px, `--shadow-card` 5 px) and buttons that sink into their
