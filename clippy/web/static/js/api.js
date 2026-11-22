@@ -55,6 +55,7 @@ export const api = {
   savePostSlots: (postSlots) =>
     request("/api/settings", { method: "PUT", body: JSON.stringify({ post_slots: postSlots }) }),
   llm: () => request("/api/llm"),
+  llmModels: (mode) => request(`/api/llm/models?mode=${encodeURIComponent(mode)}`),
   saveLlm: (body) => request("/api/llm", { method: "PUT", body: JSON.stringify(body) }),
   llmProblem: (body) => request("/api/llm/problem", { method: "POST", body: JSON.stringify(body) }),
   testLlm: (body) => request("/api/llm/test", { method: "POST", body: JSON.stringify(body) }),

@@ -11,6 +11,7 @@ import { bindPicks, loadPicks } from "./picks.js";
 import { bindWatches, loadWatches } from "./watches.js";
 import { isActive, onView } from "./views.js";
 import { $, esc, toast } from "./util.js";
+import { actions, button } from "./ui.js";
 
 export async function loadSettings() {
   try { state.settings = await api.settings(); } catch { return; }
@@ -20,35 +21,50 @@ function dateText(seconds) {
   return new Date(seconds * 1000).toLocaleDateString(document.documentElement.lang || undefined);
 }
 
-function accountButton(name, a, here) {
-  const label = (key) => esc(t(key));
-  const aria = esc(t("accounts.pasteTokenFor", { platform: a.label }));
+let pasting = null;
+
+function accountAction(name, a, here) {
   if (!here) return "";
+  const named = (key) => `aria-label="${esc(`${t(key)} ${a.label}`)}"`;
   if (a.connected) {
-    return `<button type="button" class="btn ghost" data-account="disconnect" data-platform="${name}" aria-label="${label("accounts.disconnect")} ${esc(a.label)}">${platformIcon(name, "sm")}${label("accounts.disconnect")}</button>`;
+    return button(t("accounts.disconnect"), { variant: "ghost danger", data: { account: "disconnect", platform: name },
+      attrs: named("accounts.disconnect") });
   }
   if (!a.oauth) {
-    return `<button type="button" class="btn ghost" data-account="token" data-platform="${name}" aria-label="${aria}">${platformIcon(name, "sm")}${label("accounts.pasteToken")}</button>`;
+    return pasting === name ? "" : button(t("accounts.pasteToken"), { variant: "", data: { account: "token", platform: name },
+      attrs: `aria-label="${esc(t("accounts.pasteTokenFor", { platform: a.label }))}"` });
   }
   return a.configured
-    ? `<button type="button" class="btn ghost" data-account="connect" data-platform="${name}" aria-label="${label("accounts.connect")} ${esc(a.label)}">${platformIcon(name, "sm")}${label("accounts.connect")}</button>`
+    ? button(t("accounts.connect"), { variant: "", data: { account: "connect", platform: name }, attrs: named("accounts.connect") })
     : "";
+}
+
+function tokenForm() {
+  return `<div class="token-box"><label for="igToken">${esc(t("accounts.tokenLabel"))}</label>
+    <p class="hint" id="igTokenHint">${esc(t("accounts.tokenHint"))}</p>
+    <input class="field" id="igToken" type="password" autocomplete="off" autocapitalize="off" spellcheck="false"
+      maxlength="2000" placeholder="IGAA…" aria-describedby="igTokenHint">
+    ${actions(button(t("settings.cancel"), { data: { account: "cancel" } }),
+      button(t("accounts.tokenSave"), { variant: "primary", data: { account: "save" } }))}</div>`;
 }
 
 function accountCard(name, a, here) {
   const status = a.connected
     ? t("accounts.connectedAs", { name: a.name || a.label })
-    : t(a.configured ? "accounts.notConnected" : "accounts.notConfigured");
+    : t(a.configured || !a.oauth ? "accounts.notConnected" : "accounts.notConfigured");
   const until = a.connected && a.expires && !a.lasting ? ` · ${t("accounts.until", { date: dateText(a.expires) })}` : "";
   const notice = state.accounts?.notices?.[name];
   const tag = a.posting ? "accounts.canPost" : "accounts.connectOnly";
+  const action = accountAction(name, a, here);
   return `<li class="acct ${a.connected ? "on" : ""} ${a.posting ? "" : "no-post"}" data-platform="${name}">
     <div class="acct-head">${platformIcon(name)}<div class="acct-name"><b>${esc(a.label)}</b>
-      <span class="acct-tag">${esc(t(tag))}</span></div></div>
+      <span class="acct-tag">${esc(t(tag))}</span></div>
+      <span class="acct-status${a.connected ? " on" : ""}">${esc(t(a.connected ? "accounts.on" : "accounts.off"))}</span></div>
     <span class="account-state">${esc(status + until)}</span>
     ${a.posting ? "" : `<span class="acct-note">${esc(t("accounts.noPosting", { platform: a.label }))}</span>`}
     ${notice ? `<span class="account-error" role="alert">${esc(tx(notice, ""))}</span>` : ""}
-    <div class="acct-foot">${accountButton(name, a, here)}</div></li>`;
+    ${pasting === name ? tokenForm() : ""}
+    ${action ? `<div class="acct-foot">${action}</div>` : ""}</li>`;
 }
 
 function renderAccounts() {
@@ -68,7 +84,7 @@ async function refreshAccounts() {
 }
 
 function openSettings() {
-  $("#igTokenBox").hidden = true;
+  pasting = null;
   renderAccounts();
   refreshAccounts();
   loadLlm();
@@ -97,9 +113,14 @@ async function onAccount(event) {
   const button = event.target.closest("button[data-account]");
   if (!button) return;
   const { account, platform } = button.dataset;
-  if (account === "token") {
-    $("#igTokenBox").hidden = false;
-    $("#igToken").focus();
+  if (account === "token" || account === "cancel") {
+    pasting = account === "token" ? platform : null;
+    renderAccounts();
+    if (pasting) $("#igToken").focus();
+    return;
+  }
+  if (account === "save") {
+    await saveToken(button);
     return;
   }
   button.disabled = true;
@@ -118,20 +139,20 @@ async function onAccount(event) {
   }
 }
 
-async function saveToken() {
-  const field = $("#igToken");
-  const button = $("#igSave");
-  if (!field.value.trim()) return;
+async function saveToken(button) {
+  const token = $("#igToken").value.trim();
+  if (!token) {
+    $("#igToken").focus();
+    return;
+  }
   button.disabled = true;
   try {
-    await api.instagramToken(field.value.trim());
-    field.value = "";
-    $("#igTokenBox").hidden = true;
+    await api.instagramToken(token);
+    pasting = null;
     toast(t("accounts.saved"));
     await refreshAccounts();
   } catch (err) {
     toast(tx(err.t, err.message));
-  } finally {
     button.disabled = false;
   }
 }
@@ -144,9 +165,11 @@ export function bindSettings() {
   onView("results", loadResults);
   $("#linksSave").addEventListener("click", saveLinks);
   $("#accountList").addEventListener("click", onAccount);
-  $("#igSave").addEventListener("click", saveToken);
-  $("#igToken").addEventListener("keydown", (e) => {
-    if (e.key === "Enter") { e.preventDefault(); saveToken(); }
+  $("#accountList").addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && e.target.id === "igToken") {
+      e.preventDefault();
+      saveToken($('#accountList button[data-account="save"]'));
+    }
   });
   bindLlm();
   bindPicks();

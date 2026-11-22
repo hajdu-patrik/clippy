@@ -7,7 +7,9 @@ import { $, esc, store, toast } from "./util.js";
 
 const ASKED_KEY = "clippy-llm-asked";
 const WITH_MODEL = ["ollama", "openrouter", "claude", "codex"];
+const CUSTOM = "__custom";
 const draft = { mode: "", models: {} };
+const offered = {};
 let checking = 0;
 
 const current = () => state.llm?.modes.find((m) => m.id === draft.mode);
@@ -38,13 +40,39 @@ function renderFields() {
   const hasModel = WITH_MODEL.includes(draft.mode);
   $("#llmModelBox").hidden = !hasModel;
   for (const id of ["llmKeyBox", "llmKeyHint", "llmModelHint"]) $(`#${id}`).hidden = draft.mode !== "openrouter";
-  if (hasModel) {
-    $("#llmModel").value = draft.models[draft.mode] || "";
-    $("#llmModel").placeholder = placeholderOf(mode);
-  }
+  if (hasModel) renderModelPick(mode);
   $("#llmKey").value = "";
   $("#llmKey").placeholder = mode.key ? t("llm.keySaved", { key: mode.key }) : "sk-or-…";
-  for (const id of ["llmModel", "llmKey", "llmTest", "llmSave"]) $(`#${id}`).disabled = !here || draft.mode === "openai";
+  for (const id of ["llmModelPick", "llmModel", "llmKey", "llmTest", "llmSave"]) $(`#${id}`).disabled = !here || draft.mode === "openai";
+}
+
+function renderModelPick(mode) {
+  const value = draft.models[draft.mode] || "";
+  const list = (offered[draft.mode] || []).filter((m) => m !== mode.default);
+  const custom = Boolean(value) && value !== mode.default && !list.includes(value);
+  const label = mode.default ? t("llm.default", { model: mode.default }) : t("llm.defaultCli");
+  $("#llmModelPick").innerHTML = [`<option value="">${esc(label)}</option>`,
+    ...list.map((m) => `<option value="${esc(m)}">${esc(m)}</option>`),
+    `<option value="${CUSTOM}">${esc(t("llm.other"))}</option>`].join("");
+  $("#llmModelPick").value = custom ? CUSTOM : value === mode.default ? "" : value;
+  $("#llmModel").hidden = !custom;
+  $("#llmModel").value = custom ? value : "";
+  $("#llmModel").placeholder = placeholderOf(mode);
+}
+
+async function loadModels(mode) {
+  if (!WITH_MODEL.includes(mode) || offered[mode]) return;
+  try { offered[mode] = (await api.llmModels(mode)).models; } catch { offered[mode] = []; }
+  if (draft.mode === mode && current()) renderModelPick(current());
+}
+
+function pickModel() {
+  const value = $("#llmModelPick").value;
+  const custom = value === CUSTOM;
+  $("#llmModel").hidden = !custom;
+  draft.models[draft.mode] = custom ? $("#llmModel").value.trim() : value;
+  if (custom) $("#llmModel").focus();
+  else check();
 }
 
 function render() {
@@ -53,6 +81,7 @@ function render() {
   $("#llmHere").hidden = state.llm.here;
   $("#llmFirst").hidden = state.llm.chosen;
   renderFields();
+  loadModels(draft.mode);
 }
 
 function say(text, bad = false) {
@@ -135,7 +164,8 @@ export async function askOnce() {
 
 export function bindLlm() {
   $("#llmModes").addEventListener("change", pick);
-  $("#llmModel").addEventListener("input", (e) => { draft.models[draft.mode] = e.target.value; });
+  $("#llmModelPick").addEventListener("change", pickModel);
+  $("#llmModel").addEventListener("input", (e) => { draft.models[draft.mode] = e.target.value.trim(); });
   $("#llmModel").addEventListener("change", check);
   $("#llmKey").addEventListener("change", check);
   $("#llmTest").addEventListener("click", test);

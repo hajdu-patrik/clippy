@@ -24,7 +24,7 @@
 .account b { font-size: var(--fs-sm); font-weight: 600; overflow-wrap: anywhere; }
 .account-state { color: var(--fg-muted); font-size: var(--fs-xs); line-height: 1.45; overflow-wrap: anywhere; }
 .account-state:empty { display: none; }
-.account.on > div > .account-state, .acct.on .account-state { color: var(--ok); }
+.account.on > div > .account-state { color: var(--ok); }
 .account-error { color: var(--danger); font-size: var(--fs-xs); overflow-wrap: anywhere; }
 .account.pick { display: grid; grid-template-columns: 112px minmax(0, 1fr); gap: 8px 16px; align-items: start; }
 .account.pick > .watch-btns { grid-column: 2; justify-content: flex-start; }
@@ -54,6 +54,14 @@
 .acct:has(.llm-mode input:checked) { border-color: color-mix(in srgb, var(--accent-text) 60%, transparent); background: var(--accent-tint); }
 .acct:has(.llm-mode input:focus-visible) { outline: 2px solid var(--focus); outline-offset: 2px; }
 .acct-head { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.acct-head .acct-name { flex: 1; }
+.acct-status { flex: none; align-self: flex-start; display: inline-flex; align-items: center; gap: 6px; padding: 2px 10px;
+  border-radius: var(--r-pill); background: var(--surface-2); color: var(--fg-muted); font-size: var(--fs-2xs); font-weight: 600; }
+.acct-status::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.acct-status.on { color: var(--ok); background: color-mix(in srgb, var(--ok) 14%, transparent); }
+.acct .token-box { display: grid; gap: 6px; margin-top: 4px; }
+.acct .token-box .hint { margin: 0; }
+.acct .token-box .watch-btns { justify-content: flex-end; }
 .acct-name { display: grid; gap: 2px; min-width: 0; }
 .acct-name b { font-size: var(--fs-sm); font-weight: 600; overflow-wrap: anywhere; }
 .acct-tag { color: var(--fg-muted); font-size: var(--fs-xs); font-weight: 500; }

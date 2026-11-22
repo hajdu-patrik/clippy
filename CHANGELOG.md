@@ -114,6 +114,10 @@ change, what changed rather than how; dates are ISO 8601.
   profile / channel / playlist link, no video in the post, no sound, each with what helps.
 
 ### Changed
+- Settings, AI: the model is a drop-down of what the mode can use (the models installed in Ollama, OpenRouter's free
+  models, Claude's sonnet, opus and haiku), with the default first and "Other model…" for any name.
+- Settings, accounts: each card shows a Connected / Not connected badge and one clear button (Connect, Paste token or
+  Disconnect); pasting the Instagram token opens inside its card with Cancel and Connect.
 - The interface is built from shared pieces (`js/ui.js`: buttons, action rows, list rows, empty states and one
   platform picker) instead of markup copied across modules, with one CSS definition per component; checked from 320 to
   1440 px with no overflow and no overlapping elements.

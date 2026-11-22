@@ -562,3 +562,23 @@ def test_installing_asks_for_the_ai_only_when_the_install_worked(monkeypatch):
         monkeypatch.setattr(shell, "install", lambda say, code=code: code)
         assert control._install([]) == code
     assert asked == [1]
+
+
+def test_model_choices_list_what_a_mode_can_use(tmp_path, monkeypatch):
+    from clippy import llm_setup
+    from clippy.storage import Storage
+
+    storage = Storage(tmp_path / "data", tmp_path / "library")
+    llm_setup._listed.clear()
+    monkeypatch.setitem(llm_setup.LISTERS, "ollama", lambda: ["qwen3:8b", "bad name!", "clippy-qwen3:14b-q6k"])
+    picks = llm_setup.choices(storage, "ollama")
+    assert picks[0] == llm_setup.DEFAULT_MODELS["ollama"] and "qwen3:8b" in picks and "bad name!" not in picks
+    assert len(picks) == len(set(picks))
+    assert llm_setup.choices(storage, "claude")[:3] == ["sonnet", "opus", "haiku"]
+
+    def down():
+        raise llm_setup.requests.ConnectionError("offline")
+
+    llm_setup._listed.clear()
+    monkeypatch.setitem(llm_setup.LISTERS, "openrouter", down)
+    assert llm_setup.choices(storage, "openrouter") == [llm_setup.DEFAULT_MODELS["openrouter"]]

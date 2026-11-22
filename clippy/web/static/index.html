@@ -429,8 +429,10 @@
         <p class="hint warn" id="llmHere" hidden data-i18n="llm.hereOnly">The AI can be changed on the computer that runs Clippy.</p>
         <ul class="account-grid" id="llmModes" role="radiogroup" aria-labelledby="llmTitle"></ul>
         <div class="post-options">
-          <div id="llmModelBox"><label for="llmModel" data-i18n="llm.model">Model</label>
-            <input class="field" id="llmModel" autocomplete="off" spellcheck="false" maxlength="100"></div>
+          <div id="llmModelBox"><label for="llmModelPick" data-i18n="llm.model">Model</label>
+            <select id="llmModelPick"></select>
+            <input class="field" id="llmModel" autocomplete="off" spellcheck="false" maxlength="100" hidden
+              aria-label="Model name" data-i18n-attr="aria-label:llm.modelName"></div>
           <div id="llmKeyBox" hidden><label for="llmKey" data-i18n="llm.key">OpenRouter API key</label>
             <input class="field" id="llmKey" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" maxlength="300"
               aria-describedby="llmKeyHint"></div>
@@ -449,14 +451,6 @@
         <p class="hint" data-i18n="accounts.hint">Connect your own accounts. Clips can be posted to YouTube, Instagram, Facebook, TikTok and X. One-time setup: docs/publishing.md.</p>
         <p class="hint warn" id="accountsHere" hidden data-i18n="accounts.hereOnly">Connect accounts on the computer that runs Clippy; posting works from here too.</p>
         <ul class="account-grid" id="accountList"></ul>
-        <div class="token-box" id="igTokenBox" hidden>
-          <label for="igToken" data-i18n="accounts.tokenLabel">Instagram access token</label>
-          <p class="hint" id="igTokenHint" data-i18n="accounts.tokenHint">From your Meta app: Instagram, API setup with Instagram login, Generate token.</p>
-          <div class="token-row">
-            <input class="field" id="igToken" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" maxlength="2000" placeholder="IGAA…"
-              aria-describedby="igTokenHint">
-            <button type="button" class="btn primary" id="igSave" data-i18n="accounts.tokenSave">Connect</button>
-          </div>
         </div>
       </section>
 <section class="notify" aria-labelledby="notifyTitle">

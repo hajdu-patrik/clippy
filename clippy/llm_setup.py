@@ -11,9 +11,11 @@ import threading
 import time
 from collections.abc import Callable
 
+import requests
+
 from . import i18n
-from .llm import (DEFAULT_MODELS, MODEL_NAME, MODES, CliLLM, build_llm, key_of, mode_of, model_of, stored,
-                  unload_all)
+from .llm import (DEFAULT_MODELS, MODEL_NAME, MODES, OLLAMA_URL, OPENROUTER_URL, CliLLM, build_llm, key_of, mode_of,
+                  model_of, setting, stored, unload_all)
 from .shell import command_doc, flags_of
 from .storage import Storage
 from .tools import ClippyError, write_json
@@ -23,6 +25,47 @@ NAMED = ("ollama", "openrouter", "claude", "codex")
 KEYED = ("openrouter",)
 PROBE_TIMEOUT = 120
 PROBE_SCHEMA = {"type": "object", "properties": {"ok": {"type": "boolean"}}, "required": ["ok"]}
+
+
+CLI_MODELS = {"claude": ("sonnet", "opus", "haiku")}
+LIST_TIMEOUT = 4
+LIST_MAX = 40
+_listed: dict[str, tuple[float, list[str]]] = {}
+LIST_TTL = 3600.0
+
+
+def _ollama_models() -> list[str]:
+    body = requests.get(f"{setting('BASE_URL', OLLAMA_URL)}/api/tags", timeout=LIST_TIMEOUT).json()
+    return [m["name"] for m in body.get("models") or [] if isinstance(m, dict) and isinstance(m.get("name"), str)]
+
+
+def _openrouter_free() -> list[str]:
+    body = requests.get(f"{OPENROUTER_URL}/models", timeout=LIST_TIMEOUT).json()
+    ids = [m.get("id") for m in body.get("data") or [] if isinstance(m, dict)]
+    return sorted(i for i in ids if isinstance(i, str) and i.endswith(":free"))[:LIST_MAX]
+
+
+LISTERS: dict[str, Callable[[], list[str]]] = {"ollama": _ollama_models, "openrouter": _openrouter_free}
+
+
+def choices(storage: Storage, mode: str, now: Callable[[], float] = time.time) -> list[str]:
+    """The models to offer for a mode: the installed (Ollama) or free (OpenRouter) ones, a CLI's own names, and always
+    the default and the saved one. A list that cannot be read leaves just those two."""
+    found: list[str] = list(CLI_MODELS.get(mode, ()))
+    lister = LISTERS.get(mode)
+    if lister is not None:
+        cached = _listed.get(mode)
+        if cached and now() - cached[0] < LIST_TTL:
+            found = cached[1]
+        else:
+            try:
+                found = lister()
+                _listed[mode] = (now(), found)
+            except (requests.RequestException, ValueError, AttributeError, TypeError):
+                found = []
+    saved = model_of(mode, stored(storage)) if mode in NAMED else ""
+    picks = [m for m in (DEFAULT_MODELS.get(mode, ""), saved, *found) if m and MODEL_NAME.fullmatch(m)]
+    return list(dict.fromkeys(picks))
 
 
 def mask(key: str) -> str:

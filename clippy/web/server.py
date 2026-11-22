@@ -346,6 +346,12 @@ def create_app(storage: Storage | None = None, db_path: Path | None = None, runn
         hub.publish(None, {"type": "llm", "llm": saved})
         return saved
 
+    @app.get("/api/llm/models")
+    async def llm_models(mode: str = Query(max_length=20)):
+        if mode not in llm_setup.NAMED:
+            return {"models": []}
+        return {"models": await run_in_threadpool(llm_setup.choices, storage, mode)}
+
     @app.post("/api/llm/problem")
     def llm_problem(body: LLMChoice, request: Request):
         """Whether a mode can answer right now, and if not, what the user has to do."""
