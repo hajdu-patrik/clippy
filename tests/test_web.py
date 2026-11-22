@@ -601,3 +601,30 @@ def test_a_connection_closed_by_the_browser_is_not_logged_as_an_error():
 
     assert not ClosedByPeer().filter(record(ConnectionResetError(10054, "closed")))
     assert ClosedByPeer().filter(record(ValueError("real")))
+
+
+def test_an_attached_video_is_clipped_and_then_edited_with_the_other_attachments(env):
+    from pathlib import Path
+
+    from clippy.web import presets
+
+    client, runner, storage = env
+    cid = client.post("/api/chats").json()["id"]
+    sample = Path(__file__).parent / "sample" / "sample.mp4"
+    video = client.put(f"/api/chats/{cid}/assets?name=My trip.mp4", content=sample.read_bytes()).json()
+    logo = client.put(f"/api/chats/{cid}/assets?name=logo.png", content=png_bytes()).json()
+    assert video["kind"] == "video"
+    edit = next(p for p in presets.PRESETS if p.edit)
+    text = f"{edit.marker} Edit my video\nMake 1 clip, 15-90 seconds.\nExtra wishes: logo top right\nVideo: "
+    FakeLLM.reply = {"reply": "On it.", "actions": [{"type": "generate", "n": 1}]}
+    client.post(f"/api/chats/{cid}/messages", json={"text": text, "attachments": [video["id"], logo["id"]]})
+    job = runner.pending[0].payload
+    assert Path(job["url"]).parent == storage.chat_assets(cid) and job["title"] == "My trip"
+    assert job["then_edit"]["attachments"] == [logo["id"]] and "logo top right" in job["then_edit"]["request"]
+    run_pending(runner)
+    assert [c["version"] for c in runner.db.current_clips(cid)] == [2]
+
+    FakeLLM.reply = {"reply": "On it.", "actions": [{"type": "generate", "n": 1}]}
+    other = client.post("/api/chats").json()["id"]
+    client.post(f"/api/chats/{other}/messages", json={"text": "clip this", "attachments": [video["id"]]})
+    assert not runner.pending

@@ -270,9 +270,10 @@ class GenerateJob(JobHandler):
             log("stream: facecam on top, game below")
             chat_opts["layout"] = "stream"
             ctx.db.update_chat(chat["id"], options=chat_opts)
-        updates = {"video_title": proj.title, "video_id": proj.video_stem}
+        title = p.get("title") or proj.title
+        updates = {"video_title": title, "video_id": proj.video_stem}
         if chat["title"] in (NEW_TITLE, "", PLACEHOLDER_TITLE) or chat["title"].startswith("http"):
-            updates["title"] = proj.title[:80]
+            updates["title"] = title[:80]
         ctx.runner.hub.publish(chat["id"], {"type": "chat", "chat": ctx.db.update_chat(chat["id"], **updates)})
         existing = [Clip.from_dict(c["clip"]) for c in ctx.current_clips()] if same_video else []
         clips = proj.select(n=p.get("n"), exclude=existing, instructions=p.get("instructions") or "",
@@ -294,7 +295,15 @@ class GenerateJob(JobHandler):
             self.post_new(ctx, first, p["post"])
             p["posted"] = True
             ctx.remember()
-        return tx("done.generate", n=n, title=proj.title)
+        if p.get("then_edit") and not p.get("edit_queued"):
+            numbers = [c["number"] for c in ctx.current_clips() if c["number"] >= first]
+            if numbers:
+                ctx.runner.submit(chat["id"], "edit", {"type": "edit", "clips": numbers, **p["then_edit"]})
+            p["edit_queued"] = True
+            ctx.remember()
+            if numbers:
+                return tx("done.generate_then_edit", n=n, title=title)
+        return tx("done.generate", n=n, title=title)
 
     @staticmethod
     def post_new(ctx, first: int, post: dict) -> None:

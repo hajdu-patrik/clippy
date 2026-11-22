@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from clippy import i18n, playbook
 from clippy.captions import CaptionStyle, build_ass
 from clippy.editing.planner import EditPlanner, EditRequest, PromptFormatter
@@ -72,9 +74,12 @@ def test_post_text_is_ready_to_paste_in_the_clip_language():
     assert "Pinned comment: A teljes videó: https://youtu.be/x" in notes
     assert "Opening text idea (question): Erről senki nem beszél" in notes
     assert "B opening text idea (A/B test): Tíz év hazugság" in notes and "read out of context" in notes
-    english = post_text(Clip(0, 20, 50, hook="Nobody tells you this", title="Why he quit"), "u",
+    english = post_text(Clip(0, 20, 50, hook="Nobody tells you this", title="Why he quit"), "https://u.example/v",
                         {"duration_out": 20, "dead_air_removed": 0})
-    assert "Pinned comment: Full video: u" in english and "B opening text" not in english
+    assert "Pinned comment: Full video: https://u.example/v" in english and "B opening text" not in english
+    own = post_text(Clip(0, 20, 50, title="My video"), str(Path("chats") / "7" / "assets" / "a1b2.mp4"),
+                    {"duration_out": 20, "dead_air_removed": 0})
+    assert "Pinned comment" not in own and "Original" not in own and "Source: a1b2.mp4" in own
     whole = post_text(Clip(0, 15, 50, title="Why he quit"), "u", {"duration_out": 15, "dead_air_removed": 0})
     assert "Opening text" not in whole
     teaser = Clip(0, 20, 50, title="GTA 6 Is Watching You", topic="GTA 6", question="Which detail surprised you?",

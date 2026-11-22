@@ -360,7 +360,7 @@ def test_the_chat_clips_the_latest_stream_with_the_gameplay_preset(web, monkeypa
     payload = job.payload
     assert payload["url"] == "https://kick.com/n3on/videos/abc" and payload["n"] == 4
     assert payload["options"]["layout"] == "stream" and payload["options"]["audio"] == "natural"
-    assert payload["instructions"].startswith("Gameplay or stream.")
+    assert payload["instructions"].startswith("Facecam stream.")
     assert db.get_chat(cid)["title"] == "N3on x Twitchcon"
 
 

@@ -49,7 +49,7 @@ def test_watch_settings_and_the_job_they_start():
     assert settings["every"] == 60 and settings["n"] == 12 and settings["slots"] == ["20:00"]
     payload = generate_payload("https://www.twitch.tv/videos/1", settings)
     assert payload["n"] == 12 and payload["options"]["layout"] == "stream" and "n" not in payload["options"]
-    assert payload["instructions"].startswith("Gameplay or stream.") and "clutch" in payload["instructions"]
+    assert payload["instructions"].startswith("Facecam stream.") and "clutch" in payload["instructions"]
     assert payload["autopost"] == {"platforms": ["tiktok"], "options": settings["options"], "slots": ["20:00"]}
     plain = generate_payload("https://youtu.be/x", watch_settings())
     assert plain["n"] == 5 and plain["options"] == {} and "autopost" not in plain

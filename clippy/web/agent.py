@@ -234,9 +234,10 @@ class ActionValidator:
     """Turns the LLM's proposal into safe actions. The LLM also sees transcript text from the video, so anything
     destructive or outward-reaching must be backed by the user's own message, not just by the model."""
 
-    def __init__(self, numbers: set[int], chat: dict, message: str, attachments: tuple[str, ...] = ()):
+    def __init__(self, numbers: set[int], chat: dict, message: str, attachments: tuple[str, ...] = (),
+                 videos: tuple[str, ...] = ()):
         self.numbers, self.chat, self.message = numbers, chat, message or ""
-        self.attachments = tuple(attachments)
+        self.attachments, self.videos = tuple(attachments), tuple(videos)
         self.urls = URL_RE.findall(self.message)
         self.notes: list[str] = []
 
@@ -265,15 +266,22 @@ class ActionValidator:
         return actions
 
     def _generate(self, raw: dict, opts: dict) -> dict | None:
+        """A link from the user's message, or else the longest video attached to it. The other attachments (pictures,
+        intro, outro, music, a second video for B-roll) and an edit preset's wishes go on the new clips afterwards."""
         url = str(raw.get("url") or "").strip()
         if url not in self.urls:
             url = self.urls[0] if self.urls else ""
-        if not url:
+        source = {"url": url} if url else {"asset": self.videos[0]} if self.videos else None
+        if source is None:
             if latest_action(self.message) is None:
                 self.note("note.no_link")
             return None
-        return {"type": "generate", "url": url, "n": _coerce("n", raw.get("n") or opts.pop("n", 5)),
-                "instructions": _coerce("instructions", raw.get("instructions") or ""), "options": opts}
+        action = {"type": "generate", **source, "n": _coerce("n", raw.get("n") or opts.pop("n", 5)),
+                  "instructions": _coerce("instructions", raw.get("instructions") or ""), "options": opts}
+        extras = [a for a in self.attachments if a != source.get("asset")]
+        if extras or presets.edits_after(self.message):
+            action["then_edit"] = {"request": presets.edit_request(self.message), "attachments": extras}
+        return action
 
     def _more(self, raw: dict, opts: dict) -> dict | None:
         if not self.chat.get("source"):
@@ -292,7 +300,7 @@ class ActionValidator:
             numbers = sorted({n for n in (self._clip(v) for v in target) if n is not None})
         if not numbers:
             return None
-        action = {"type": "edit", "clips": numbers, "request": self.message[:1000]}
+        action = {"type": "edit", "clips": numbers, "request": presets.edit_request(self.message)}
         if self.attachments:
             action["attachments"] = list(self.attachments)
         return action
@@ -472,7 +480,8 @@ def run_agent(llm, chat: dict, clips: list[dict], history: list[dict], message: 
              for m in history[-10:] if m.get("kind") in ("text", "error") and m.get("content")]
     reply_rule = "Write \"reply\" in English, whatever language the user writes in."
     attached = ("\nATTACHED TO THIS MESSAGE: " + ", ".join(f"{a['name']} ({a['kind']})" for a in attachments)
-                + ", usable in edits (music, logo, intro / outro, LUT)") if attachments else ""
+                + ", usable in edits (music, logo, intro / outro, LUT); with no link, the longest attached video is "
+                  "the source of a generate") if attachments else ""
     prompt = (f"STATE:\n{build_state(chat, clips, excerpt, lessons)}\n\nCONVERSATION SO FAR:\n" + ("\n".join(turns) or "(empty)")
               + f"\n\nNEW USER MESSAGE:\n{message}{attached}\n\n{reply_rule}")
     fast = fast_path(message, chat, bool(clips))
@@ -484,7 +493,10 @@ def run_agent(llm, chat: dict, clips: list[dict], history: list[dict], message: 
     except Exception as exc:
         if not fast:
             return {"reply": i18n.t("error.llm_unreachable", error=exc), "actions": [], "notes": []}
-    validator = ActionValidator({c["number"] for c in clips}, chat, message, tuple(a["id"] for a in attachments))
+    videos = tuple(a["id"] for a in sorted((a for a in attachments if a.get("kind") == "video"),
+                                           key=lambda a: -float(a.get("duration") or 0)))
+    validator = ActionValidator({c["number"] for c in clips}, chat, message, tuple(a["id"] for a in attachments),
+                                videos)
     actions = validator.validate(raw_actions)
     if fast and not any(a["type"] == fast["type"] for a in actions):
         actions = [a for a in actions if a["type"] not in ("generate", "watch", "latest_stream", "daily")]

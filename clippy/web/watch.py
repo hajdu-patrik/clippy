@@ -11,7 +11,7 @@ from ..download import latest_uploads, require_public_url
 from ..tools import ClippyError, log
 from . import cover_retry, results, schedule
 from .texts import NEW_TITLE, english, tx
-from .presets import PRESETS
+from .presets import PRESETS, WATCH_PRESETS
 
 TICK = 30.0
 MEASURE_EVERY = 600.0
@@ -22,7 +22,7 @@ DEFAULT_EVERY = 60
 LIST_LIMIT = 10
 NEW_PER_CHECK = 3
 SEEN_KEEP = 300
-PRESET_KEYS = tuple(p.key for p in PRESETS)
+PRESET_KEYS = tuple(p.key for p in WATCH_PRESETS)
 
 
 def watch_settings(n: int = 0, preset: str = "", instructions: str = "", every: int = DEFAULT_EVERY,

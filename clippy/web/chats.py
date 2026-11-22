@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Callable
 
 from ..concurrency import SOURCE
 from .. import i18n, streamers
 from ..download import require_public_url
-from ..editing.assets import Asset, AssetService
+from ..editing.assets import Asset, AssetKind, AssetService
 from ..editing.repository import TimelineRepository
 from ..llm import LLM
 from ..publish.registry import LABELS, POSTING
@@ -194,7 +195,9 @@ class ChatService:
             self.library.unpublish(chat, action["clip"])
             self.hub.publish(chat["id"], {"type": "deleted", "number": action["clip"]})
             return []
-        if kind == "generate":
+        if kind == "generate" and action.get("asset"):
+            self._attached_source(chat["id"], action)
+        elif kind == "generate":
             require_public_url(action["url"])
         if kind == "publish":
             return self._publish_jobs(action)
@@ -210,6 +213,14 @@ class ChatService:
                                                                   current.get("platforms") or ()))
             return []
         return [(kind, action)]
+
+    def _attached_source(self, chat_id: int, action: dict) -> None:
+        """A video the user attached to this chat becomes the source: its file in the chat's own folder, found here by
+        its id, so no message or model reply can point a job at any other file."""
+        asset = self.assets.index(chat_id).find(action.pop("asset"))
+        if asset is None or asset.kind != AssetKind.VIDEO or not asset.path.is_file():
+            raise ClippyError(key="note.no_link")
+        action["url"], action["title"] = str(asset.path), Path(asset.name).stem[:80]
 
     def _latest_stream_job(self, chat: dict, action: dict) -> dict:
         """The streamer's newest finished stream, clipped with the gameplay preset; `action` keeps what was picked."""

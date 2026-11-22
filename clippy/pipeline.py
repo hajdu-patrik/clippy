@@ -128,19 +128,21 @@ def post_text(clip: Clip, source: str, info: dict, links: list[str] | tuple = ()
                 else i18n.t(key, **params))
 
     question = f"{clip.question} {tr('post.comments')}" if clip.question else ""
-    blocks = (clip.description or clip.title, question, tr("post.original", url=source) if source else "",
+    link = source if is_url(source) else ""
+    blocks = (clip.description or clip.title, question, tr("post.original", url=link) if link else "",
               "\n".join(link_lines(links, clip.topic, tr)), " ".join(clip.hashtags))
     caption = "\n\n".join(x for x in blocks if x)
     kind = f" ({tr('hooktype.' + clip.hook_type)})" if clip.hook_type else ""
     notes = [f"{tr('post.title')}: {clip.title}"]
     if clip.alt_title:
         notes.append(f"{tr('post.alt_title')}: {clip.alt_title}")
-    notes.append(f"{tr('post.pinned')}: {tr('post.full_video', url=source)}")
+    if link:
+        notes.append(f"{tr('post.pinned')}: {tr('post.full_video', url=link)}")
     if clip.hook:
         notes.append(f"{tr('post.hook')}{kind}: {clip.hook}")
     if clip.alt_hook:
         notes.append(f"{tr('post.alt_hook')}: {clip.alt_hook}")
-    notes += [f"{tr('post.source')}: {source}  ({fmt_ts(clip.start)}-{fmt_ts(clip.end)})",
+    notes += [f"{tr('post.source')}: {link or Path(source).name}  ({fmt_ts(clip.start)}-{fmt_ts(clip.end)})",
               tr("post.length", s=f"{info['duration_out']:.1f}", removed=f"{info['dead_air_removed']:.1f}"),
               f"{tr('post.score')}: {clip.score:.0f}", f"{tr('post.why')}: {clip.reason}"]
     if clip.risks:
