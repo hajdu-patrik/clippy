@@ -628,3 +628,39 @@ def test_an_attached_video_is_clipped_and_then_edited_with_the_other_attachments
     other = client.post("/api/chats").json()["id"]
     client.post(f"/api/chats/{other}/messages", json={"text": "clip this", "attachments": [video["id"]]})
     assert not runner.pending
+
+
+def test_a_clipping_campaign_clips_its_sources_and_pays_its_posts_by_views(env):
+    from clippy.web.campaigns import payout
+
+    client, runner, storage = env
+    assert payout(25_000, 2.0, 0) == 50.0 and payout(25_000, 2.0, 30) == 30.0 and payout(-5, 2.0, 0) == 0.0
+    body = {"name": "Spring push", "client": "xQc", "brief": "only the GTA rage moments", "preset": "nope",
+            "cpm": 1.5, "cap": 100, "sources": ["https://www.twitch.tv/xqc/clip/A", "http://127.0.0.1/x",
+                                               "https://www.twitch.tv/xqc/clip/A", "https://www.twitch.tv/xqc/clip/B"]}
+    made = client.post("/api/campaigns", json=body).json()
+    assert made["preset"] == "gameplay" and made["sources"] == ["https://www.twitch.tv/xqc/clip/A",
+                                                                "https://www.twitch.tv/xqc/clip/B"]
+    out = client.post(f"/api/campaigns/{made['id']}/clip").json()
+    assert out["started"] == 2 and len(runner.pending) == 2
+    assert "only the GTA rage moments" in runner.pending[0].payload["instructions"]
+    assert client.post(f"/api/campaigns/{made['id']}/clip").json()["started"] == 0
+
+    client.post(f"/api/campaigns/{made['id']}/posts", json={"clipper": "anna", "url": "https://youtube.com/shorts/x1"})
+    dup = client.post(f"/api/campaigns/{made['id']}/posts", json={"clipper": "bob", "url": "https://youtube.com/shorts/x1"})
+    assert dup.status_code == 400 and dup.json()["detail"]["key"] == "error.post_known"
+    client.post(f"/api/campaigns/{made['id']}/posts", json={"clipper": "bob", "url": "https://youtube.com/shorts/x2"})
+    counts = {"https://youtube.com/shorts/x1": 40_000}
+
+    def counter(url):
+        if url not in counts:
+            raise RuntimeError("blocked")
+        return counts[url]
+
+    client.app.state.campaigns.counter = counter
+    view = client.post(f"/api/campaigns/{made['id']}/refresh").json()
+    assert view["views"] == 40_000 and view["owed"] == 60.0
+    assert view["posts"][1]["error_t"]["key"] == "error.views_unread"
+    assert client.delete(f"/api/campaigns/{made['id']}/posts/{view['posts'][1]['id']}").json() == {"ok": True}
+    assert client.delete(f"/api/campaigns/{made['id']}").json() == {"ok": True}
+    assert client.get("/api/campaigns").json()["campaigns"] == []

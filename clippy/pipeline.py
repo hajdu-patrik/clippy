@@ -63,6 +63,7 @@ class Options:
     facecam: tuple[int, int, int, int] | None = None
     cta: str = ""
     hook: bool = False
+    title_bar: bool = False
     highlight: str = "yellow"
     uppercase: bool = True
     font: str = "Arial Black"
@@ -420,6 +421,8 @@ class Project:
         o = self.opts.merged(overrides)
         dest.mkdir(parents=True, exist_ok=True)
         settings = o.render_settings(clip.hook, self.audio_source(o.duck), self.caption_translator(o.captions, o))
+        if o.title_bar:
+            settings = replace(settings, title_bar=clip.title)
         analysis = self._prefetched(clip)
         out_file = dest / f"{name}.mp4"
         work = self.storage.scratch(self.scratch_root)

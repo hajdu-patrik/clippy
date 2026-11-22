@@ -6,6 +6,11 @@ change, what changed rather than how; dates are ISO 8601.
 ## [Unreleased]
 
 ### Added
+- Campaigns (sidebar): clipping campaigns for a streamer, a podcast or a brand, with a brief, a rate per 1,000 views,
+  a cap per post and the moments to clip; Clippy clips every source with the brief, collects the clippers' post links,
+  reads their public views and works out the payout.
+- Stream clips cut to the streamer's camera full screen for a moment at the biggest reactions.
+- An optional title bar: the clip's title in a black box at the top for the whole clip (only when asked).
 - ✂️ Edit my video, a fifth ready-made prompt: attach your own video (or give a link) with pictures, a logo, an intro,
   an outro or music, write how to edit it, and Clippy cuts the clip and then puts your edits on it as a new version.
 - A video attached to a message is clipped when the message has no link; the other attachments and an edit prompt's
@@ -109,6 +114,9 @@ change, what changed rather than how; dates are ISO 8601.
   profile / channel / playlist link, no video in the post, no sound, each with what helps.
 
 ### Changed
+- A stream clip follows the stream's scene switches: when the camera is not where it was found, the shot follows the
+  face or shows the whole frame; without any facecam the whole frame sits on a blurred copy of itself.
+- Captions already burned into a video are found, and Clippy leaves its own out instead of doubling them.
 - 🎮 Facecam stream (was Gameplay & stream): 15-60 s clips with the reaction on screen in the first second, the
   camera on the top two fifths and English captions on the line above the game.
 - 🎙️ Podcast clips follow the short-form podcast style: 4 clips of 20-45 s, the first sentence as the hook, the

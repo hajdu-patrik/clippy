@@ -28,7 +28,68 @@ def max_zoom(an: ClipAnalysis) -> float:
     return max(1.0, min(1.4, an.height / 873.0))
 
 
-def _shot_modes(an: ClipAnalysis, layout: str) -> list[tuple[int, int, str]]:
+CAM_PRESENCE = 0.3
+REACTION_GAP = 8.0
+REACTION_EVERY = 15.0
+REACTION_MAX = 3
+REACTION_LEAD, REACTION_HOLD = 0.2, 1.2
+REACTION_EDGE = 1.5
+REACTION_RISE_DB = 6.0
+
+
+def in_box(f, box: tuple[float, float, float, float]) -> bool:
+    x, y, w, h = box
+    return x <= f.cx <= x + w and y <= f.cy <= y + h
+
+
+def _stream_mode(an: ClipAnalysis, s: int, e: int, facecam) -> str:
+    """A stream shot keeps the split while the streamer's camera is where it was found; when the stream switches
+    scene (the camera full screen, a cutscene, a "be right back" card) the shot follows the face or shows the whole
+    frame instead of a crop of the wrong corner."""
+    if facecam is None:
+        return "stream"
+    with_cam = sum(any(in_box(f, facecam) for f in an.faces[i]) for i in range(s, e))
+    if with_cam >= CAM_PRESENCE * (e - s):
+        return "stream"
+    sizes = [max(f.h for f in an.faces[i]) for i in range(s, e) if an.faces[i]]
+    if len(sizes) >= 0.5 * (e - s) and float(np.median(sizes)) >= 0.07:
+        return "crop"
+    return "fit"
+
+
+def reaction_windows(an: ClipAnalysis, env_db, hop: float, facecam) -> list[tuple[int, int]]:
+    """The streamer's biggest reactions: the loudest moments while the face in the camera has its mouth open, at
+    least REACTION_GAP apart, one per REACTION_EVERY seconds (at most REACTION_MAX), never in the first or last
+    moments. Each becomes a short window of frames that shows the camera full screen."""
+    env = np.asarray(env_db if env_db is not None else [], dtype=float)
+    if facecam is None or len(env) < 10 or an.n_frames < an.fps * 4:
+        return []
+    k = max(1, int(0.25 / hop))
+    env = np.convolve(env, np.ones(k) / k, mode="same")
+    times = np.arange(an.n_frames) / an.fps
+    loud = env[np.minimum((times / hop).astype(int), len(env) - 1)]
+    mouth = np.array([max((f.mouth for f in an.faces[i] if in_box(f, facecam)), default=0.0)
+                      for i in range(an.n_frames)])
+    if not mouth.any():
+        return []
+    open_mouth = mouth >= np.percentile(mouth[mouth > 0], 60)
+    floor = float(np.median(loud)) + REACTION_RISE_DB
+    edge = int(REACTION_EDGE * an.fps)
+    want = min(REACTION_MAX, max(1, int(an.n_frames / an.fps / REACTION_EVERY)))
+    picked: list[int] = []
+    for i in np.argsort(-loud):
+        i = int(i)
+        if loud[i] < floor or len(picked) >= want:
+            break
+        if i < edge or i > an.n_frames - edge or not open_mouth[i]:
+            continue
+        if all(abs(i - p) >= REACTION_GAP * an.fps for p in picked):
+            picked.append(i)
+    return [(max(0, p - int(REACTION_LEAD * an.fps)), min(an.n_frames, p + int(REACTION_HOLD * an.fps)))
+            for p in sorted(picked)]
+
+
+def _shot_modes(an: ClipAnalysis, layout: str, facecam=None) -> list[tuple[int, int, str]]:
     bounds = an.cuts + [an.n_frames]
     shots = []
     for s, e in zip(bounds[:-1], bounds[1:]):
@@ -37,7 +98,7 @@ def _shot_modes(an: ClipAnalysis, layout: str) -> list[tuple[int, int, str]]:
         if layout in ("blur", "fit"):
             mode = "fit"
         elif layout == "stream":
-            mode = "stream"
+            mode = _stream_mode(an, s, e, facecam)
         elif layout == "center":
             mode = "center"
         elif layout == "face":
@@ -164,9 +225,11 @@ def _camera(tx: np.ndarray, ty: np.ndarray, switches: set[int], fps: float, dz: 
 
 
 def plan_frames(an: ClipAnalysis, layout: str = "auto", join_frames=(), sentence_frames=(),
-                punch: bool = True) -> tuple[list[FramePlan], list[tuple[int, int, str]]]:
+                punch: bool = True, facecam=None, reactions=()) -> tuple[list[FramePlan], list[tuple[int, int, str]]]:
+    """`facecam` and `reactions` (frame windows) only matter for the stream layout: its shots follow scene switches,
+    and its reactions show the streamer's camera full screen."""
     fps = an.fps
-    shots = _shot_modes(an, layout)
+    shots = _shot_modes(an, layout, facecam)
     plans: list[FramePlan] = [FramePlan("fit")] * an.n_frames
     zmax = max_zoom(an)
     joins, sents = set(join_frames), set(sentence_frames)
@@ -174,6 +237,10 @@ def plan_frames(an: ClipAnalysis, layout: str = "auto", join_frames=(), sentence
         if mode in ("fit", "square", "stream"):
             for i in range(s, e):
                 plans[i] = FramePlan(mode)
+            if mode == "stream":
+                for a, b in reactions:
+                    for i in range(max(a, s), min(b, e)):
+                        plans[i] = FramePlan("cam")
             continue
 
         face_h = [max(f.h for f in an.faces[i]) for i in range(s, e) if an.faces[i]]

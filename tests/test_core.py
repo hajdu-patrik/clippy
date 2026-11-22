@@ -298,3 +298,75 @@ def test_prepare_fonts_only_reports_a_font_that_is_really_missing(tmp_path, monk
     monkeypatch.setattr(render.shutil, "copyfile", failed)
     render.prepare_fonts(folder)
     assert len(logged) == 1 and "caption.ttf skipped" in logged[0]
+
+
+def _scenes(kind: str, x: int = 320) -> list:
+    from PIL import Image, ImageDraw, ImageFont
+
+    from clippy.render import system_fonts
+
+    rng = np.random.default_rng(1)
+    font = ImageFont.truetype(str(system_fonts()[0]), 34)
+    words = ["THAT WAS INSANE", "NO WAY BRO", "WATCH THIS", "HE DID IT", "OH MY GOD", "LETS GO", "WHAT IS THAT",
+             "RUN RUN", "NOT AGAIN", "CLUTCH"]
+    out = []
+    for i, word in enumerate(words):
+        im = Image.fromarray((rng.random((360, 640, 3)) * 120 + 40).astype(np.uint8))
+        text = {"captions": word, "hud": "HP 100  AMMO 30"}.get(kind, "")
+        if text:
+            ImageDraw.Draw(im).text((x, 300), text, font=font, fill="white", stroke_width=3, stroke_fill="black",
+                                    anchor="mm")
+        out.append(np.asarray(im))
+    return out
+
+
+def test_captions_burned_into_the_source_are_found_but_a_hud_or_a_side_chat_is_not():
+    from clippy.burned import caption_zone
+
+    assert caption_zone(_scenes("captions")) is not None
+    assert caption_zone(_scenes("hud")) is None and caption_zone(_scenes("none")) is None
+    assert caption_zone(_scenes("captions", x=110)) is None
+
+
+def test_a_stream_shot_follows_the_scene_when_the_camera_is_not_where_it_was_found():
+    from clippy.director import plan_frames
+
+    cam = (0.75, 0.05, 0.2, 0.2)
+
+    def faces(i):
+        if i < 100:
+            return [FaceObs(0.82, 0.1, 0.05, 0.09, 0.9, 0.12)]
+        return [FaceObs(0.35, 0.2, 0.3, 0.5, 0.9, 0.35)]
+
+    an = _fake_analysis(200, faces, cuts=[0, 100])
+    plans, shots = plan_frames(an, "stream", punch=False, facecam=cam)
+    assert [m for _, _, m in shots] == ["stream", "crop"]
+    assert plans[50].mode == "stream" and plans[150].mode == "crop"
+
+
+def test_the_loudest_reaction_shows_the_camera_full_screen():
+    from clippy.director import plan_frames, reaction_windows
+
+    cam = (0.75, 0.05, 0.2, 0.2)
+    an = _fake_analysis(750, lambda i: [FaceObs(0.82, 0.1, 0.05, 0.09, 0.9, 0.12, mouth=0.6 if 300 <= i < 330 else 0.1)])
+    env = np.full(3000, -40.0)
+    env[1200:1300] = -10.0
+    windows = reaction_windows(an, env, 0.01, cam)
+    assert len(windows) == 1 and 300 <= windows[0][0] < 330 < windows[0][1]
+    assert reaction_windows(an, env, 0.01, None) == [] and reaction_windows(an, np.full(3000, -40.0), 0.01, cam) == []
+    plans, _ = plan_frames(an, "stream", punch=False, facecam=cam, reactions=windows)
+    assert plans[windows[0][0] + 1].mode == "cam" and plans[100].mode == "stream"
+
+
+def test_the_camera_compositor_and_the_title_bar():
+    from clippy.compositing import OUT_H, OUT_W, CamCompositor
+    from clippy.director import FramePlan
+    from clippy.render import title_bar
+
+    frame = np.zeros((1080, 1920, 3), np.uint8)
+    frame[54:270, 1440:1824] = 200
+    out = CamCompositor((0.75, 0.05, 0.2, 0.2)).compose(frame, FramePlan("cam"))
+    assert out.shape == (OUT_H, OUT_W, 3) and out[OUT_H // 2, OUT_W // 2].mean() > 150
+    assert title_bar("", 10, True) == ()
+    [bar] = title_bar("He did it", 12.0, True)
+    assert bar.end == 12.0 and bar.y < 400 and bar.box

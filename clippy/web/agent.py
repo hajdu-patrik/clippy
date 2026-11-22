@@ -19,6 +19,7 @@ OPTION_SPEC: dict[str, tuple] = {
     "max_len": ("float", 10, 180),
     "cta": ("str", 80),
     "hook": ("bool",),
+    "title_bar": ("bool",),
     "highlight": ("enum", tuple(COLORS)),
     "uppercase": ("bool",),
     "font": ("str", 40),
@@ -32,7 +33,7 @@ OPTION_SPEC: dict[str, tuple] = {
     "vocab": ("str", 200),
     "instructions": ("str", 400),
 }
-RENDER_KEYS = {"captions", "cta", "hook", "highlight", "uppercase", "font", "layout", "tighten", "punch", "audio", "duck"}
+RENDER_KEYS = {"captions", "cta", "hook", "title_bar", "highlight", "uppercase", "font", "layout", "tighten", "punch", "audio", "duck"}
 
 SYSTEM_PROMPT = """You are the assistant of "Clippy", a local app that cuts videos (YouTube, TikTok, Instagram, Twitch, Kick, Facebook… or long podcasts) into
 vertical short clips (TikTok, YouTube Shorts, Reels). A new clip is only the moment, framed vertically, with
@@ -75,7 +76,8 @@ Actions:
 
 options (all optional, for generate / more):
   n (1-12), min_len / max_len (clip length in seconds), cta (end text, max 80 chars, "" = none; only when asked),
-  hook (true/false: burn the suggested opening text over the first 3 s; default false, only when asked), highlight ("yellow","green","cyan","red","white"), uppercase (true/false),
+  hook (true/false: burn the suggested opening text over the first 3 s; default false, only when asked),
+  title_bar (true/false: the clip's title in a black box at the top for the whole clip; only when asked), highlight ("yellow","green","cyan","red","white"), uppercase (true/false),
   layout ("auto","face","center","blur","stream"), tighten (true/false: cut dead air), punch (true/false: zoom on cuts; default false),
   audio ("voice","natural"), duck (0-15 dB music lowering under speech), lang (SPOKEN language of the video: "hu" or "en"; "auto" = detect),
   captions (language of the captions + hook on the video: "hu" or "en"; "auto" = same as spoken; a different one is

@@ -15,11 +15,12 @@ from typing import Callable
 import numpy as np
 
 from .concurrency import RENDER
+from . import burned
 from . import audio as aud
 from .analysis import ClipAnalysis, analyze, decode_cmd
-from .captions import CaptionStyle, write_ass
+from .captions import CaptionStyle, TextEvent, write_ass
 from .compositing import OUT_H, OUT_W, CropCompositor, LayoutCompositor, Prebuilt, StreamCompositor
-from .director import guess_facecam, plan_frames
+from .director import guess_facecam, plan_frames, reaction_windows
 from .edit import EditPlan, build_edit
 from .tools import (ROOT, ClippyError, atomic_path, ffmpeg_features, ffmpeg_path, fps_rational, log, probe_video,
                     read_exact, report, report_span)
@@ -53,6 +54,21 @@ class RenderSettings:
     exclude: tuple[tuple[float, float], ...] = ()
     mezzanine: bool = False
     base_out: Path | None = None
+    reactions: bool = True
+    skip_burned: bool = True
+    title_bar: str = ""
+
+
+TITLE_BAR_Y, TITLE_BAR_STREAM_Y = 250, 120
+
+
+def title_bar(text: str, duration: float, stream: bool) -> tuple[TextEvent, ...]:
+    """The clip's title kept on screen for the whole clip, in a black box near the top (over the camera's top edge in
+    the stream layout)."""
+    if not text.strip():
+        return ()
+    return (TextEvent(text, 0.0, duration, OUT_W / 2, TITLE_BAR_STREAM_Y if stream else TITLE_BAR_Y, size=60,
+                      box=True, uppercase=True, width=0.9, animation="none"),)
 
 
 MAX_RATE, BUFFER = "18M", "36M"
@@ -137,23 +153,28 @@ class ClipRenderer:
         self._graph: str | None = None
 
     def render(self, out_file: Path, work: Path, fonts: Path, analysis: ClipAnalysis | None = None) -> dict:
-        edit = build_edit(self.words, self.start, self.end, self.fps,
-                          env=aud.envelope(self.video, self.start, self.span), tighten=self.s.tighten,
+        env = aud.envelope(self.video, self.start, self.span)
+        edit = build_edit(self.words, self.start, self.end, self.fps, env=env, tighten=self.s.tighten,
                           exclude=self.s.exclude)
         with report_span(0.0, 0.3):
             an = analysis or analyze(self.video, self.start, self.span)
         facecam = self._facecam(an) if self.s.layout == "stream" else None
-        layout = self.s.layout if facecam or self.s.layout != "stream" else "auto"
-        plans, shots = plan_frames(an, layout, edit.join_frames, edit.sentence_frames, punch=self.s.punch)
+        layout = self.s.layout if facecam or self.s.layout != "stream" else "blur"
+        reactions = reaction_windows(an, env, aud.HOP, facecam) if self.s.reactions else []
+        plans, shots = plan_frames(an, layout, edit.join_frames, edit.sentence_frames, punch=self.s.punch,
+                                   facecam=facecam, reactions=reactions)
         prebuilt = facecam is not None and bool(plans) and all(p.mode == "stream" for p in plans)
         compositor = Prebuilt() if prebuilt else LayoutCompositor(facecam)
         self._graph = StreamCompositor(facecam).graph(self.meta["width"], self.meta["height"]) if prebuilt else None
         words, hook = self.s.translate(edit.words, self.s.hook) if self.s.translate else (edit.words, self.s.hook)
+        if not self.s.mezzanine and self.s.skip_burned and burned.has_captions(self.video, self.start, self.span):
+            words = []
         if not self.s.mezzanine:
             style = self.s.style or CaptionStyle()
             if facecam is not None:
                 style = replace(style, margin_v=StreamCompositor.caption_margin())
-            write_ass(work / "captions.ass", words, 0.0, edit.duration, style, hook=hook, cta=self.s.cta)
+            write_ass(work / "captions.ass", words, 0.0, edit.duration, style, hook=hook, cta=self.s.cta,
+                      texts=title_bar(self.s.title_bar, edit.duration, facecam is not None))
         audio_src = self.s.audio_src or self.video
         measured = aud.measure(audio_src, self.start, self.span, edit.intervals, self.s.audio_mode)
         encoder = Encoder.choose(self.s.encoder)
@@ -192,15 +213,15 @@ class ClipRenderer:
                 "intervals": [(round(self.start + a, 4), round(self.start + b, 4)) for a, b in edit.intervals]}
 
     def _facecam(self, an: ClipAnalysis) -> tuple[float, float, float, float] | None:
-        """The streamer's camera: given, or found as a face that stays put. Without one the stream layout becomes
-        the automatic one (the camera follows the faces, other shots show the whole frame)."""
+        """The streamer's camera: given, or found as a face that stays put. Without one the stream layout shows the
+        whole frame on a blurred copy of itself."""
         if self.s.facecam:
             x, y, w, h = self.s.facecam
             W, H = self.meta["width"], self.meta["height"]
             return x / W, y / H, w / W, h / H
         cam = guess_facecam(an)
         if not cam:
-            log("[render] no facecam found: the camera follows the action instead")
+            log("[render] no facecam found: the whole frame on a blurred background instead")
         return cam or None
 
     def _needed_height(self, plans, facecam) -> float:

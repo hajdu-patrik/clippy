@@ -121,10 +121,15 @@ you get; you can also write your own prompt from scratch.
 | Button | Clips | Look and sound | Picks |
 | --- | --- | --- | --- |
 | 🎙️ Podcast | 4 × 20-45 s | follows the speaker with zooms on cuts, opening text in a black box on the first 3 s, captions with the key word in yellow, speech tuned, dead air out, no watermark | standalone opinions, surprising facts, stories with a payoff, banter, confessions; the first sentence is the hook |
-| 🎮 Facecam stream | 5 × 15-60 s | camera on the top two fifths, game on the three fifths below, a thin black line between them, English captions on the line, natural sound, quiet parts kept | clutch plays, wins, fails, twists, loud reactions, jokes with chat; the reaction is on screen in the first second |
+| 🎮 Facecam stream | 5 × 15-60 s | camera on the top two fifths, game on the three fifths below, a thin black line between them, English captions on the line, the biggest reactions cut to the camera full screen, scene switches followed, a blurred full frame without a facecam, captions already in the video not doubled, a title bar on request, natural sound, quiet parts kept | clutch plays, wins, fails, twists, loud reactions, jokes with chat; the reaction is on screen in the first second |
 | 📣 Video & promo | 4 × 15-30 s | follows the speaker, speech tuned, opening text and a CTA | the main benefit, a demo, a strong claim or number, a testimonial (hook → proof → CTA) |
 | ⚡ Quick shorts | 3 × 10-25 s | automatic, dead air out | jokes, punchlines, surprising lines and reactions |
 | ✂️ Edit my video | 1 × 15-90 s | your own video attached with the paperclip (or a link), plus pictures, logo, intro, outro or music; the clip is cut first, then your edits go on it as a new version | the part that best fits your wishes |
+
+**Campaigns.** *Campaigns* in the sidebar runs clipping campaigns the way a clipping agency does: a client (a
+streamer, a podcast or a brand), a brief, a rate per 1,000 views with a cap per post, and the moments to clip.
+*Clip the sources* makes a chat for every source with the brief as its picking rules; add the clippers' post links,
+and *Read views* reads their public view counts and works out what each post and the whole campaign owe.
 
 **Post text.** Every clip comes with a ready-to-paste post (*Copy text* on the card, and the `.txt` file next to
 the video): a one-line teaser ending with an emoji, the comment question, the link of the original video, your own

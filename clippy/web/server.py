@@ -43,7 +43,9 @@ from .media import MediaStore
 from .lan import Lan, is_loopback
 from .security import SecurityMiddleware
 from .kit import StyleKit
+from .campaigns import Campaigns
 from .daily import Daily, daily_settings, present_daily
+from .presets import WATCH_PRESETS
 from .watch import EVERY_MINUTES, Watcher, present_watch, watch_settings
 
 STATIC = Path(__file__).resolve().parent / "static"
@@ -143,6 +145,22 @@ class NewDaily(BaseModel):
     now: bool = True
 
 
+class CampaignBody(BaseModel):
+    name: str = Field(min_length=1, max_length=80)
+    client: str = Field(default="", max_length=80)
+    brief: str = Field(default="", max_length=400)
+    preset: str = Field(default="gameplay", max_length=20)
+    cpm: float = Field(default=0.0, ge=0, le=1000)
+    cap: float = Field(default=0.0, ge=0, le=1_000_000)
+    sources: list[str] = Field(default_factory=list, max_length=40)
+    active: bool = True
+
+
+class CampaignPost(BaseModel):
+    clipper: str = Field(default="", max_length=60)
+    url: str = Field(min_length=8, max_length=500)
+
+
 class KitPatch(BaseModel):
     font: str = Field(default="", max_length=40)
     highlight: str = Field(default="", max_length=20)
@@ -184,6 +202,7 @@ def create_app(storage: Storage | None = None, db_path: Path | None = None, runn
     chats = ChatService(db, hub, runner, storage, presenter, library, make_llm)
     watcher = Watcher(db, runner, hub)
     watcher.daily = Daily(db, runner, hub)
+    campaigns = Campaigns(db, runner, hub)
     chats.watcher = watcher
     if start_worker:
         watcher.start()
@@ -196,6 +215,7 @@ def create_app(storage: Storage | None = None, db_path: Path | None = None, runn
     app.add_middleware(SecurityMiddleware, build=build, lan=lan)
     app.add_middleware(GZipMiddleware, minimum_size=1024)
     app.state.db, app.state.hub, app.state.runner, app.state.chats = db, hub, runner, chats
+    app.state.campaigns = campaigns
     app.mount(f"/static/{build}", StaticFiles(directory=STATIC), name="static-built")
     app.mount("/static", StaticFiles(directory=STATIC), name="static")
 
@@ -526,6 +546,42 @@ def create_app(storage: Storage | None = None, db_path: Path | None = None, runn
         if d is None:
             raise HTTPException(404, "No such daily pick")
         return {"new": watcher.daily.run(d)}
+
+    @app.get("/api/campaigns")
+    def list_campaigns():
+        return {"campaigns": campaigns.list(), "presets": [p.key for p in WATCH_PRESETS]}
+
+    @app.post("/api/campaigns")
+    def add_campaign(body: CampaignBody):
+        return campaigns.save(None, {**body.model_dump(), "active": int(body.active)})
+
+    @app.put("/api/campaigns/{campaign_id}")
+    def save_campaign(campaign_id: int, body: CampaignBody):
+        return campaigns.save(campaign_id, {**body.model_dump(), "active": int(body.active)})
+
+    @app.delete("/api/campaigns/{campaign_id}")
+    def delete_campaign(campaign_id: int):
+        if not campaigns.delete(campaign_id):
+            raise HTTPException(404, "No such campaign")
+        return {"ok": True}
+
+    @app.post("/api/campaigns/{campaign_id}/clip")
+    def clip_campaign(campaign_id: int):
+        return campaigns.clip(campaign_id)
+
+    @app.post("/api/campaigns/{campaign_id}/posts")
+    def add_campaign_post(campaign_id: int, body: CampaignPost):
+        return campaigns.add_post(campaign_id, body.clipper, body.url)
+
+    @app.delete("/api/campaigns/{campaign_id}/posts/{post_id}")
+    def delete_campaign_post(campaign_id: int, post_id: int):
+        if not campaigns.remove_post(campaign_id, post_id):
+            raise HTTPException(404, "No such post")
+        return {"ok": True}
+
+    @app.post("/api/campaigns/{campaign_id}/refresh")
+    async def refresh_campaign(campaign_id: int):
+        return await run_in_threadpool(campaigns.refresh, campaign_id)
 
     @app.delete("/api/daily/{daily_id}")
     def delete_daily(daily_id: int):

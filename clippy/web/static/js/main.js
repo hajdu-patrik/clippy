@@ -7,6 +7,7 @@ import { startLive } from "./live.js";
 import { askOnce } from "./llm.js";
 import { bindSettings, loadSettings, openSettingsFromLink } from "./settings.js";
 import { bindPublish } from "./publish.js";
+import { bindCampaigns } from "./campaigns.js";
 import { bindSchedule } from "./schedule.js";
 import { bindViewport } from "./viewport.js";
 import { bindNotify } from "./notify.js";
@@ -71,6 +72,7 @@ function bindChrome() {
   bindSettings();
   bindPublish();
   bindSchedule();
+  bindCampaigns();
   bindViewport();
   bindNotify();
   bindVoice();

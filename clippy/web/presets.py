@@ -13,6 +13,7 @@ EXTRA = re.compile(r"^[ \t]*Extra wishes[ \t]*:[ \t]*(\S.*?)[ \t]*$", re.I | re.
 CTA = re.compile(r"CTA[^:\n]{0,20}:\s*[„“\"]([^”\"\n]{1,80})[”\"]")
 MAX_INSTRUCTIONS = 900
 MAX_EDIT_REQUEST = 1000
+TITLE_WISH = re.compile(r"\b(title bar|címsor\w*|cimsor\w*)", re.I)
 HOOK_WISH = re.compile(r"\b(hook\w*|opening text|nyitó\w*)", re.I)
 
 
@@ -94,6 +95,8 @@ def apply(message: str, actions: list[dict]) -> list[dict]:
             given = action.get("options") or {}
             if extra and not HOOK_WISH.search(extra.group(1)):
                 given = {k: v for k, v in given.items() if k != "hook"}
+            if extra and not TITLE_WISH.search(extra.group(1)):
+                given = {k: v for k, v in given.items() if k != "title_bar"}
             options = {**fixed, **given} if extra else fixed
             if lengths:
                 low, high = sorted(float(x) for x in lengths.groups())

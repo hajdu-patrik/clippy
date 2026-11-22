@@ -28,6 +28,7 @@
   <link rel="modulepreload" href="/static/js/publish.js">
   <link rel="modulepreload" href="/static/js/watches.js">
   <link rel="modulepreload" href="/static/js/schedule.js">
+  <link rel="modulepreload" href="/static/js/campaigns.js">
   <link rel="modulepreload" href="/static/js/viewport.js">
   <link rel="modulepreload" href="/static/js/picks.js">
   <link rel="modulepreload" href="/static/js/results.js">
@@ -73,6 +74,7 @@
     <symbol id="i-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 2.8v2.4M12 18.8v2.4M2.8 12h2.4M18.8 12h2.4M5.5 5.5l1.7 1.7M16.8 16.8l1.7 1.7M5.5 18.5l1.7-1.7M16.8 7.2l1.7-1.7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
     <symbol id="i-calendar" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15.5" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M3.5 10h17M8 3v4M16 3v4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
     <symbol id="i-mic" viewBox="0 0 24 24"><rect x="9" y="3.5" width="6" height="11" rx="3" fill="none" stroke="currentColor" stroke-width="1.9"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5v3" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></symbol>
+    <symbol id="i-flag" viewBox="0 0 24 24"><path d="M5 21V4M5 4h11l-2 4 2 4H5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
     <symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 8v5M12 16.5v.5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></symbol>
   </svg>
 
@@ -94,6 +96,9 @@
       <nav class="side-nav" aria-label="Clippy" data-i18n-attr="aria-label:side.menu">
         <button type="button" class="nav-item" id="scheduleBtn">
           <svg aria-hidden="true"><use href="#i-calendar"/></svg><span data-i18n="side.scheduler">Scheduler</span>
+        </button>
+        <button type="button" class="nav-item" id="campaignsBtn">
+          <svg aria-hidden="true"><use href="#i-flag"/></svg><span data-i18n="side.campaigns">Campaigns</span>
         </button>
         <button type="button" class="nav-item" id="settingsBtn">
           <svg aria-hidden="true"><use href="#i-gear"/></svg><span data-i18n="side.settings">Settings</span>
@@ -491,6 +496,52 @@
       <div class="dialog-btns">
         <button type="button" class="btn ghost" id="schedBack" data-i18n="sched.back">Back</button>
         <button type="submit" class="btn primary" id="schedSend" data-i18n="publish.schedule">Schedule</button>
+      </div>
+    </form>
+  </dialog>
+  <dialog class="settings-dialog sheet" id="campaignsDialog" aria-labelledby="campaignsTitle">
+    <header class="sheet-head">
+      <h2 id="campaignsTitle" data-i18n="camp.title">Campaigns</h2>
+      <button type="button" class="icon-btn" id="campaignsClose" aria-label="Close" data-i18n-attr="aria-label:sched.close">
+        <svg aria-hidden="true"><use href="#i-close"/></svg>
+      </button>
+    </header>
+    <section id="campList" aria-labelledby="campaignsTitle">
+      <div class="sched-bar">
+        <p class="hint" data-i18n="camp.hint">Clipping campaigns for a streamer, a podcast or a brand: the brief, the moments to clip, the clippers' posts and what each one earns.</p>
+        <button type="button" class="btn primary" id="campNew" data-i18n="camp.new">New campaign</button>
+      </div>
+      <div class="notice" role="note">
+        <svg aria-hidden="true"><use href="#i-flag"/></svg>
+        <div>
+          <p data-i18n="camp.how">How it works: the client gives a brief, a rate per 1,000 views and a cap per post, plus the moments to clip. Clippy cuts every source with the brief as its picking rules, you add the clippers' post links, and Clippy reads their public views and works out the payout.</p>
+          <p data-i18n="camp.rights">Clip only footage you have the right to use: what a campaign owner gives you is licensed for that campaign.</p>
+        </div>
+      </div>
+      <div id="campItems" aria-live="polite"></div>
+    </section>
+    <form id="campForm" hidden aria-labelledby="campFormTitle">
+      <h3 id="campFormTitle" data-i18n="camp.formTitle">Campaign</h3>
+      <div class="field-box"><label for="campName" data-i18n="camp.name">Name</label>
+        <input class="field" id="campName" maxlength="80" required></div>
+      <div class="field-box"><label for="campClient" data-i18n="camp.client">Client (streamer, podcast or brand)</label>
+        <input class="field" id="campClient" maxlength="80"></div>
+      <div class="field-box"><label for="campPreset" data-i18n="camp.preset">Kind of clips</label>
+        <select id="campPreset"></select></div>
+      <div class="field-box"><label for="campBrief" data-i18n="camp.brief">Brief (what to clip, what to avoid)</label>
+        <textarea class="field" id="campBrief" rows="3" maxlength="400"></textarea></div>
+      <div class="post-options">
+        <div><label for="campCpm" data-i18n="camp.cpm">Rate per 1,000 views</label>
+          <input class="field" id="campCpm" type="number" min="0" max="1000" step="0.01" value="0"></div>
+        <div><label for="campCap" data-i18n="camp.cap">Cap per post (0 = none)</label>
+          <input class="field" id="campCap" type="number" min="0" step="1" value="0"></div>
+      </div>
+      <div class="field-box"><label for="campSources" data-i18n="camp.sources">Moments to clip (one video link per line)</label>
+        <textarea class="field" id="campSources" rows="4"></textarea></div>
+      <p class="hint warn" id="campError" role="alert" hidden></p>
+      <div class="dialog-btns">
+        <button type="button" class="btn ghost" id="campBack" data-i18n="sched.back">Back</button>
+        <button type="submit" class="btn primary" id="campSave" data-i18n="camp.save">Save</button>
       </div>
     </form>
   </dialog>

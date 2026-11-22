@@ -87,14 +87,38 @@ CREATE TABLE IF NOT EXISTS scheduled (
     state TEXT NOT NULL DEFAULT 'planned',
     created REAL NOT NULL
 );
+CREATE TABLE IF NOT EXISTS campaigns (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    client TEXT NOT NULL DEFAULT '',
+    brief TEXT NOT NULL DEFAULT '',
+    preset TEXT NOT NULL DEFAULT 'gameplay',
+    cpm REAL NOT NULL DEFAULT 0,
+    cap REAL NOT NULL DEFAULT 0,
+    sources TEXT NOT NULL DEFAULT '[]',
+    chat_ids TEXT NOT NULL DEFAULT '[]',
+    active INTEGER NOT NULL DEFAULT 1,
+    created REAL NOT NULL
+);
+CREATE TABLE IF NOT EXISTS campaign_posts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    campaign_id INTEGER NOT NULL REFERENCES campaigns(id) ON DELETE CASCADE,
+    clipper TEXT NOT NULL DEFAULT '',
+    url TEXT NOT NULL,
+    views INTEGER NOT NULL DEFAULT 0,
+    checked REAL NOT NULL DEFAULT 0,
+    problem TEXT NOT NULL DEFAULT '{}',
+    created REAL NOT NULL
+);
 CREATE INDEX IF NOT EXISTS idx_scheduled_due ON scheduled(state, due);
+CREATE INDEX IF NOT EXISTS idx_campaign_posts ON campaign_posts(campaign_id, id);
 CREATE INDEX IF NOT EXISTS idx_post_clip ON posts(chat_id, number, platform, id);
 CREATE INDEX IF NOT EXISTS idx_msg_chat ON messages(chat_id, id);
 CREATE INDEX IF NOT EXISTS idx_clip_chat ON clips(chat_id, number, version);
 """
 
 _JSON_COLS = {"options", "data", "clip", "overrides", "info", "problem", "settings", "seen", "platforms", "stats",
-              "picks"}
+              "picks", "sources", "chat_ids"}
 
 
 def _row(r: sqlite3.Row | None) -> dict | None:
@@ -322,6 +346,39 @@ class DB:
 
     def delete_daily(self, daily_id: int) -> bool:
         return self._exec("DELETE FROM daily WHERE id = ?", (daily_id,)).rowcount > 0
+
+    def add_campaign(self, name: str, **fields) -> dict:
+        cur = self._exec("INSERT INTO campaigns (name, created) VALUES (?, ?)", (name, time.time()))
+        return self.update_campaign(cur.lastrowid, **fields)
+
+    def get_campaign(self, campaign_id: int) -> dict | None:
+        return self._one("SELECT * FROM campaigns WHERE id = ?", (campaign_id,))
+
+    def list_campaigns(self) -> list[dict]:
+        return self._all("SELECT * FROM campaigns ORDER BY active DESC, id DESC")
+
+    def update_campaign(self, campaign_id: int, **fields) -> dict | None:
+        self._update("campaigns", campaign_id, ("name", "client", "brief", "preset", "cpm", "cap", "sources",
+                                                "chat_ids", "active"), fields)
+        return self.get_campaign(campaign_id)
+
+    def delete_campaign(self, campaign_id: int) -> bool:
+        return self._exec("DELETE FROM campaigns WHERE id = ?", (campaign_id,)).rowcount > 0
+
+    def add_campaign_post(self, campaign_id: int, clipper: str, url: str) -> dict:
+        cur = self._exec("INSERT INTO campaign_posts (campaign_id, clipper, url, created) VALUES (?,?,?,?)",
+                         (campaign_id, clipper, url, time.time()))
+        return self._one("SELECT * FROM campaign_posts WHERE id = ?", (cur.lastrowid,))
+
+    def campaign_posts(self, campaign_id: int) -> list[dict]:
+        return self._all("SELECT * FROM campaign_posts WHERE campaign_id = ? ORDER BY id", (campaign_id,))
+
+    def update_campaign_post(self, post_id: int, **fields) -> None:
+        self._update("campaign_posts", post_id, ("views", "checked", "problem"), fields)
+
+    def delete_campaign_post(self, campaign_id: int, post_id: int) -> bool:
+        return self._exec("DELETE FROM campaign_posts WHERE id = ? AND campaign_id = ?",
+                          (post_id, campaign_id)).rowcount > 0
 
     def add_scheduled(self, chat_id: int, number: int, platforms: list[str], settings: dict, due: float) -> dict:
         cur = self._exec("INSERT INTO scheduled (chat_id, number, platforms, settings, due, created) VALUES (?,?,?,?,?,?)",

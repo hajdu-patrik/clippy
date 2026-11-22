@@ -292,6 +292,10 @@ CATALOG: dict[str, str] = {
                         "Post it today at {time} ({ny} in New York).",
     "daily.pick_tomorrow": "Daily {game} pick {i} of {n}: {streamer} on {platform}, {views} views in the last "
                            "day. Post it tomorrow at {time} ({ny} in New York).",
+    "error.no_campaign": "That campaign is gone.",
+    "error.post_known": "That post link is already on this campaign.",
+    "error.views_unread": "The views could not be read ({error}); the last count stays.",
+    "campaign.chat_note": "Campaign {name} for {client}: clips picked with the campaign's brief.",
     "error.daily_nothing": "No new {game} moment from the last day yet; trying again at the next daily run.",
     "error.daily_unknown_game": "This game is not on the list of daily picks yet.",
     "reply.latest_found": "Found it: {streamer} on {platform}, “{title}” ({date}). Making clips of it.",

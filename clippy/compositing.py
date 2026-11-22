@@ -130,6 +130,22 @@ class StreamCompositor:
         return OUT_H - cls.TOP_H - cls.CAPTION_LIFT
 
 
+class CamCompositor:
+    """A big reaction: the streamer's camera alone, its centre four thirds filling the width on a blurred copy of
+    itself, like a cut to the face in an edited reaction clip."""
+
+    def __init__(self, facecam: tuple[float, float, float, float]):
+        self.facecam, self.fit = facecam, FitCompositor()
+
+    def compose(self, frame: np.ndarray, plan: FramePlan) -> np.ndarray:
+        H, W = frame.shape[:2]
+        x, y, w, h = self.facecam
+        cam = frame[int(y * H): int(y * H) + max(2, int(h * H)), int(x * W): int(x * W) + max(2, int(w * W))]
+        ch, cw = cam.shape[:2]
+        keep = min(cw, int(ch * 4 / 3))
+        return self.fit.compose(cam[:, (cw - keep) // 2: (cw - keep) // 2 + keep], plan)
+
+
 class Prebuilt:
     """Frames the decoder already composed (see StreamCompositor.graph)."""
 
@@ -145,6 +161,7 @@ class LayoutCompositor:
                                                "square": FitCompositor(square=True)}
         if facecam:
             self.by_mode["stream"] = StreamCompositor(facecam)
+            self.by_mode["cam"] = CamCompositor(facecam)
 
     def compose(self, frame: np.ndarray, plan: FramePlan) -> np.ndarray:
         return self.by_mode.get(plan.mode, self.by_mode["fit"]).compose(frame, plan)
