@@ -4,6 +4,7 @@ import { onLive } from "./live.js";
 import { POSTING, platformLabel } from "./platforms.js";
 import { loadAccounts } from "./publish.js";
 import { state } from "./state.js";
+import { isActive, onView } from "./views.js";
 import { $, esc, toast } from "./util.js";
 
 const MIN_AHEAD_MS = 60 * 1000;
@@ -18,7 +19,7 @@ let editing = null;
 let editingSlots = false;
 let timer = 0;
 
-const dialog = () => $("#scheduleDialog");
+const dialog = () => $("#view-calendar");
 const locale = () => document.documentElement.lang || undefined;
 const pad = (n) => String(n).padStart(2, "0");
 const dateValue = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
@@ -118,7 +119,7 @@ async function loadSchedule() {
     $("#schedItems").innerHTML = `<div class="blank"><p role="alert">${esc(t("sched.loadFailed", { error: tx(err.t, err.message) }))}</p></div>`;
     return;
   }
-  if (!dialog().open) return;
+  if (!isActive("calendar")) return;
   renderSlotsBox();
   renderList();
   if (!$("#schedForm").hidden) renderForm(false);
@@ -248,7 +249,6 @@ async function open(event) {
   $("#schedItems").innerHTML = `<div class="blank"><p>${esc(t("accounts.loading"))}</p></div>`;
   $("#schedList").hidden = false;
   $("#schedForm").hidden = true;
-  if (!dialog().open) dialog().showModal();
   await Promise.all([loadSchedule(), loadAccounts()]);
   if (event?.detail?.chat) showForm(true, event.detail);
 }
@@ -284,11 +284,6 @@ async function send(event) {
 }
 
 async function onItemAction(event) {
-  const link = event.target.closest("a[data-close]");
-  if (link) {
-    dialog().close();
-    return;
-  }
   const button = event.target.closest("button[data-sched]");
   if (!button) return;
   const id = Number(button.dataset.id);
@@ -337,9 +332,7 @@ async function saveSlots(input, button) {
 }
 
 export function bindSchedule() {
-  $("#scheduleBtn").addEventListener("click", () => open());
-  document.addEventListener("clippy:schedule", open);
-  $("#scheduleClose").addEventListener("click", () => dialog().close());
+  onView("calendar", () => open());
   $("#schedNew").addEventListener("click", () => showForm(true));
   $("#schedBack").addEventListener("click", () => showForm(false));
   $("#schedForm").addEventListener("submit", send);
@@ -360,9 +353,8 @@ export function bindSchedule() {
   });
   $("#schedItems").addEventListener("click", onItemAction);
   $("#schedSlotsSave").addEventListener("click", (e) => saveSlots($("#schedSlotsInput"), e.currentTarget));
-  dialog().addEventListener("close", () => { editing = null; });
   onLive((event) => {
-    if (!LIVE_EVENTS.has(event.type) || !dialog().open || editing !== null) return;
+    if (!LIVE_EVENTS.has(event.type) || !isActive("calendar") || editing !== null) return;
     clearTimeout(timer);
     timer = setTimeout(() => { loadAccounts().then(loadSchedule); }, RELOAD_MS);
   });

@@ -1,4 +1,5 @@
 import { api } from "./api.js";
+import { isActive } from "./views.js";
 import { showCopyDialog } from "./cards.js";
 import { t, tx } from "./i18n.js";
 import { onLive } from "./live.js";
@@ -80,7 +81,6 @@ async function onClick(event) {
     const row = pickButton.closest("[data-chat]");
     const p = daily.flatMap((d) => d.picks || []).find((x) => x.chat_id === Number(row.dataset.chat));
     if (pickButton.dataset.pick === "open") {
-      $("#settingsDialog").close();
       location.hash = `#/chat/${row.dataset.chat}`;
     } else if (p && (await copyText(p.text))) {
       toast(t("card.copied"));
@@ -137,6 +137,6 @@ export function bindPicks() {
   $("#picksList").addEventListener("click", onClick);
   $("#picksSave").addEventListener("click", addDaily);
   onLive((event) => {
-    if ((event.type === "daily" || event.type === "clip") && $("#settingsDialog").open) loadPicks();
+    if ((event.type === "daily" || event.type === "clip") && isActive("daily")) loadPicks();
   });
 }

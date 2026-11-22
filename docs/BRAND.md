@@ -41,8 +41,10 @@ the same scale: sizes `--fs-2xs` to `--fs-2xl` (11.5, 12.5, 14, 15.5, 18, 20, 24
 - Buttons are pills (`.btn`, 44 px high, 36 px for `.sm` on a mouse, 44 px on touch): outlined by default, one filled
   `.primary` per view, `.danger` for removing.
 - Surfaces (cards, rows, fields) are `--bg-elev` with a `--border` line and `--radius-md`.
-- On a phone (up to 560 px) the large dialogs (Settings, Scheduler, Post) fill the screen with their buttons pinned at
-  the bottom; every control is at least 44 px.
+- Every screen is a page in the main area (Projects, Calendar, Results, Daily picks, Watched channels, Campaigns, Brand
+  kit, Settings): a title, one line on what it is for, at most one filled button, then one column of content. Only the
+  quick Post and Copy steps are dialogs; on a phone (up to 560 px) the Post dialog fills the screen with its buttons
+  pinned at the bottom, and every control is at least 44 px.
 
 ## Motion
 

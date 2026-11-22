@@ -1,6 +1,7 @@
 import { api } from "./api.js";
 import { t, tx } from "./i18n.js";
 import { onLive } from "./live.js";
+import { isActive, onView } from "./views.js";
 import { $, esc, toast } from "./util.js";
 
 const RELOAD_MS = 300;
@@ -9,7 +10,6 @@ let data = { campaigns: [], presets: [] };
 let editing = null;
 let timer = 0;
 
-const dialog = () => $("#campaignsDialog");
 const money = (n) => Number(n || 0).toLocaleString(document.documentElement.lang || undefined,
   { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const count = (n) => Number(n || 0).toLocaleString(document.documentElement.lang || undefined);
@@ -160,20 +160,18 @@ async function onAdd(event) {
 async function open() {
   showForm(false);
   $("#campItems").innerHTML = `<div class="blank"><p>${esc(t("accounts.loading"))}</p></div>`;
-  if (!dialog().open) dialog().showModal();
   await load();
 }
 
 export function bindCampaigns() {
-  $("#campaignsBtn").addEventListener("click", open);
-  $("#campaignsClose").addEventListener("click", () => dialog().close());
+  onView("campaigns", open);
   $("#campNew").addEventListener("click", () => showForm(true));
   $("#campBack").addEventListener("click", () => showForm(false));
   $("#campForm").addEventListener("submit", save);
   $("#campItems").addEventListener("click", onAction);
   $("#campItems").addEventListener("submit", onAdd);
   onLive((event) => {
-    if (event.type !== "campaigns" || !dialog().open || !$("#campForm").hidden) return;
+    if (event.type !== "campaigns" || !isActive("campaigns") || !$("#campForm").hidden) return;
     clearTimeout(timer);
     timer = setTimeout(load, RELOAD_MS);
   });

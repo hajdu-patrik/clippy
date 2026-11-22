@@ -1,4 +1,5 @@
 import { api } from "./api.js";
+import { isActive } from "./views.js";
 import { t, tx } from "./i18n.js";
 import { onLive } from "./live.js";
 import { $, esc, toast } from "./util.js";
@@ -55,6 +56,6 @@ async function refresh() {
 export function bindResults() {
   $("#resultsRefresh").addEventListener("click", refresh);
   onLive((event) => {
-    if (event.type === "results" && $("#settingsDialog").open) loadResults();
+    if (event.type === "results" && isActive("results")) loadResults();
   });
 }

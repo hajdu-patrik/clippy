@@ -1,4 +1,5 @@
 import { api } from "./api.js";
+import { isActive } from "./views.js";
 import { t, tx } from "./i18n.js";
 import { onLive } from "./live.js";
 import { LABELS, POSTING, platformLabel } from "./platforms.js";
@@ -114,6 +115,6 @@ export function bindWatches() {
     }
   });
   onLive((event) => {
-    if (event.type === "watches" && $("#settingsDialog").open) loadWatches();
+    if (event.type === "watches" && isActive("watched")) loadWatches();
   });
 }

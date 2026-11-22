@@ -1,7 +1,7 @@
 # Local LLM
 
 Qwen3-14B tuned for a 16 GB laptop GPU (RTX 4090 Laptop) with 32 GB RAM. This is the `ollama` mode, the default.
-The other modes (OpenRouter, your Claude or ChatGPT subscription, none) are chosen in *Settings, AI* or with
+The other modes (OpenRouter, your Claude or ChatGPT subscription, none) are chosen in *Settings* or with
 `clippy llm <mode>` (see the README); any OpenAI-compatible API also works through `CLIPPY_LLM_BACKEND=openai`
 (`.env.example`).
 

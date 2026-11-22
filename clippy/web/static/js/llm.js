@@ -1,4 +1,5 @@
 import { api } from "./api.js";
+import { go } from "./views.js";
 import { t, tx } from "./i18n.js";
 import { onLive } from "./live.js";
 import { state } from "./state.js";
@@ -129,7 +130,7 @@ export async function askOnce() {
   if (state.llm?.chosen) store.set(ASKED_KEY, "1");
   if (!state.llm || state.llm.chosen || !state.llm.here) return;
   store.set(ASKED_KEY, "1");
-  document.dispatchEvent(new CustomEvent("clippy:settings", { detail: { page: "ai" } }));
+  go("settings");
 }
 
 export function bindLlm() {

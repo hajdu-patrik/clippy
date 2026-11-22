@@ -114,6 +114,12 @@ change, what changed rather than how; dates are ISO 8601.
   profile / channel / playlist link, no video in the post, no sound, each with what helps.
 
 ### Changed
+- The app is organised like the big clipping platforms: a sidebar grouped into Clip (Projects), Post (Calendar,
+  Results), Automate (Daily picks, Watched channels, Campaigns) and Brand (Brand kit), with Settings at the bottom; every
+  screen is a page of its own instead of a dialog over the chat, with one title, one line on what it is for and at most
+  one filled button. Settings keeps only the AI, connected accounts and notifications; the caption look, logo, intro,
+  outro and profile links are the Brand kit.
+- New Projects page: every chat as a card, with search.
 - A face in the middle of a stream is a full-screen camera, not a facecam overlay: the clip follows that face instead
   of showing the same person twice.
 - Your posting times live in the Scheduler, where they are used, and are edited there in place; Settings, General

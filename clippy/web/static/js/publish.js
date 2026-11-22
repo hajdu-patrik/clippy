@@ -1,4 +1,5 @@
 import { api } from "./api.js";
+import { go } from "./views.js";
 import { t, tx } from "./i18n.js";
 import { onLive } from "./live.js";
 import { POSTING, platformLabel } from "./platforms.js";
@@ -160,7 +161,7 @@ export function bindPublish() {
   $("#postPlatforms").addEventListener("change", syncOptions);
   $("#postSettings").addEventListener("click", () => {
     $("#postDialog").close();
-    document.dispatchEvent(new CustomEvent("clippy:settings", { detail: { page: "accounts" } }));
+    go("settings");
   });
   onLive((event) => {
     if (event.type !== "accounts") return;

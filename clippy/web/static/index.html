@@ -29,6 +29,8 @@
   <link rel="modulepreload" href="/static/js/watches.js">
   <link rel="modulepreload" href="/static/js/schedule.js">
   <link rel="modulepreload" href="/static/js/campaigns.js">
+  <link rel="modulepreload" href="/static/js/views.js">
+  <link rel="modulepreload" href="/static/js/projects.js">
   <link rel="modulepreload" href="/static/js/viewport.js">
   <link rel="modulepreload" href="/static/js/picks.js">
   <link rel="modulepreload" href="/static/js/results.js">
@@ -75,6 +77,9 @@
     <symbol id="i-calendar" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15.5" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M3.5 10h17M8 3v4M16 3v4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
     <symbol id="i-mic" viewBox="0 0 24 24"><rect x="9" y="3.5" width="6" height="11" rx="3" fill="none" stroke="currentColor" stroke-width="1.9"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5v3" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></symbol>
     <symbol id="i-flag" viewBox="0 0 24 24"><path d="M5 21V4M5 4h11l-2 4 2 4H5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-chart" viewBox="0 0 24 24"><path d="M4 20h16M7 16v-5M12 16V7M17 16v-8" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></symbol>
+    <symbol id="i-bolt" viewBox="0 0 24 24"><path d="M13 3L5 14h6l-1 7 8-11h-6z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></symbol>
+    <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="12" r="2.8" fill="none" stroke="currentColor" stroke-width="1.8"/></symbol>
     <symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 8v5M12 16.5v.5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></symbol>
   </svg>
 
@@ -91,22 +96,25 @@
         </button>
       </div>
       <button class="new-chat" id="newChat">
-        <svg aria-hidden="true"><use href="#i-plus"/></svg><span data-i18n="side.newChat">New chat</span><kbd>Ctrl Shift O</kbd>
+        <svg aria-hidden="true"><use href="#i-plus"/></svg><span data-i18n="side.newClip">New clip</span><kbd>Ctrl Shift O</kbd>
       </button>
       <nav class="side-nav" aria-label="Clippy" data-i18n-attr="aria-label:side.menu">
-        <button type="button" class="nav-item" id="scheduleBtn">
-          <svg aria-hidden="true"><use href="#i-calendar"/></svg><span data-i18n="side.scheduler">Scheduler</span>
-        </button>
-        <button type="button" class="nav-item" id="campaignsBtn">
-          <svg aria-hidden="true"><use href="#i-flag"/></svg><span data-i18n="side.campaigns">Campaigns</span>
-        </button>
-        <button type="button" class="nav-item" id="settingsBtn">
-          <svg aria-hidden="true"><use href="#i-gear"/></svg><span data-i18n="side.settings">Settings</span>
-        </button>
+        <div class="nav-group" data-i18n="side.groupClip">Clip</div>
+        <a class="nav-item" href="#/projects" data-view="projects"><svg aria-hidden="true"><use href="#i-film"/></svg><span data-i18n="side.projects">Projects</span></a>
+        <div class="nav-group" data-i18n="side.groupPost">Post</div>
+        <a class="nav-item" href="#/calendar" data-view="calendar"><svg aria-hidden="true"><use href="#i-calendar"/></svg><span data-i18n="side.calendar">Calendar</span></a>
+        <a class="nav-item" href="#/results" data-view="results"><svg aria-hidden="true"><use href="#i-chart"/></svg><span data-i18n="side.results">Results</span></a>
+        <div class="nav-group" data-i18n="side.groupAuto">Automate</div>
+        <a class="nav-item" href="#/daily" data-view="daily"><svg aria-hidden="true"><use href="#i-bolt"/></svg><span data-i18n="side.daily">Daily picks</span></a>
+        <a class="nav-item" href="#/watched" data-view="watched"><svg aria-hidden="true"><use href="#i-eye"/></svg><span data-i18n="side.watched">Watched channels</span></a>
+        <a class="nav-item" href="#/campaigns" data-view="campaigns"><svg aria-hidden="true"><use href="#i-flag"/></svg><span data-i18n="side.campaigns">Campaigns</span></a>
+        <div class="nav-group" data-i18n="side.groupBrand">Brand</div>
+        <a class="nav-item" href="#/brand" data-view="brand"><svg aria-hidden="true"><use href="#i-palette"/></svg><span data-i18n="side.brand">Brand kit</span></a>
       </nav>
-      <div class="chat-list-label" data-i18n="side.chats">Chats</div>
+      <div class="chat-list-label" data-i18n="side.recent">Recent chats</div>
       <div class="chat-list" id="chatList" aria-label="Chats" data-i18n-attr="aria-label:side.chats" role="list"></div>
       <div class="side-footer">
+        <a class="nav-item side-settings" href="#/settings" data-view="settings"><svg aria-hidden="true"><use href="#i-gear"/></svg><span data-i18n="side.settings">Settings</span></a>
         <div class="worker" id="worker" role="status" aria-live="polite">
           <span class="dot" aria-hidden="true"></span>
           <span class="worker-text"><span id="workerText">Idle</span><span class="worker-bar" aria-hidden="true"><i id="workerBar"></i></span></span>
@@ -148,304 +156,17 @@
         <div class="messages" id="messages" role="log" aria-live="polite" aria-relevant="additions"></div>
       </section>
 
-      <button class="to-bottom" id="toBottom" aria-label="Scroll to the newest message" data-i18n-attr="aria-label:thread.toBottom" hidden>
-        <svg aria-hidden="true"><use href="#i-down"/></svg>
-      </button>
-
-      <footer class="composer-wrap">
-        <div class="attachments" id="attachments" role="list" aria-live="polite" hidden></div>
-        <form class="composer" id="composer">
-          <button type="button" class="icon-btn attach-btn" id="attach" aria-label="Attach files" title="Attach files"
-            data-i18n-attr="aria-label:composer.attach;title:composer.attach">
-            <svg aria-hidden="true"><use href="#i-clip"/></svg>
-          </button>
-          <input type="file" id="fileInput" multiple accept="image/*,audio/*,video/*,.cube" hidden>
-          <label class="sr-only" for="input" data-i18n="composer.label">Message</label>
-          <textarea id="input" rows="1" placeholder="Paste a video link (YouTube, TikTok, Twitch…), or describe what you want…" autocomplete="off" enterkeyhint="send"></textarea>
-          <button type="button" class="icon-btn voice-btn" id="voiceBtn" aria-pressed="false" aria-label="Speak" title="Speak">
-            <svg aria-hidden="true"><use href="#i-mic"/></svg>
-          </button>
-          <button type="submit" class="send" id="send" aria-label="Send" data-i18n-attr="aria-label:composer.send">
-            <svg aria-hidden="true"><use href="#i-send"/></svg>
-          </button>
-        </form>
-        <div class="hint"><span class="only-desktop" data-i18n="composer.hintKeys">Enter to send · Shift+Enter for a new line · </span><span data-i18n="composer.hint">Finished clips go to your video library</span></div>
-      </footer>
-    </main>
-  </div>
-  <dialog class="settings-dialog" id="copyDialog" aria-labelledby="copyTitle">
-    <h2 id="copyTitle" data-i18n="copy.title">Post text</h2>
-    <p class="hint" data-i18n="copy.hint">Copying is blocked here; select the text and copy it yourself.</p>
-    <textarea id="copyText" rows="10" readonly aria-labelledby="copyTitle"></textarea>
-    <div class="dialog-btns">
-      <button type="button" class="btn primary" id="copyClose" data-i18n="copy.close">Close</button>
-    </div>
-  </dialog>
-  <dialog class="settings-dialog sheet" id="settingsDialog" aria-labelledby="settingsTitle">
-    <form method="dialog" id="settingsForm">
-      <h2 id="settingsTitle" data-i18n="settings.title">Settings</h2>
-      <div class="settings-tabs" role="tablist" aria-labelledby="settingsTitle" id="settingsTabs">
-        <button type="button" role="tab" id="tab-general" aria-controls="page-general" aria-selected="true" data-i18n="settings.page.general">General</button>
-        <button type="button" role="tab" id="tab-ai" aria-controls="page-ai" aria-selected="false" tabindex="-1" data-i18n="settings.page.ai">AI</button>
-        <button type="button" role="tab" id="tab-accounts" aria-controls="page-accounts" aria-selected="false" tabindex="-1" data-i18n="settings.page.accounts">Accounts</button>
-        <button type="button" role="tab" id="tab-style" aria-controls="page-style" aria-selected="false" tabindex="-1" data-i18n="settings.page.style">Style</button>
-        <button type="button" role="tab" id="tab-auto" aria-controls="page-auto" aria-selected="false" tabindex="-1" data-i18n="settings.page.auto">Automation</button>
-        <button type="button" role="tab" id="tab-results" aria-controls="page-results" aria-selected="false" tabindex="-1" data-i18n="settings.page.results">Results</button>
-      </div>
-      <div class="settings-page" role="tabpanel" id="page-general" aria-labelledby="tab-general">
-      <label for="profileLinks" data-i18n="settings.links">Your profile links</label>
-      <p class="hint" id="profileLinksHint" data-i18n="settings.hint">One per line. They go under every clip's post text.</p>
-      <textarea id="profileLinks" rows="4" maxlength="2000" aria-describedby="profileLinksHint"
-        placeholder="TikTok: https://www.tiktok.com/@…&#10;Instagram: https://www.instagram.com/…/"></textarea>
-      <section class="notify" aria-labelledby="notifyTitle">
-        <h3 id="notifyTitle" data-i18n="notify.title">Notifications</h3>
-        <label class="check inline"><input type="checkbox" id="notifyToggle"><span data-i18n="notify.toggle">Tell me when a job is done (also when this window is in the background)</span></label>
-        <p class="hint" id="notifyHint" hidden data-i18n="notify.unavailable">This browser cannot show notifications here; on the computer that runs Clippy it works.</p>
-      </section>
-      </div>
-      <div class="settings-page" role="tabpanel" id="page-ai" aria-labelledby="tab-ai" hidden>
-      <section class="llm" aria-labelledby="llmTitle">
-        <h3 id="llmTitle" data-i18n="llm.title">AI</h3>
-        <p class="hint" data-i18n="llm.hint">Which AI picks the moments and writes the titles and texts. Change it any time.</p>
-        <p class="hint warn" id="llmFirst" hidden data-i18n="llm.first">Choose how Clippy thinks. Ollama runs on this computer and is the default.</p>
-        <p class="hint warn" id="llmHere" hidden data-i18n="llm.hereOnly">The AI can be changed on the computer that runs Clippy.</p>
-        <ul class="account-grid" id="llmModes" role="radiogroup" aria-labelledby="llmTitle"></ul>
-        <div class="post-options">
-          <div id="llmModelBox"><label for="llmModel" data-i18n="llm.model">Model</label>
-            <input class="field" id="llmModel" autocomplete="off" spellcheck="false" maxlength="100"></div>
-          <div id="llmKeyBox" hidden><label for="llmKey" data-i18n="llm.key">OpenRouter API key</label>
-            <input class="field" id="llmKey" type="password" autocomplete="off" spellcheck="false" maxlength="300"
-              aria-describedby="llmKeyHint"></div>
-        </div>
-        <p class="hint" id="llmKeyHint" data-i18n="llm.keyHint">The key stays on this computer and is never shown again.</p>
-        <p class="hint" id="llmModelHint" hidden data-i18n="llm.modelHint">Any model id from openrouter.ai/models; ids ending in :free cost nothing.</p>
-        <p class="hint" id="llmStatus" role="status"></p>
-        <p class="hint" data-i18n="llm.note">A change applies from the next request, no restart needed.</p>
-        <div class="watch-btns">
-          <button type="button" class="btn sm ghost" id="llmTest" data-i18n="llm.test">Test</button>
-          <button type="button" class="btn sm primary" id="llmSave" data-i18n="llm.save">Save AI</button>
-        </div>
-      </section>
-      </div>
-      <div class="settings-page" role="tabpanel" id="page-accounts" aria-labelledby="tab-accounts" hidden>
-      <section class="accounts" aria-labelledby="accountsTitle">
-        <h3 id="accountsTitle" data-i18n="accounts.title">Accounts</h3>
-        <p class="hint" data-i18n="accounts.hint">Connect your own accounts. Clips can be posted to YouTube, Instagram, Facebook, TikTok and X. One-time setup: docs/publishing.md.</p>
-        <p class="hint warn" id="accountsHere" hidden data-i18n="accounts.hereOnly">Connect accounts on the computer that runs Clippy; posting works from here too.</p>
-        <ul class="account-grid" id="accountList"></ul>
-        <div class="token-box" id="igTokenBox" hidden>
-          <label for="igToken" data-i18n="accounts.tokenLabel">Instagram access token</label>
-          <p class="hint" id="igTokenHint" data-i18n="accounts.tokenHint">From your Meta app: Instagram, API setup with Instagram login, Generate token.</p>
-          <div class="token-row">
-            <input id="igToken" type="password" autocomplete="off" spellcheck="false" maxlength="2000" placeholder="IGAA…"
-              aria-describedby="igTokenHint">
-            <button type="button" class="btn primary" id="igSave" data-i18n="accounts.tokenSave">Connect</button>
-          </div>
-        </div>
-      </section>
-      </div>
-      <div class="settings-page" role="tabpanel" id="page-style" aria-labelledby="tab-style" hidden>
-      <section class="kit" aria-labelledby="kitTitle">
-        <h3 id="kitTitle" data-i18n="kit.title">Style kit</h3>
-        <p class="hint" data-i18n="kit.hint">Every new clip gets this look by itself: the caption style, and your logo, intro and outro when you add them. Nothing here is required.</p>
-        <div class="post-options">
-          <div><label for="kitFont" data-i18n="kit.font">Caption font</label><select id="kitFont"></select></div>
-          <div><label for="kitHighlight" data-i18n="kit.highlight">Highlight colour</label><select id="kitHighlight"></select></div>
-          <div>
-            <label for="kitUpper" data-i18n="kit.upper">Capital letters</label>
-            <select id="kitUpper">
-              <option value="" data-i18n="kit.default">Default</option>
-              <option value="true" data-i18n="kit.upperOn">Captions in capitals</option>
-              <option value="false" data-i18n="kit.upperOff">Captions as spoken</option>
-            </select>
-          </div>
-          <div><label for="kitPosition" data-i18n="kit.position">Logo position</label><select id="kitPosition"></select></div>
-        </div>
-        <ul class="account-list kit-files">
-          <li class="account"><div><b data-i18n="kit.logo">Logo</b><span class="account-state" id="kit-logo-name"></span></div>
-            <div class="watch-btns">
-              <label class="btn sm ghost file-btn"><span data-i18n="kit.choose">Choose file</span><input type="file" id="kit-logo-file" accept="image/*" hidden></label>
-              <button type="button" class="btn sm ghost" id="kit-logo-remove" data-i18n="kit.remove" hidden>Remove</button>
-            </div></li>
-          <li class="account"><div><b data-i18n="kit.intro">Intro</b><span class="account-state" id="kit-intro-name"></span>
-            <span class="hint kit-note" data-i18n="kit.introHint">Keep it under 1.5 s: a slow start loses viewers.</span></div>
-            <div class="watch-btns">
-              <label class="btn sm ghost file-btn"><span data-i18n="kit.choose">Choose file</span><input type="file" id="kit-intro-file" accept="video/*,image/*" hidden></label>
-              <button type="button" class="btn sm ghost" id="kit-intro-remove" data-i18n="kit.remove" hidden>Remove</button>
-            </div></li>
-          <li class="account"><div><b data-i18n="kit.outro">Outro</b><span class="account-state" id="kit-outro-name"></span></div>
-            <div class="watch-btns">
-              <label class="btn sm ghost file-btn"><span data-i18n="kit.choose">Choose file</span><input type="file" id="kit-outro-file" accept="video/*,image/*" hidden></label>
-              <button type="button" class="btn sm ghost" id="kit-outro-remove" data-i18n="kit.remove" hidden>Remove</button>
-            </div></li>
-        </ul>
-        <button type="button" class="btn primary" id="kitSave" data-i18n="kit.save">Save style</button>
-      </section>
-      </div>
-      <div class="settings-page" role="tabpanel" id="page-results" aria-labelledby="tab-results" hidden>
-      <section class="results" aria-labelledby="resultsTitle">
-        <h3 id="resultsTitle" data-i18n="results.title">What works</h3>
-        <p class="hint" id="resultsSummary" data-i18n="results.hint">Clippy reads back how your posted clips do and picks more of what works.</p>
-        <p class="hint warn" id="resultsAnalytics" hidden data-i18n="results.reconnect">Connect YouTube again so Clippy can also read how much of each clip people watch.</p>
-        <ul class="findings" id="resultsList"></ul>
-        <button type="button" class="btn sm ghost" id="resultsRefresh" data-i18n="results.refresh">Read the numbers now</button>
-      </section>
-      </div>
-      <div class="settings-page" role="tabpanel" id="page-auto" aria-labelledby="tab-auto" hidden>
-      <section class="watches" aria-labelledby="picksTitle">
-        <h3 id="picksTitle" data-i18n="picks.title">Daily picks</h3>
-        <p class="hint" data-i18n="picks.hint">Every day the most watched streamer moments of a game become clips, each with a time to post it.</p>
-        <ul class="account-list" id="picksList"></ul>
-        <details class="watch-add" id="picksAdd">
-          <summary data-i18n="picks.add">Start daily picks</summary>
-          <div class="post-options">
-            <div>
-              <label for="picksGame" data-i18n="picks.game">Game</label>
-              <select id="picksGame"></select>
-            </div>
-            <div>
-              <label for="picksN" data-i18n="picks.n">Clips a day</label>
-              <input class="field" id="picksN" type="number" min="1" max="5" value="3">
-            </div>
-            <div>
-              <label for="picksAt" data-i18n="picks.at">Pick them at</label>
-              <input class="field" id="picksAt" type="time" value="09:00">
-            </div>
-          </div>
-          <label for="picksTimes" data-i18n="picks.times">Posting times in New York, best first</label>
-          <input class="field" id="picksTimes" maxlength="80" autocomplete="off" placeholder="19:00, 15:00, 12:00"
-            aria-describedby="picksTimesHint">
-          <p class="hint" id="picksTimesHint" data-i18n="picks.timesHint">The most watched moment gets the first time. Each pick shows the time in your own time zone too.</p>
-          <fieldset class="post-platforms">
-            <legend data-i18n="picks.autopost">Post each clip at its time by itself (optional)</legend>
-            <div id="picksPlatforms"></div>
-          </fieldset>
-          <p class="hint" data-i18n="picks.autopostHint">YouTube gets the clip right away and makes it public at its time, so it goes out even while this computer is off.</p>
-          <div class="dialog-btns">
-            <button type="button" class="btn primary" id="picksSave" data-i18n="picks.save">Start</button>
-          </div>
-        </details>
-      </section>
-      <section class="watches" aria-labelledby="watchesTitle">
-        <h3 id="watchesTitle" data-i18n="watch.title">Watched channels</h3>
-        <p class="hint" data-i18n="watch.hint">New videos of these channels become clips by themselves.</p>
-        <ul class="account-list" id="watchList"></ul>
-        <details class="watch-add" id="watchAdd">
-          <summary data-i18n="watch.add">Watch a channel</summary>
-          <label for="watchUrl" data-i18n="watch.url">Channel or playlist link</label>
-          <input class="field" id="watchUrl" type="url" maxlength="500" autocomplete="off" spellcheck="false"
-            placeholder="https://www.youtube.com/@… · https://www.twitch.tv/…">
-          <div class="post-options">
-            <div>
-              <label for="watchPreset" data-i18n="watch.kind">Kind of clips</label>
-              <select id="watchPreset">
-                <option value="" data-i18n="watch.preset.auto">Automatic</option>
-                <option value="podcast" data-i18n="watch.preset.podcast">Podcast</option>
-                <option value="gameplay" data-i18n="watch.preset.gameplay">Facecam stream</option>
-                <option value="promo" data-i18n="watch.preset.promo">Video &amp; promo</option>
-                <option value="quick" data-i18n="watch.preset.quick">Quick shorts</option>
-              </select>
-            </div>
-            <div>
-              <label for="watchN" data-i18n="watch.n">Clips per video (0: as the kind says)</label>
-              <input class="field" id="watchN" type="number" min="0" max="12" value="0" placeholder="3">
-            </div>
-            <div>
-              <label for="watchEvery" data-i18n="watch.everyLabel">Look for new videos</label>
-              <select id="watchEvery">
-                <option value="15" data-i18n="watch.every15">every 15 minutes</option>
-                <option value="30" data-i18n="watch.every30">every 30 minutes</option>
-                <option value="60" selected data-i18n="watch.every60">every hour</option>
-                <option value="180" data-i18n="watch.every180">every 3 hours</option>
-                <option value="360" data-i18n="watch.every360">every 6 hours</option>
-                <option value="1440" data-i18n="watch.every1440">once a day</option>
-              </select>
-            </div>
-          </div>
-          <fieldset class="post-platforms">
-            <legend data-i18n="watch.autopost">Post the new clips automatically (optional)</legend>
-            <div id="watchPlatforms"></div>
-          </fieldset>
-          <label for="watchSlots" data-i18n="watch.slots">Daily posting times, one clip each</label>
-          <input class="field" id="watchSlots" maxlength="120" autocomplete="off" placeholder="18:00, 21:00"
-            aria-describedby="watchSlotsHint">
-          <p class="hint" id="watchSlotsHint" data-i18n="watch.slotsHint">YouTube goes public, TikTok to your drafts. Leave both empty to post by hand.</p>
-          <label class="check inline"><input type="checkbox" id="watchLatest"><span data-i18n="watch.latest">Clip the newest video now too</span></label>
-          <div class="dialog-btns">
-            <button type="button" class="btn primary" id="watchSave" data-i18n="watch.save">Start watching</button>
-          </div>
-        </details>
-      </section>
-      </div>
-      <div class="dialog-btns">
-        <button type="button" class="btn ghost" id="settingsCancel" data-i18n="settings.cancel">Cancel</button>
-        <button type="submit" class="btn primary" id="settingsSave" data-i18n="settings.save">Save</button>
-      </div>
-    </form>
-  </dialog>
-  <dialog class="settings-dialog sheet" id="postDialog" aria-labelledby="postTitle">
-    <form method="dialog" id="postForm">
-      <h2 id="postTitle" data-i18n="publish.titlePlain">Post clip</h2>
-      <fieldset class="post-platforms">
-        <legend data-i18n="publish.where">Where to</legend>
-        <div id="postPlatforms"></div>
-      </fieldset>
-      <div class="post-options">
-        <div id="variantOption" hidden>
-          <label for="postVariant" data-i18n="publish.variant">Title</label>
-          <select id="postVariant"></select>
-        </div>
-        <div id="ytOption">
-          <label for="ytPrivacy" data-i18n="publish.ytPrivacy">YouTube visibility</label>
-          <select id="ytPrivacy">
-            <option value="public" data-i18n="publish.public">Public</option>
-            <option value="unlisted" data-i18n="publish.unlisted">Unlisted</option>
-            <option value="private" data-i18n="publish.private">Private</option>
-          </select>
-        </div>
-        <div id="ttOption">
-          <label for="ttMode" data-i18n="publish.ttMode">TikTok</label>
-          <select id="ttMode">
-            <option value="draft" data-i18n="publish.draft">To drafts, I post it in the TikTok app</option>
-            <option value="private" data-i18n="publish.selfOnly">Posted, visible only to me</option>
-          </select>
+      <div class="page" id="view-projects" hidden>
+        <header class="page-head"><div><h1 id="projectsTitle" data-i18n="page.projects">Projects</h1><p class="page-lead" data-i18n="page.projectsLead">Every chat with its clips, newest first.</p></div></header>
+        <div class="page-body">
+<input class="field" id="projectSearch" type="search" placeholder="xQc GTA" aria-label="Search projects" data-i18n-attr="aria-label:projects.search"><ul class="project-grid" id="projectList"></ul>
         </div>
       </div>
-      <div class="post-options">
-        <div>
-          <label for="postWhen" data-i18n="publish.when">When</label>
-          <select id="postWhen">
-            <option value="now" data-i18n="publish.now">Now</option>
-            <option value="later" data-i18n="publish.later">At a set time</option>
-          </select>
-        </div>
-        <div id="postAtBox" hidden>
-          <label for="postAt" data-i18n="publish.at">Date and time</label>
-          <input class="field" id="postAt" type="datetime-local">
-        </div>
-      </div>
-      <label for="postCaption" data-i18n="publish.caption">Post text</label>
-      <textarea id="postCaption" rows="7" readonly></textarea>
-      <p class="hint" id="postNote"></p>
-      <div class="dialog-btns">
-        <button type="button" class="btn ghost" id="postSettings" hidden data-i18n="publish.toSettings">Settings</button>
-        <button type="button" class="btn ghost" id="postCancel" data-i18n="settings.cancel">Cancel</button>
-        <button type="submit" class="btn primary" id="postSend" data-i18n="publish.send">Post</button>
-      </div>
-    </form>
-  </dialog>
-  <dialog class="settings-dialog sheet" id="scheduleDialog" aria-labelledby="scheduleTitle">
-    <header class="sheet-head">
-      <h2 id="scheduleTitle" data-i18n="sched.title">Scheduler</h2>
-      <button type="button" class="icon-btn" id="scheduleClose" aria-label="Close" data-i18n-attr="aria-label:sched.close">
-        <svg aria-hidden="true"><use href="#i-close"/></svg>
-      </button>
-    </header>
-    <section id="schedList" aria-labelledby="scheduleTitle">
-      <div class="sched-bar">
-        <p class="hint" data-i18n="sched.hint">Every post that waits for its time, on YouTube or here in Clippy.</p>
-        <button type="button" class="btn primary" id="schedNew" data-i18n="sched.new">Schedule a clip</button>
-      </div>
+      <div class="page" id="view-calendar" hidden>
+        <header class="page-head"><div><h1 id="scheduleTitle" data-i18n="sched.title">Calendar</h1><p class="page-lead" data-i18n="sched.hint">Every post that waits for its time, on YouTube or here in Clippy.</p></div><button type="button" class="btn primary" id="schedNew" data-i18n="sched.new">Schedule a clip</button></header>
+        <div class="page-body">
+<section id="schedList" aria-labelledby="scheduleTitle">
+      
       <div class="notice" role="note">
         <svg aria-hidden="true"><use href="#i-calendar"/></svg>
         <div>
@@ -502,19 +223,119 @@
         <button type="submit" class="btn primary" id="schedSend" data-i18n="publish.schedule">Schedule</button>
       </div>
     </form>
-  </dialog>
-  <dialog class="settings-dialog sheet" id="campaignsDialog" aria-labelledby="campaignsTitle">
-    <header class="sheet-head">
-      <h2 id="campaignsTitle" data-i18n="camp.title">Campaigns</h2>
-      <button type="button" class="icon-btn" id="campaignsClose" aria-label="Close" data-i18n-attr="aria-label:sched.close">
-        <svg aria-hidden="true"><use href="#i-close"/></svg>
-      </button>
-    </header>
-    <section id="campList" aria-labelledby="campaignsTitle">
-      <div class="sched-bar">
-        <p class="hint" data-i18n="camp.hint">Clipping campaigns for a streamer, a podcast or a brand: the brief, the moments to clip, the clippers' posts and what each one earns.</p>
-        <button type="button" class="btn primary" id="campNew" data-i18n="camp.new">New campaign</button>
+        </div>
       </div>
+      <div class="page" id="view-results" hidden>
+        <header class="page-head"><div><h1 id="resultsPageTitle" data-i18n="results.title">Results</h1><p class="page-lead" data-i18n="results.lead">How your posted clips do, and what Clippy learns from them.</p></div></header>
+        <div class="page-body">
+<section class="results" aria-labelledby="resultsTitle">
+        
+        <p class="hint" id="resultsSummary" data-i18n="results.hint">Clippy reads back how your posted clips do and picks more of what works.</p>
+        <p class="hint warn" id="resultsAnalytics" hidden data-i18n="results.reconnect">Connect YouTube again so Clippy can also read how much of each clip people watch.</p>
+        <ul class="findings" id="resultsList"></ul>
+        <button type="button" class="btn sm ghost" id="resultsRefresh" data-i18n="results.refresh">Read the numbers now</button>
+      </section>
+        </div>
+      </div>
+      <div class="page" id="view-daily" hidden>
+        <header class="page-head"><div><h1 id="picksTitle" data-i18n="picks.title">Daily picks</h1><p class="page-lead" data-i18n="picks.hint">Every day the most watched streamer moments of a game become clips, each with a time to post it.</p></div></header>
+        <div class="page-body">
+<section class="watches" aria-labelledby="picksTitle">
+        
+        
+        <ul class="account-list" id="picksList"></ul>
+        <details class="watch-add" id="picksAdd">
+          <summary data-i18n="picks.add">Start daily picks</summary>
+          <div class="post-options">
+            <div>
+              <label for="picksGame" data-i18n="picks.game">Game</label>
+              <select id="picksGame"></select>
+            </div>
+            <div>
+              <label for="picksN" data-i18n="picks.n">Clips a day</label>
+              <input class="field" id="picksN" type="number" min="1" max="5" value="3">
+            </div>
+            <div>
+              <label for="picksAt" data-i18n="picks.at">Pick them at</label>
+              <input class="field" id="picksAt" type="time" value="09:00">
+            </div>
+          </div>
+          <label for="picksTimes" data-i18n="picks.times">Posting times in New York, best first</label>
+          <input class="field" id="picksTimes" maxlength="80" autocomplete="off" placeholder="19:00, 15:00, 12:00"
+            aria-describedby="picksTimesHint">
+          <p class="hint" id="picksTimesHint" data-i18n="picks.timesHint">The most watched moment gets the first time. Each pick shows the time in your own time zone too.</p>
+          <fieldset class="post-platforms">
+            <legend data-i18n="picks.autopost">Post each clip at its time by itself (optional)</legend>
+            <div id="picksPlatforms"></div>
+          </fieldset>
+          <p class="hint" data-i18n="picks.autopostHint">YouTube gets the clip right away and makes it public at its time, so it goes out even while this computer is off.</p>
+          <div class="dialog-btns">
+            <button type="button" class="btn primary" id="picksSave" data-i18n="picks.save">Start</button>
+          </div>
+        </details>
+      </section>
+        </div>
+      </div>
+      <div class="page" id="view-watched" hidden>
+        <header class="page-head"><div><h1 id="watchesTitle" data-i18n="watch.title">Watched channels</h1><p class="page-lead" data-i18n="watch.hint">New videos of these channels become clips by themselves.</p></div></header>
+        <div class="page-body">
+<section class="watches" aria-labelledby="watchesTitle">
+        
+        
+        <ul class="account-list" id="watchList"></ul>
+        <details class="watch-add" id="watchAdd">
+          <summary data-i18n="watch.add">Watch a channel</summary>
+          <label for="watchUrl" data-i18n="watch.url">Channel or playlist link</label>
+          <input class="field" id="watchUrl" type="url" maxlength="500" autocomplete="off" spellcheck="false"
+            placeholder="https://www.youtube.com/@… · https://www.twitch.tv/…">
+          <div class="post-options">
+            <div>
+              <label for="watchPreset" data-i18n="watch.kind">Kind of clips</label>
+              <select id="watchPreset">
+                <option value="" data-i18n="watch.preset.auto">Automatic</option>
+                <option value="podcast" data-i18n="watch.preset.podcast">Podcast</option>
+                <option value="gameplay" data-i18n="watch.preset.gameplay">Facecam stream</option>
+                <option value="promo" data-i18n="watch.preset.promo">Video &amp; promo</option>
+                <option value="quick" data-i18n="watch.preset.quick">Quick shorts</option>
+              </select>
+            </div>
+            <div>
+              <label for="watchN" data-i18n="watch.n">Clips per video (0: as the kind says)</label>
+              <input class="field" id="watchN" type="number" min="0" max="12" value="0" placeholder="3">
+            </div>
+            <div>
+              <label for="watchEvery" data-i18n="watch.everyLabel">Look for new videos</label>
+              <select id="watchEvery">
+                <option value="15" data-i18n="watch.every15">every 15 minutes</option>
+                <option value="30" data-i18n="watch.every30">every 30 minutes</option>
+                <option value="60" selected data-i18n="watch.every60">every hour</option>
+                <option value="180" data-i18n="watch.every180">every 3 hours</option>
+                <option value="360" data-i18n="watch.every360">every 6 hours</option>
+                <option value="1440" data-i18n="watch.every1440">once a day</option>
+              </select>
+            </div>
+          </div>
+          <fieldset class="post-platforms">
+            <legend data-i18n="watch.autopost">Post the new clips automatically (optional)</legend>
+            <div id="watchPlatforms"></div>
+          </fieldset>
+          <label for="watchSlots" data-i18n="watch.slots">Daily posting times, one clip each</label>
+          <input class="field" id="watchSlots" maxlength="120" autocomplete="off" placeholder="18:00, 21:00"
+            aria-describedby="watchSlotsHint">
+          <p class="hint" id="watchSlotsHint" data-i18n="watch.slotsHint">YouTube goes public, TikTok to your drafts. Leave both empty to post by hand.</p>
+          <label class="check inline"><input type="checkbox" id="watchLatest"><span data-i18n="watch.latest">Clip the newest video now too</span></label>
+          <div class="dialog-btns">
+            <button type="button" class="btn primary" id="watchSave" data-i18n="watch.save">Start watching</button>
+          </div>
+        </details>
+      </section>
+        </div>
+      </div>
+      <div class="page" id="view-campaigns" hidden>
+        <header class="page-head"><div><h1 id="campaignsTitle" data-i18n="camp.title">Campaigns</h1><p class="page-lead" data-i18n="camp.hint">Clipping campaigns for a streamer, a podcast or a brand: the brief, the moments to clip, the clippers' posts and what each one earns.</p></div><button type="button" class="btn primary" id="campNew" data-i18n="camp.new">New campaign</button></header>
+        <div class="page-body">
+<section id="campList" aria-labelledby="campaignsTitle">
+      
       <div class="notice" role="note">
         <svg aria-hidden="true"><use href="#i-flag"/></svg>
         <div>
@@ -550,6 +371,184 @@
       <div class="dialog-btns">
         <button type="button" class="btn ghost" id="campBack" data-i18n="sched.back">Back</button>
         <button type="submit" class="btn primary" id="campSave" data-i18n="camp.save">Save</button>
+      </div>
+    </form>
+        </div>
+      </div>
+      <div class="page" id="view-brand" hidden>
+        <header class="page-head"><div><h1 id="kitTitle" data-i18n="kit.title">Brand kit</h1><p class="page-lead" data-i18n="kit.hint">Every new clip gets this look by itself: the caption style, and your logo, intro and outro when you add them. Nothing here is required.</p></div></header>
+        <div class="page-body">
+<section class="kit" aria-labelledby="kitTitle">
+        
+        
+        <div class="post-options">
+          <div><label for="kitFont" data-i18n="kit.font">Caption font</label><select id="kitFont"></select></div>
+          <div><label for="kitHighlight" data-i18n="kit.highlight">Highlight colour</label><select id="kitHighlight"></select></div>
+          <div>
+            <label for="kitUpper" data-i18n="kit.upper">Capital letters</label>
+            <select id="kitUpper">
+              <option value="" data-i18n="kit.default">Default</option>
+              <option value="true" data-i18n="kit.upperOn">Captions in capitals</option>
+              <option value="false" data-i18n="kit.upperOff">Captions as spoken</option>
+            </select>
+          </div>
+          <div><label for="kitPosition" data-i18n="kit.position">Logo position</label><select id="kitPosition"></select></div>
+        </div>
+        <ul class="account-list kit-files">
+          <li class="account"><div><b data-i18n="kit.logo">Logo</b><span class="account-state" id="kit-logo-name"></span></div>
+            <div class="watch-btns">
+              <label class="btn sm ghost file-btn"><span data-i18n="kit.choose">Choose file</span><input type="file" id="kit-logo-file" accept="image/*" hidden></label>
+              <button type="button" class="btn sm ghost" id="kit-logo-remove" data-i18n="kit.remove" hidden>Remove</button>
+            </div></li>
+          <li class="account"><div><b data-i18n="kit.intro">Intro</b><span class="account-state" id="kit-intro-name"></span>
+            <span class="hint kit-note" data-i18n="kit.introHint">Keep it under 1.5 s: a slow start loses viewers.</span></div>
+            <div class="watch-btns">
+              <label class="btn sm ghost file-btn"><span data-i18n="kit.choose">Choose file</span><input type="file" id="kit-intro-file" accept="video/*,image/*" hidden></label>
+              <button type="button" class="btn sm ghost" id="kit-intro-remove" data-i18n="kit.remove" hidden>Remove</button>
+            </div></li>
+          <li class="account"><div><b data-i18n="kit.outro">Outro</b><span class="account-state" id="kit-outro-name"></span></div>
+            <div class="watch-btns">
+              <label class="btn sm ghost file-btn"><span data-i18n="kit.choose">Choose file</span><input type="file" id="kit-outro-file" accept="video/*,image/*" hidden></label>
+              <button type="button" class="btn sm ghost" id="kit-outro-remove" data-i18n="kit.remove" hidden>Remove</button>
+            </div></li>
+        </ul>
+        <button type="button" class="btn primary" id="kitSave" data-i18n="kit.save">Save style</button>
+      </section>
+<section class="links" aria-labelledby="linksTitle"><h3 id="linksTitle" data-i18n="settings.links">Your profile links</h3>
+<p class="hint" id="profileLinksHint" data-i18n="settings.hint">One per line. They go under every clip's post text.</p>
+      <textarea id="profileLinks" rows="4" maxlength="2000" aria-describedby="profileLinksHint"
+        placeholder="TikTok: https://www.tiktok.com/@…&#10;Instagram: https://www.instagram.com/…/"></textarea>
+<button type="button" class="btn" id="linksSave" data-i18n="settings.linksSave">Save links</button></section>
+        </div>
+      </div>
+      <div class="page" id="view-settings" hidden>
+        <header class="page-head"><div><h1 id="settingsTitle" data-i18n="settings.title">Settings</h1><p class="page-lead" data-i18n="settings.lead">The AI that picks the moments, the accounts clips are posted to, and notifications.</p></div></header>
+        <div class="page-body">
+<section class="llm" aria-labelledby="llmTitle">
+        <h3 id="llmTitle" data-i18n="llm.title">AI</h3>
+        <p class="hint" data-i18n="llm.hint">Which AI picks the moments and writes the titles and texts. Change it any time.</p>
+        <p class="hint warn" id="llmFirst" hidden data-i18n="llm.first">Choose how Clippy thinks. Ollama runs on this computer and is the default.</p>
+        <p class="hint warn" id="llmHere" hidden data-i18n="llm.hereOnly">The AI can be changed on the computer that runs Clippy.</p>
+        <ul class="account-grid" id="llmModes" role="radiogroup" aria-labelledby="llmTitle"></ul>
+        <div class="post-options">
+          <div id="llmModelBox"><label for="llmModel" data-i18n="llm.model">Model</label>
+            <input class="field" id="llmModel" autocomplete="off" spellcheck="false" maxlength="100"></div>
+          <div id="llmKeyBox" hidden><label for="llmKey" data-i18n="llm.key">OpenRouter API key</label>
+            <input class="field" id="llmKey" type="password" autocomplete="off" spellcheck="false" maxlength="300"
+              aria-describedby="llmKeyHint"></div>
+        </div>
+        <p class="hint" id="llmKeyHint" data-i18n="llm.keyHint">The key stays on this computer and is never shown again.</p>
+        <p class="hint" id="llmModelHint" hidden data-i18n="llm.modelHint">Any model id from openrouter.ai/models; ids ending in :free cost nothing.</p>
+        <p class="hint" id="llmStatus" role="status"></p>
+        <p class="hint" data-i18n="llm.note">A change applies from the next request, no restart needed.</p>
+        <div class="watch-btns">
+          <button type="button" class="btn sm ghost" id="llmTest" data-i18n="llm.test">Test</button>
+          <button type="button" class="btn sm primary" id="llmSave" data-i18n="llm.save">Save AI</button>
+        </div>
+      </section>
+<section class="accounts" aria-labelledby="accountsTitle">
+        <h3 id="accountsTitle" data-i18n="accounts.title">Accounts</h3>
+        <p class="hint" data-i18n="accounts.hint">Connect your own accounts. Clips can be posted to YouTube, Instagram, Facebook, TikTok and X. One-time setup: docs/publishing.md.</p>
+        <p class="hint warn" id="accountsHere" hidden data-i18n="accounts.hereOnly">Connect accounts on the computer that runs Clippy; posting works from here too.</p>
+        <ul class="account-grid" id="accountList"></ul>
+        <div class="token-box" id="igTokenBox" hidden>
+          <label for="igToken" data-i18n="accounts.tokenLabel">Instagram access token</label>
+          <p class="hint" id="igTokenHint" data-i18n="accounts.tokenHint">From your Meta app: Instagram, API setup with Instagram login, Generate token.</p>
+          <div class="token-row">
+            <input id="igToken" type="password" autocomplete="off" spellcheck="false" maxlength="2000" placeholder="IGAA…"
+              aria-describedby="igTokenHint">
+            <button type="button" class="btn primary" id="igSave" data-i18n="accounts.tokenSave">Connect</button>
+          </div>
+        </div>
+      </section>
+<section class="notify" aria-labelledby="notifyTitle">
+        <h3 id="notifyTitle" data-i18n="notify.title">Notifications</h3>
+        <label class="check inline"><input type="checkbox" id="notifyToggle"><span data-i18n="notify.toggle">Tell me when a job is done (also when this window is in the background)</span></label>
+        <p class="hint" id="notifyHint" hidden data-i18n="notify.unavailable">This browser cannot show notifications here; on the computer that runs Clippy it works.</p>
+      </section>
+        </div>
+      </div>
+      <button class="to-bottom" id="toBottom" aria-label="Scroll to the newest message" data-i18n-attr="aria-label:thread.toBottom" hidden>
+        <svg aria-hidden="true"><use href="#i-down"/></svg>
+      </button>
+
+      <footer class="composer-wrap">
+        <div class="attachments" id="attachments" role="list" aria-live="polite" hidden></div>
+        <form class="composer" id="composer">
+          <button type="button" class="icon-btn attach-btn" id="attach" aria-label="Attach files" title="Attach files"
+            data-i18n-attr="aria-label:composer.attach;title:composer.attach">
+            <svg aria-hidden="true"><use href="#i-clip"/></svg>
+          </button>
+          <input type="file" id="fileInput" multiple accept="image/*,audio/*,video/*,.cube" hidden>
+          <label class="sr-only" for="input" data-i18n="composer.label">Message</label>
+          <textarea id="input" rows="1" placeholder="Paste a video link (YouTube, TikTok, Twitch…), or describe what you want…" autocomplete="off" enterkeyhint="send"></textarea>
+          <button type="button" class="icon-btn voice-btn" id="voiceBtn" aria-pressed="false" aria-label="Speak" title="Speak">
+            <svg aria-hidden="true"><use href="#i-mic"/></svg>
+          </button>
+          <button type="submit" class="send" id="send" aria-label="Send" data-i18n-attr="aria-label:composer.send">
+            <svg aria-hidden="true"><use href="#i-send"/></svg>
+          </button>
+        </form>
+        <div class="hint"><span class="only-desktop" data-i18n="composer.hintKeys">Enter to send · Shift+Enter for a new line · </span><span data-i18n="composer.hint">Finished clips go to your video library</span></div>
+      </footer>
+    </main>
+  </div>
+  <dialog class="settings-dialog" id="copyDialog" aria-labelledby="copyTitle">
+    <h2 id="copyTitle" data-i18n="copy.title">Post text</h2>
+    <p class="hint" data-i18n="copy.hint">Copying is blocked here; select the text and copy it yourself.</p>
+    <textarea id="copyText" rows="10" readonly aria-labelledby="copyTitle"></textarea>
+    <div class="dialog-btns">
+      <button type="button" class="btn primary" id="copyClose" data-i18n="copy.close">Close</button>
+    </div>
+  </dialog>
+  <dialog class="settings-dialog sheet" id="postDialog" aria-labelledby="postTitle">
+    <form method="dialog" id="postForm">
+      <h2 id="postTitle" data-i18n="publish.titlePlain">Post clip</h2>
+      <fieldset class="post-platforms">
+        <legend data-i18n="publish.where">Where to</legend>
+        <div id="postPlatforms"></div>
+      </fieldset>
+      <div class="post-options">
+        <div id="variantOption" hidden>
+          <label for="postVariant" data-i18n="publish.variant">Title</label>
+          <select id="postVariant"></select>
+        </div>
+        <div id="ytOption">
+          <label for="ytPrivacy" data-i18n="publish.ytPrivacy">YouTube visibility</label>
+          <select id="ytPrivacy">
+            <option value="public" data-i18n="publish.public">Public</option>
+            <option value="unlisted" data-i18n="publish.unlisted">Unlisted</option>
+            <option value="private" data-i18n="publish.private">Private</option>
+          </select>
+        </div>
+        <div id="ttOption">
+          <label for="ttMode" data-i18n="publish.ttMode">TikTok</label>
+          <select id="ttMode">
+            <option value="draft" data-i18n="publish.draft">To drafts, I post it in the TikTok app</option>
+            <option value="private" data-i18n="publish.selfOnly">Posted, visible only to me</option>
+          </select>
+        </div>
+      </div>
+      <div class="post-options">
+        <div>
+          <label for="postWhen" data-i18n="publish.when">When</label>
+          <select id="postWhen">
+            <option value="now" data-i18n="publish.now">Now</option>
+            <option value="later" data-i18n="publish.later">At a set time</option>
+          </select>
+        </div>
+        <div id="postAtBox" hidden>
+          <label for="postAt" data-i18n="publish.at">Date and time</label>
+          <input class="field" id="postAt" type="datetime-local">
+        </div>
+      </div>
+      <label for="postCaption" data-i18n="publish.caption">Post text</label>
+      <textarea id="postCaption" rows="7" readonly></textarea>
+      <p class="hint" id="postNote"></p>
+      <div class="dialog-btns">
+        <button type="button" class="btn ghost" id="postSettings" hidden data-i18n="publish.toSettings">Settings</button>
+        <button type="button" class="btn ghost" id="postCancel" data-i18n="settings.cancel">Cancel</button>
+        <button type="submit" class="btn primary" id="postSend" data-i18n="publish.send">Post</button>
       </div>
     </form>
   </dialog>

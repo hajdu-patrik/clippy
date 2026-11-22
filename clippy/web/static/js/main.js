@@ -5,16 +5,19 @@ import { bindDrawer, closeDrawer } from "./drawer.js";
 import { applyStatic, loadCatalog } from "./i18n.js";
 import { startLive } from "./live.js";
 import { askOnce } from "./llm.js";
-import { bindSettings, loadSettings, openSettingsFromLink } from "./settings.js";
+import { bindSettings, loadSettings } from "./settings.js";
 import { bindPublish } from "./publish.js";
 import { bindCampaigns } from "./campaigns.js";
 import { bindSchedule } from "./schedule.js";
+import { bindProjects } from "./projects.js";
+import { showView, viewOf } from "./views.js";
 import { bindViewport } from "./viewport.js";
 import { bindNotify } from "./notify.js";
 import { bindVoice } from "./voice.js";
 import { bindCopyDialog } from "./cards.js";
 import { bindScroll } from "./messages.js";
 import { loadChats, setWorker } from "./sidebar.js";
+import { state } from "./state.js";
 import { $, store } from "./util.js";
 
 const THEME_KEY = "clippy-theme";
@@ -38,6 +41,17 @@ function newChat() {
 }
 
 function route() {
+  if (location.hash === "#settings") {
+    history.replaceState(null, "", "#/settings");
+  }
+  const view = viewOf(location.hash);
+  closeDrawer();
+  if (view) {
+    if (state.current) openChat(null);
+    showView(view);
+    return;
+  }
+  showView(null);
   const match = location.hash.match(/^#\/chat\/(\d+)/);
   openChat(match ? Number(match[1]) : null);
 }
@@ -73,6 +87,7 @@ function bindChrome() {
   bindPublish();
   bindSchedule();
   bindCampaigns();
+  bindProjects();
   bindViewport();
   bindNotify();
   bindVoice();
@@ -90,6 +105,5 @@ await loadSettings();
 startLive();
 setInterval(refreshStatus, STATUS_POLL_MS);
 route();
-openSettingsFromLink();
 await askOnce();
 if (matchMedia("(pointer: fine)").matches) $("#input").focus();

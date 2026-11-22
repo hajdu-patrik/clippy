@@ -10,12 +10,12 @@ platform's own page, and the tokens it gives back stay on this computer in `data
 never sent to the browser). **Disconnect** in Settings deletes them; you can also revoke Clippy's access on the
 platform's account page at any time.
 
-Accounts are connected on the computer that runs Clippy (Settings, Accounts). Paired phones can post, but cannot
+Accounts are connected on the computer that runs Clippy (Settings, Connected accounts). Paired phones can post, but cannot
 connect accounts.
 
 ## What each platform allows
 
-*Settings, Accounts* shows one card per platform. Clippy only uses each platform's public, official API and its
+*Settings*, Connected accounts, shows one card per platform. Clippy only uses each platform's public, official API and its
 official sign-in; where a platform offers apps no way to upload a video, the card says so instead of faking it.
 
 | Platform | Connect | Post | Plan a post | What the platform requires |
@@ -106,7 +106,7 @@ Works with an Instagram **Creator** or **Business** account; no Facebook Page is
 3. In **API setup with Instagram login** add your account and press **Generate token**. Allow the permissions it
    asks for (`instagram_business_basic`, `instagram_business_content_publish`, and
    `instagram_business_manage_insights` for the numbers) and copy the token.
-4. In Clippy: Settings, Accounts, **Paste token** next to Instagram, then **Connect**.
+4. In Clippy: Settings, Connected accounts, **Paste token** next to Instagram, then **Connect**.
 
 The token lasts 60 days; Clippy renews it by itself well before that, as long as it posts or checks the account now
 and then. If it has run out, generate a new token and paste it again.
@@ -244,21 +244,21 @@ Kick uses OAuth 2.1 with PKCE; Clippy asks for `user:read` and `channel:read`.
 
 - **At a set time:** in the Post dialog choose *At a set time* and a date. The card lists the planned post with a
   *cancel* link; at its time it starts like a post made by hand. A clip deleted in the meantime is not posted.
-- **Automatically for a watched channel:** under *Settings, Automation* give the channel the platforms and the
+- **Automatically for a watched channel:** under *Watched channels* give the channel the platforms and the
   daily times (for example *18:00, 21:00*). Each new clip of that channel takes the next free time, one clip per time
   across all channels, best clip first. YouTube posts go public, TikTok to your drafts.
 
 Clippy has to be running at the planned time; a post whose time passed while it was off goes out when it starts again.
 
-**The Scheduler** (sidebar) shows every planned post in one list, grouped by day: videos YouTube holds for their
+**The Calendar** (sidebar) shows every planned post in one list, grouped by day: videos YouTube holds for their
 publish time (state *Scheduled on YouTube*, and *Uploading* while the file is still on its way) and posts waiting in
 Clippy's own plan, each with the clip's cover, its chat, the platforms and the time in your time zone. *Schedule a clip*
-picks a chat, a clip, the platforms and a date and time; the quick picks are your posting times (*Your posting times* at the top of the Scheduler, or
+picks a chat, a clip, the platforms and a date and time; the quick picks are your posting times (*Your posting times* at the top of the Calendar, or
 the daily times of your watched channels) and *Next free slot*, which skips times that already hold a post. Posts in
 Clippy's plan can be moved (*Change time*) or removed. A YouTube video goes up at once, private, and YouTube makes it
 public at its time, so its visibility choice does not apply to a timed video. Its time cannot be changed from
 Clippy: YouTube's `videos.update` and `videos.delete` need the `youtube` or `youtube.force-ssl` scope, and Clippy asks
-only for `youtube.upload` (plus read-only scopes), so the Scheduler links the video in YouTube Studio instead. Nothing is
+only for `youtube.upload` (plus read-only scopes), so the Calendar links the video in YouTube Studio instead. Nothing is
 posted without your own action: scheduling is the click on *Schedule*.
 
 ## Learning from the results
@@ -268,7 +268,7 @@ platform tells, how much of the clip people watch (YouTube Analytics, Instagram'
 show under each post on the clip card. TikTok drafts have no public video yet, and Facebook and X posts are not read
 back yet, so only YouTube and Instagram posts are measured.
 
-*Settings, Results* compares the clips with your own usual (the median views on the same platform), from 5 clips
+*Results* compares the clips with your own usual (the median views on the same platform), from 5 clips
 that are at least two days old: which openings, lengths, kinds of moment and posting times do clearly better or
 worse. The clear patterns go to the clip picker as a soft preference (a clearly better moment still wins), and the
 chat can answer *"mi működik a legjobban?"* with your own numbers. An account connected to YouTube before this

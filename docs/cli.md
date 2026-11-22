@@ -30,7 +30,7 @@ help text.
 each can answer (installed, signed in, key set). `clippy llm <mode>` switches (`--model <name>` sets that mode's model,
 `--test` asks the AI one tiny question). OpenRouter asks for its API key without showing it; `claude` and `codex` need
 the Claude Code and Codex apps installed and signed in (`claude`, `codex login`). `clippy install` asks once when no
-AI was ever chosen. The same choice is in the web app under *Settings, AI*; it applies from the next request.
+AI was ever chosen. The same choice is in the web app under *Settings*; it applies from the next request.
 
 ## Clipping: `clippy clip`
 
