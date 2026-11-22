@@ -3,8 +3,9 @@ import { isActive } from "./views.js";
 import { showCopyDialog } from "./cards.js";
 import { t, tx } from "./i18n.js";
 import { onLive } from "./live.js";
-import { LABELS, POSTING, platformLabel } from "./platforms.js";
+import { LABELS } from "./platforms.js";
 import { $, copyText, esc, toast } from "./util.js";
+import { PlatformPicker, actions, blank, button, row } from "./ui.js";
 
 let daily = [];
 let games = [];
@@ -19,6 +20,9 @@ function clock(due) {
   return `${at.toLocaleDateString(undefined, { month: "short", day: "numeric" })} ${time}`;
 }
 
+let picker = null;
+const platforms = () => (picker ||= new PlatformPicker($("#picksPlatforms"), { name: "picksPlatform" }));
+
 function pickRow(p) {
   const head = p.clip_title || p.title || p.streamer;
   const views = t("picks.views", { n: Number(p.views || 0).toLocaleString(undefined) });
@@ -27,10 +31,7 @@ function pickRow(p) {
     <div class="pick-body"><b>${esc(head)}</b>
       <span class="account-state">${esc(`${p.streamer} · ${p.platform} · ${views}`)}</span>
       <p class="pick-text${p.failed ? " failed" : ""}">${esc(p.text || t(p.failed ? "picks.failed" : "picks.making"))}</p></div>
-    <div class="watch-btns">
-      <button type="button" class="btn sm ghost" data-pick="open">${esc(t("picks.open"))}</button>
-      ${p.text ? `<button type="button" class="btn sm ghost" data-pick="copy">${esc(t("picks.copy"))}</button>` : ""}
-    </div></li>`;
+    ${actions(button(t("picks.open"), { data: { pick: "open" } }), p.text && button(t("picks.copy"), { data: { pick: "copy" } }))}</li>`;
 }
 
 function dailyRow(d) {
@@ -39,27 +40,18 @@ function dailyRow(d) {
   const posts = names ? ` · ${t("picks.posts", { platforms: names })}` : "";
   const state = t("picks.summary", { n: s.n || 3, at: s.at || "09:00", times: (s.times || []).join(", ") }) + posts
     + (d.enabled ? "" : ` · ${t("picks.paused")}`);
-  return `<li class="account watch ${d.enabled ? "on" : ""}" data-did="${d.id}">
-    <div><b>${esc(d.name)}</b><span class="account-state">${esc(state)}</span>
-      ${d.error_t ? `<span class="account-error">${esc(tx(d.error_t, ""))}</span>` : ""}</div>
-    <div class="watch-btns">
-      <button type="button" class="btn sm ghost" data-daily="run">${esc(t("picks.runNow"))}</button>
-      <button type="button" class="btn sm ghost" data-daily="toggle">${esc(t(d.enabled ? "picks.pause" : "picks.resume"))}</button>
-      <button type="button" class="btn sm ghost danger" data-daily="delete">${esc(t("picks.delete"))}</button>
-    </div></li>${(d.picks || []).map(pickRow).join("")}`;
+  const tail = actions(button(t("picks.runNow"), { data: { daily: "run" } }),
+    button(t(d.enabled ? "picks.pause" : "picks.resume"), { data: { daily: "toggle" } }),
+    button(t("picks.delete"), { variant: "ghost danger", data: { daily: "delete" } }));
+  return row({ title: d.name, state, error: d.error_t ? tx(d.error_t, "") : "", tail, cls: `watch ${d.enabled ? "on" : ""}`,
+    data: { did: d.id } }) + (d.picks || []).map(pickRow).join("");
 }
 
 function render() {
   const list = $("#picksList");
   if (!list) return;
-  list.innerHTML = daily.length ? daily.map(dailyRow).join("")
-    : `<li class="blank">${esc(t("picks.none"))}</li>`;
-  const boxes = $("#picksPlatforms");
-  if (boxes && !boxes.children.length) {
-    boxes.innerHTML = POSTING.map((name) =>
-      `<label class="check"><input type="checkbox" name="picksPlatform" value="${name}">` +
-      `<span>${platformLabel(name)}</span></label>`).join("");
-  }
+  list.innerHTML = daily.length ? daily.map(dailyRow).join("") : blank(t("picks.none"), { tag: "li" });
+  if (!platforms().box.children.length) platforms().render();
   const select = $("#picksGame");
   if (select && select.options.length !== games.length) {
     select.innerHTML = games.map((g) => `<option value="${esc(g.key)}">${esc(g.name)}</option>`).join("");
@@ -120,7 +112,7 @@ async function addDaily() {
       n: Number($("#picksN").value) || 3,
       at: $("#picksAt").value || "09:00",
       times: $("#picksTimes").value,
-      platforms: [...document.querySelectorAll("input[name=picksPlatform]:checked")].map((box) => box.value),
+      platforms: platforms().selected(),
       now: true,
     });
     $("#picksAdd").open = false;

@@ -3,6 +3,7 @@ import { onLive } from "./live.js";
 import { state } from "./state.js";
 import { isActive, onView } from "./views.js";
 import { $, esc } from "./util.js";
+import { blank } from "./ui.js";
 
 const locale = () => document.documentElement.lang || undefined;
 
@@ -18,7 +19,7 @@ function render() {
         <strong>${esc(chatTitle(c.title))}</strong>
         <span class="hint">${esc(c.video_title && c.video_title !== c.title ? c.video_title : "")}</span>
         <span class="hint">${esc(when(c.updated || c.created))}</span></a></li>`).join("")
-    : `<li class="blank"><p>${esc(t(q ? "projects.none" : "projects.empty"))}</p></li>`;
+    : blank(t(q ? "projects.none" : "projects.empty"), { tag: "li" });
 }
 
 export function bindProjects() {

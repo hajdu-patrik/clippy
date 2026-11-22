@@ -3,6 +3,7 @@ import { t, tx } from "./i18n.js";
 import { onLive } from "./live.js";
 import { isActive, onView } from "./views.js";
 import { $, esc, toast } from "./util.js";
+import { blank } from "./ui.js";
 
 const RELOAD_MS = 300;
 
@@ -62,7 +63,7 @@ function cardHtml(c) {
 function render() {
   $("#campItems").innerHTML = data.campaigns.length
     ? `<ul class="sched-list">${data.campaigns.map(cardHtml).join("")}</ul>`
-    : `<div class="blank"><p>${esc(t("camp.empty"))}</p></div>`;
+    : blank(t("camp.empty"));
 }
 
 async function load() {
@@ -159,7 +160,7 @@ async function onAdd(event) {
 
 async function open() {
   showForm(false);
-  $("#campItems").innerHTML = `<div class="blank"><p>${esc(t("accounts.loading"))}</p></div>`;
+  $("#campItems").innerHTML = blank(t("accounts.loading"));
   await load();
 }
 

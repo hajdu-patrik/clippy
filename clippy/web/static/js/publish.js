@@ -5,6 +5,7 @@ import { onLive } from "./live.js";
 import { POSTING, platformLabel } from "./platforms.js";
 import { state } from "./state.js";
 import { $, esc, toast } from "./util.js";
+import { PlatformPicker } from "./ui.js";
 
 let target = null;
 
@@ -58,23 +59,19 @@ function caption(c) {
   return (c.txt || "").split("\n---\n")[0].trim() || c.clip?.description || c.clip?.title || "";
 }
 
+let picker = null;
+const platforms = () => (picker ||= new PlatformPicker($("#postPlatforms"), { accounts: () => state.accounts?.accounts }));
+
 function renderPlatforms() {
-  const accounts = state.accounts?.accounts || {};
-  const box = $("#postPlatforms");
-  box.innerHTML = POSTING.map((name) => {
-    const a = accounts[name] || {};
-    const who = a.connected ? (a.name ? ` <small>${esc(a.name)}</small>` : "") : ` <small>${esc(t("accounts.notConnected"))}</small>`;
-    return `<label class="check ${a.connected ? "" : "off"}"><input type="checkbox" name="platform" value="${name}"
-      ${a.connected ? "checked" : "disabled"}><span>${platformLabel(name)}${who}</span></label>`;
-  }).join("");
-  const any = POSTING.some((name) => accounts[name]?.connected);
+  platforms().render(platforms().usable());
+  const any = platforms().usable().length > 0;
   $("#postSend").disabled = !any;
   $("#postSettings").hidden = any;
   syncOptions();
 }
 
 function chosen() {
-  return [...document.querySelectorAll('#postPlatforms input[name="platform"]:checked')].map((x) => x.value);
+  return platforms().selected();
 }
 
 function syncOptions() {

@@ -2,8 +2,9 @@ import { api } from "./api.js";
 import { isActive } from "./views.js";
 import { t, tx } from "./i18n.js";
 import { onLive } from "./live.js";
-import { LABELS, POSTING, platformLabel } from "./platforms.js";
-import { $, esc, toast } from "./util.js";
+import { LABELS } from "./platforms.js";
+import { $, toast } from "./util.js";
+import { PlatformPicker, actions, blank, button, row } from "./ui.js";
 
 const PRESET_ICONS = { podcast: "🎙️", gameplay: "🎮", promo: "📣", quick: "⚡" };
 
@@ -20,17 +21,16 @@ function watchRow(w) {
       : "",
   ].filter(Boolean);
   const paused = w.enabled ? "" : ` · ${t("watch.paused")}`;
-  return `<li class="account watch ${w.enabled ? "on" : ""}" data-wid="${w.id}">
-    <div><b>${esc(w.title || w.url)}</b><span class="account-state">${esc(parts.join(" · ") + paused)}</span>
-      ${w.error_t ? `<span class="account-error">${esc(tx(w.error_t, ""))}</span>` : ""}</div>
-    <div class="watch-btns">
-      <button type="button" class="btn sm ghost" data-watch="check">${esc(t("watch.checkNow"))}</button>
-      <button type="button" class="btn sm ghost" data-watch="toggle">${esc(t(w.enabled ? "watch.pause" : "watch.resume"))}</button>
-      <button type="button" class="btn sm ghost danger" data-watch="delete" aria-label="${esc(t("watch.delete"))}">${esc(t("watch.delete"))}</button>
-    </div></li>`;
+  const tail = actions(button(t("watch.checkNow"), { data: { watch: "check" } }),
+    button(t(w.enabled ? "watch.pause" : "watch.resume"), { data: { watch: "toggle" } }),
+    button(t("watch.delete"), { variant: "ghost danger", data: { watch: "delete" } }));
+  return row({ title: w.title || w.url, state: parts.join(" · ") + paused, error: w.error_t ? tx(w.error_t, "") : "", tail,
+    cls: `watch ${w.enabled ? "on" : ""}`, data: { wid: w.id } });
 }
 
 let watches = [];
+let picker = null;
+const platforms = () => (picker ||= new PlatformPicker($("#watchPlatforms"), { name: "watchPlatform" }));
 
 export async function loadWatches() {
   try {
@@ -44,8 +44,7 @@ export async function loadWatches() {
 function renderWatches() {
   const list = $("#watchList");
   if (!list) return;
-  list.innerHTML = watches.length ? watches.map(watchRow).join("")
-    : `<li class="blank">${esc(t("watch.none"))}</li>`;
+  list.innerHTML = watches.length ? watches.map(watchRow).join("") : blank(t("watch.none"), { tag: "li" });
 }
 
 async function onWatch(event) {
@@ -86,14 +85,14 @@ async function addWatch() {
       preset: $("#watchPreset").value,
       n: Number($("#watchN").value) || 0,
       every: Number($("#watchEvery").value),
-      platforms: [...document.querySelectorAll("#watchPlatforms input:checked")].map((x) => x.value),
+      platforms: platforms().selected(),
       slots: $("#watchSlots").value,
       latest: $("#watchLatest").checked,
     });
     $("#watchUrl").value = "";
     $("#watchSlots").value = "";
     $("#watchLatest").checked = false;
-    document.querySelectorAll("#watchPlatforms input").forEach((x) => { x.checked = false; });
+    platforms().clear();
     $("#watchAdd").open = false;
     toast(t("watch.added"));
     await loadWatches();
@@ -105,7 +104,7 @@ async function addWatch() {
 }
 
 export function bindWatches() {
-  $("#watchPlatforms").innerHTML = POSTING.map((name) => `<label class="check"><input type="checkbox" value="${name}"><span>${platformLabel(name)}</span></label>`).join("");
+  platforms().render();
   $("#watchList").addEventListener("click", onWatch);
   $("#watchSave").addEventListener("click", addWatch);
   $("#watchAdd").addEventListener("keydown", (e) => {

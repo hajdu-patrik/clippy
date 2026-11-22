@@ -69,7 +69,7 @@
   .acct:has(.llm-mode input:checked):hover { background: var(--accent-tint); }
 }
 
-.post b, .pf-label { display: inline-flex; align-items: center; gap: 8px; }
+.post b { display: inline-flex; align-items: center; gap: 8px; }
 .posts { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 6px; font-size: var(--fs-sm); }
 .post { color: var(--fg-muted); overflow-wrap: anywhere; }
 .post b { color: var(--fg); font-weight: 600; margin-right: 4px; }
@@ -152,7 +152,7 @@
   .clip-pick:has(input:checked):hover { background: var(--accent-tint); }
 }
 .quick { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 16px; }
-:is(.settings-dialog, .page) .quick .hint { margin: 0; flex: 1 1 100%; }
+:is(.settings-dialog, .page) .quick .hint { margin: 12px 0 0; flex: 1 1 100%; }
 .slots-inline { margin-top: 8px; }
 
 #projectSearch { margin: 0 0 16px; }

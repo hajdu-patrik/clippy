@@ -1,11 +1,12 @@
 import { api } from "./api.js";
 import { chatTitle, t, tx } from "./i18n.js";
 import { onLive } from "./live.js";
-import { POSTING, platformLabel } from "./platforms.js";
+import { platformLabel } from "./platforms.js";
 import { loadAccounts } from "./publish.js";
 import { state } from "./state.js";
 import { isActive, onView } from "./views.js";
 import { $, esc, toast } from "./util.js";
+import { PlatformPicker, blank, button } from "./ui.js";
 
 const MIN_AHEAD_MS = 60 * 1000;
 const QUICK_MORE = 5;
@@ -63,10 +64,8 @@ function editHtml(item) {
 function actionsHtml(item) {
   const open = `<a class="btn sm ghost" href="#/chat/${Number(item.chat_id)}" data-close>${esc(t("sched.openClip"))}</a>`;
   if (item.source === "plan") {
-    return `<div class="sched-actions">
-      <button type="button" class="btn sm ghost" data-sched="edit" data-id="${item.id}">${esc(t("sched.change"))}</button>
-      <button type="button" class="btn sm ghost danger" data-sched="remove" data-id="${item.id}">${esc(t("sched.remove"))}</button>
-      ${open}</div>`;
+    return `<div class="sched-actions">${button(t("sched.change"), { data: { sched: "edit", id: item.id } })}
+      ${button(t("sched.remove"), { variant: "ghost danger", data: { sched: "remove", id: item.id } })}${open}</div>`;
   }
   const studio = secure(item.studio), url = secure(item.url);
   const link = (href, key) => `<a class="btn sm ghost" href="${esc(href)}" target="_blank" rel="noopener noreferrer">${esc(t(key))}</a>`;
@@ -109,14 +108,14 @@ function renderList() {
   }
   const html = [...days.values()].map((items) => groupHtml(dayName(items[0].due), items)).join("")
     + groupHtml(t("sched.undated"), undated) + groupHtml(t("sched.recent"), past);
-  box.innerHTML = html || `<div class="blank"><p>${esc(t("sched.none"))}</p></div>`;
+  box.innerHTML = html || blank(t("sched.none"));
 }
 
 async function loadSchedule() {
   try {
     data = await api.schedule();
   } catch (err) {
-    $("#schedItems").innerHTML = `<div class="blank"><p role="alert">${esc(t("sched.loadFailed", { error: tx(err.t, err.message) }))}</p></div>`;
+    $("#schedItems").innerHTML = blank(t("sched.loadFailed", { error: tx(err.t, err.message) }), { alert: true });
     return;
   }
   if (!isActive("calendar")) return;
@@ -137,9 +136,9 @@ function selectedClip() {
   return chat && picked ? { chat, number: Number(picked.value) } : null;
 }
 
-function chosenPlatforms() {
-  return [...document.querySelectorAll('#schedPlatforms input[name="platform"]:checked')].map((x) => x.value);
-}
+let picker = null;
+const platforms = () => (picker ||= new PlatformPicker($("#schedPlatforms"), { accounts: () => state.accounts?.accounts }));
+const chosenPlatforms = () => platforms().selected();
 
 function renderClips(number) {
   const chat = data.choices.find((c) => c.id === Number($("#schedChat").value));
@@ -154,15 +153,7 @@ function renderClips(number) {
     <span class="clip-pick-name">${esc(c.title || t("sched.clipNumber", { n: c.number }))}<small>#${c.number}</small></span></label>`).join("");
 }
 
-function renderPlatforms(keep) {
-  const accounts = state.accounts?.accounts || {};
-  $("#schedPlatforms").innerHTML = POSTING.map((name) => {
-    const a = accounts[name] || {};
-    const who = a.connected ? (a.name ? ` <small>${esc(a.name)}</small>` : "") : ` <small>${esc(t("accounts.notConnected"))}</small>`;
-    return `<label class="check ${a.connected ? "" : "off"}"><input type="checkbox" name="platform" value="${name}"
-      ${a.connected ? "" : "disabled"} ${keep.includes(name) && a.connected ? "checked" : ""}><span>${platformLabel(name)}${who}</span></label>`;
-  }).join("");
-}
+const renderPlatforms = (keep) => platforms().render(keep);
 
 function slotsEditor(id) {
   return `<div class="token-row slots-inline">
@@ -246,7 +237,7 @@ function showForm(on, pre) {
 
 async function open(event) {
   editing = null;
-  $("#schedItems").innerHTML = `<div class="blank"><p>${esc(t("accounts.loading"))}</p></div>`;
+  $("#schedItems").innerHTML = blank(t("accounts.loading"));
   $("#schedList").hidden = false;
   $("#schedForm").hidden = true;
   await Promise.all([loadSchedule(), loadAccounts()]);

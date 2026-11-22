@@ -219,7 +219,6 @@
   .msg.user .bubble { max-width: 92%; }
   .sent-attachments { max-width: 92%; }
   .composer { padding: 4px; gap: 2px; border-radius: 24px; }
-  .composer textarea { font-size: 16px; }
   .progress { padding: 12px; }
   .progress .head { gap: 12px; flex-wrap: wrap; }
   .progress .times { text-align: left; flex-basis: 100%; display: flex; gap: 12px; }
