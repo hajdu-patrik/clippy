@@ -3,7 +3,7 @@ import { t, tx } from "./i18n.js";
 import { onLive } from "./live.js";
 import { isActive, onView } from "./views.js";
 import { $, esc, toast } from "./util.js";
-import { blank } from "./ui.js";
+import { blank, button } from "./ui.js";
 
 const RELOAD_MS = 300;
 
@@ -25,7 +25,7 @@ function postRow(c, p) {
     <span class="camp-link">${label}${problem}</span>
     <span class="camp-num" data-label="${esc(t("camp.views"))}">${count(p.views)}</span>
     <span class="camp-num" data-label="${esc(t("camp.payout"))}">${money(p.payout)}</span>
-    <button type="button" class="btn sm ghost" data-camp="removePost" data-id="${c.id}" data-post="${p.id}">${esc(t("camp.removePost"))}</button>
+    ${button(t("camp.removePost"), { data: { camp: "removePost", id: c.id, post: p.id } })}
   </li>`;
 }
 
@@ -45,10 +45,10 @@ function cardHtml(c) {
       <p class="hint">${esc(t("camp.sourcesCount", { n: (c.sources || []).length, chats }))}</p>
       <p class="camp-totals">${esc(t("camp.totals", { views: count(c.views), owed: money(c.owed) }))}</p>
       <div class="sched-actions">
-        <button type="button" class="btn sm primary" data-camp="clip" data-id="${c.id}">${esc(t("camp.clip"))}</button>
-        <button type="button" class="btn sm" data-camp="refresh" data-id="${c.id}">${esc(t("camp.refresh"))}</button>
-        <button type="button" class="btn sm ghost" data-camp="edit" data-id="${c.id}">${esc(t("camp.edit"))}</button>
-        <button type="button" class="btn sm ghost" data-camp="delete" data-id="${c.id}">${esc(t("camp.delete"))}</button>
+        ${button(t("camp.clip"), { variant: "primary", data: { camp: "clip", id: c.id } })}
+        ${button(t("camp.refresh"), { variant: "", data: { camp: "refresh", id: c.id } })}
+        ${button(t("camp.edit"), { data: { camp: "edit", id: c.id } })}
+        ${button(t("camp.delete"), { data: { camp: "delete", id: c.id } })}
       </div>
       <h4 class="camp-sub">${esc(t("camp.posts"))}</h4>
       ${posts}

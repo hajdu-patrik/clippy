@@ -114,6 +114,9 @@ change, what changed rather than how; dates are ISO 8601.
   profile / channel / playlist link, no video in the post, no sound, each with what helps.
 
 ### Changed
+- The interface is built from shared pieces (`js/ui.js`: buttons, action rows, list rows, empty states and one
+  platform picker) instead of markup copied across modules, with one CSS definition per component; checked from 320 to
+  1440 px with no overflow and no overlapping elements.
 - The look follows the form language of the big AI apps (Claude, ChatGPT, Gemini) in Clippy's black and wine
   colours: the platform's own interface font in sentence case, neutral graphite or white surfaces, soft radii, hairline
   borders, a floating pill composer, unframed assistant replies with user bubbles, wine only for the main button,

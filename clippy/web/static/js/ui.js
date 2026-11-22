@@ -35,7 +35,8 @@ export class PlatformPicker {
   option(platform, keep) {
     const a = this.account(platform);
     const usable = a.connected;
-    const who = this.accounts ? ` <small>${esc(usable ? a.name || "" : t("accounts.notConnected"))}</small>` : "";
+    const note = this.accounts ? (usable ? a.name || "" : t("accounts.notConnected")) : "";
+    const who = note ? ` <small>${esc(note)}</small>` : "";
     const checked = usable && keep.includes(platform) ? " checked" : "";
     return `<label class="check${usable ? "" : " off"}"><input type="checkbox" name="${this.name}" value="${platform}"`
       + `${usable ? "" : " disabled"}${checked}><span>${platformLabel(platform)}${who}</span></label>`;
