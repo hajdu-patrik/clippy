@@ -33,7 +33,7 @@ function statsHtml(s) {
 }
 
 function plannedHtml(c) {
-  return (c.scheduled || []).map((s) => `<li class="post planned"><b>🕒 ${esc(whenText(s.due))}</b>
+  return (c.scheduled || []).map((s) => `<li class="post planned"><b>${esc(whenText(s.due))}</b>
     <span class="pf-list">${s.platforms.map(platformLabel).join("")}</span>
     <button type="button" class="link-btn" data-act="unschedule" data-sid="${s.id}">${esc(t("publish.unschedule"))}</button></li>`).join("");
 }

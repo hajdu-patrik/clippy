@@ -114,6 +114,10 @@ change, what changed rather than how; dates are ISO 8601.
   profile / channel / playlist link, no video in the post, no sound, each with what helps.
 
 ### Changed
+- The look follows the form language of the big AI apps (Claude, ChatGPT, Gemini) in Clippy's black and wine
+  colours: the platform's own interface font in sentence case, neutral graphite or white surfaces, soft radii, hairline
+  borders, a floating pill composer, unframed assistant replies with user bubbles, wine only for the main button,
+  the selection and focus; WCAG 2.2 focus rings and touch targets. The bundled web fonts are gone.
 - New look built like makoncert.hu but in Clippy's own black and wine colours: Archivo Black titles in capitals, Space
   Grotesk text (both bundled, no network), graphite (dark) or fog (light) surfaces, wine for the filled button, the
   selected item and focus, square 2 px ink lines, hard offset shadows and buttons

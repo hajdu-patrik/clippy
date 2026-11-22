@@ -29,24 +29,21 @@ symbol in `index.html`).
 
 ## Type
 
-- Titles and the wordmark: Archivo Black, in capitals, one weight (`--font-display`).
-- Interface: Space Grotesk (`--font`). Both ship in `clippy/web/static/fonts/` under the SIL Open Font License
-  (`OFL.txt`), so nothing is fetched from the network. Logs: Cascadia Mono.
+- One family, the platform's interface font (Segoe UI Variable on Windows, SF Pro on macOS, system-ui elsewhere), so
+  nothing is fetched from the network. Titles 600 weight in sentence case; never all capitals. Logs: Cascadia Mono.
 
 ## Components
 
-The app borrows the build of makoncert.hu (square 2 px lines, offset shadows, sinking buttons, display titles in
-capitals) but keeps Clippy's own black and wine colours: graphite or fog surfaces, wine for the filled button, the
-selected item and focus. Its stylesheet is
-`clippy/web/static/style.css`, which imports one file per area from `css/`: `base.css` (tokens, fonts, controls),
-`shell.css` (sidebar, page frame), `chat.css`, `pages.css`, `overlays.css` (dialogs, toast). Square corners, 2 px ink
-lines (`--line`), hard offset shadows (`--shadow-press` 4 px, `--shadow-card` 5 px) and buttons that sink into their
-shadow when pressed; sizes `--fs-xs` to `--fs-2xl` (12.8, 14.4, 16, 18, 24, 30 px), spacing `--sp-1` to `--sp-6`.
+The app follows the form language the big AI apps share (Claude, ChatGPT, Gemini) in Clippy's black and wine colours:
+neutral graphite (dark) or white and fog (light) surfaces, wine only for the filled button, the selection and focus;
+soft radii (`--r-sm` 8, `--r-md` 12, `--r-lg` 16, pills for the composer, chips and buttons), 1 px hairlines
+(`--line`, `--line-strong`), flat surfaces with `--shadow-float` only on floating layers. The stylesheet
+`clippy/web/static/style.css` imports `css/base.css` (tokens, controls), `shell.css` (sidebar, page frame),
+`chat.css`, `pages.css` and `overlays.css` (dialogs, toast).
 
-- Buttons (`.btn`, 48 px high, 44 px for `.sm`): square, 2 px ink border and an offset shadow; one filled `.primary`
-  per view, `.ghost` without a border, `.danger` for removing.
-- Surfaces (cards, rows, fields) are `--surface` with a 2 px `--line`; dense lists are one card with rows divided by
-  `--line-soft`.
+- Buttons (`.btn`, 40 px high, 32 px for `.sm`, 44 px on touch): pills with a hairline border; one filled wine
+  `.primary` per view, `.ghost` without a border, `.danger` for removing.
+- Surfaces (cards, rows, fields) are `--surface` with a 1 px `--line`; lists are one rounded group with hairline rows.
 - Every screen is a page in the main area (Projects, Calendar, Results, Daily picks, Watched channels, Campaigns, Brand
   kit, Settings): a title, one line on what it is for, at most one filled button, then one column of content. Only the
   quick Post and Copy steps are dialogs; on a phone (up to 560 px) the Post dialog fills the screen with its buttons

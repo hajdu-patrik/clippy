@@ -52,9 +52,7 @@ def _host_of(value: str) -> str:
 
 PAIR_CODE = re.compile(r"[A-Za-z0-9_-]{8,64}")
 PAIR_PAGE_FILES = ("/static/style.css", "/static/css/base.css", "/static/css/shell.css", "/static/css/chat.css",
-                   "/static/css/pages.css", "/static/css/overlays.css", "/static/fonts/space-grotesk.woff2",
-                   "/static/fonts/archivo-black-latin.woff2", "/static/fonts/archivo-black-latin-ext.woff2",
-                   "/static/brand/mark.svg")
+                   "/static/css/pages.css", "/static/css/overlays.css", "/static/brand/mark.svg")
 
 
 def pair_page(code: str) -> str:
