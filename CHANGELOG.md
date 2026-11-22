@@ -104,6 +104,8 @@ change, what changed rather than how; dates are ISO 8601.
   profile / channel / playlist link, no video in the post, no sound, each with what helps.
 
 ### Changed
+- Stream layout: the streamer's camera takes the top two fifths and the gameplay the three fifths below, with a thin
+  black line between them, and the captions sit on that line.
 - Final clips are capped at 18 Mbit/s: about half the size and upload time, with no visible loss after the platforms'
   own re-encode.
 - The daily picks ask Twitch and Kick again after a timeout before skipping them for the day, and downloads wait longer

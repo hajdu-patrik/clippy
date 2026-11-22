@@ -8,7 +8,7 @@ import sys
 import subprocess
 from collections import deque
 from concurrent.futures import ThreadPoolExecutor
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Callable
 
@@ -150,8 +150,10 @@ class ClipRenderer:
         self._graph = StreamCompositor(facecam).graph(self.meta["width"], self.meta["height"]) if prebuilt else None
         words, hook = self.s.translate(edit.words, self.s.hook) if self.s.translate else (edit.words, self.s.hook)
         if not self.s.mezzanine:
-            write_ass(work / "captions.ass", words, 0.0, edit.duration, self.s.style or CaptionStyle(),
-                      hook=hook, cta=self.s.cta)
+            style = self.s.style or CaptionStyle()
+            if facecam is not None:
+                style = replace(style, margin_v=StreamCompositor.caption_margin())
+            write_ass(work / "captions.ass", words, 0.0, edit.duration, style, hook=hook, cta=self.s.cta)
         audio_src = self.s.audio_src or self.video
         measured = aud.measure(audio_src, self.start, self.span, edit.intervals, self.s.audio_mode)
         encoder = Encoder.choose(self.s.encoder)

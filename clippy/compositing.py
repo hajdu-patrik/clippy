@@ -92,9 +92,11 @@ class FitCompositor:
 
 
 class StreamCompositor:
-    """Facecam on top, gameplay below, a thin separator between them."""
+    """Facecam on the top two fifths, gameplay on the three fifths below, a thin black line between them."""
 
-    TOP_H = 608
+    TOP_H = OUT_H * 2 // 5
+    LINE = 6
+    CAPTION_LIFT = 52
 
     def __init__(self, facecam: tuple[float, float, float, float]):
         self.facecam = facecam
@@ -104,7 +106,7 @@ class StreamCompositor:
         x, y, w, h = self.facecam
         cam = frame[int(y * H): int(y * H) + max(2, int(h * H)), int(x * W): int(x * W) + max(2, int(w * W))]
         out = np.vstack([cover(cam, OUT_W, self.TOP_H), cover(frame, OUT_W, OUT_H - self.TOP_H)])
-        out[self.TOP_H - 3: self.TOP_H + 3] = 0
+        out[self.TOP_H - self.LINE // 2: self.TOP_H + self.LINE // 2] = 0
         return out
 
     def graph(self, W: int, H: int) -> str:
@@ -119,7 +121,13 @@ class StreamCompositor:
                 f"flags=lanczos,crop={OUT_W}:{self.TOP_H}[top];"
                 f"[game]scale={OUT_W}:{game}:force_original_aspect_ratio=increase:flags=lanczos,"
                 f"crop={OUT_W}:{game}[bottom];"
-                f"[top][bottom]vstack,drawbox=x=0:y={self.TOP_H - 3}:w={OUT_W}:h=6:color=black:t=fill")
+                f"[top][bottom]vstack,drawbox=x=0:y={self.TOP_H - self.LINE // 2}:w={OUT_W}:h={self.LINE}:color=black:t=fill")
+
+
+    @classmethod
+    def caption_margin(cls) -> int:
+        """Bottom margin that sets a one-line caption on the line between camera and gameplay."""
+        return OUT_H - cls.TOP_H - cls.CAPTION_LIFT
 
 
 class Prebuilt:
