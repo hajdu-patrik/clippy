@@ -298,9 +298,10 @@ story or the rant. A bad ending stops while the same topic, story, argument or r
 list that goes on, a promise or a question that the next sentences answer, or it adds the first sentence of a new
 topic. It is also a bad ending when the speaker only paused and NEXT carries the same sentence or thought on, or
 when NEXT is the quick reaction to the clip's last line (a laugh, a comeback, "no way", the answer to its question):
-that reaction belongs to the moment. The length does not matter here: never end a topic early to keep a clip short.
-When NEXT says the video
-ends and the clip's last words are an unfinished sentence (the recording was cut off mid-sentence), that is a bad
+that reaction belongs to the moment. A short line in NEXT that sums up, judges or answers what the clip just told
+("So the answer: just ship it.", "Worst idea I ever had.", "And that's why it works.") is its payoff, never a new
+topic: answer "extend" so the clip ends on it. The length does not matter here: never end a topic early to keep a
+clip short. When NEXT says the video ends and the clip's last words are an unfinished sentence (the recording was cut off mid-sentence), that is a bad
 ending too: answer "trim" with "words": how many of the clip's last words belong to that unfinished sentence.
 For each clip answer:
 - "ok": the topic is finished;
