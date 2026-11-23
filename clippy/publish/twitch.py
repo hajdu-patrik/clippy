@@ -14,6 +14,7 @@ API = "https://api.twitch.tv/helix"
 class Twitch(OAuthPlatform):
     name, label, posting = "twitch", "Twitch", False
     env = ("CLIPPY_TWITCH_CLIENT_ID", "CLIPPY_TWITCH_CLIENT_SECRET")
+    console = "https://dev.twitch.tv/console/apps"
     auth_endpoint, token_url, scopes, scope_env = AUTH, TOKEN, "user:read:email", "CLIPPY_TWITCH_SCOPES"
     challenge = None
     lifetime = 14400

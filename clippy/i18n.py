@@ -263,7 +263,7 @@ CATALOG: dict[str, str] = {
     "job.publish": "Posting clip #{clip}",
     "done.publish": "Clip #{clip} is posted: {platforms}.",
     "done.publish_some": "Clip #{clip} is up on {ok}. {failed} did not work; the clip card says why.",
-    "error.platform_not_configured": "{platform} is not set up yet: put its developer app's keys in .env (docs/publishing.md), then restart Clippy.",
+    "error.platform_not_configured": "{platform} is not set up yet: open Settings, Accounts, press Set up on its card and sign in.",
     "error.account_missing": "No {platform} account is connected. Connect it in Settings, under Accounts.",
     "error.account_expired": "The {platform} sign-in has run out. Connect the account again in Settings.",
     "error.platform_audit": "{platform} allows this only after its app review. Until then use the private or draft mode.",

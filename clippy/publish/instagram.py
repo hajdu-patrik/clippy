@@ -1,6 +1,7 @@
 """Instagram Reels through the Instagram API with Instagram Login (Creator or Business account, no Facebook Page).
 
-The token comes from the app dashboard's "Generate token"; it lasts 60 days and is refreshed well before that."""
+The user signs in with Instagram (Business Login): the short token is swapped for one that lasts 60 days and is
+refreshed well before that. A token from the app dashboard's "Generate token" can be pasted instead."""
 
 from __future__ import annotations
 
@@ -8,11 +9,15 @@ from dataclasses import replace
 
 from ..tools import ClippyError, report
 from . import TIMEOUT, UPLOAD_TIMEOUT, PostResult, PostText, Reader, Tokens, Upload, check_length, checked
-from .base import Platform
+from .base import OAuthPlatform
 
 VERSION = "v26.0"
 GRAPH = f"https://graph.instagram.com/{VERSION}"
 REFRESH = "https://graph.instagram.com/refresh_access_token"
+EXCHANGE = "https://graph.instagram.com/access_token"
+AUTH = "https://www.instagram.com/oauth/authorize"
+TOKEN = "https://api.instagram.com/oauth/access_token"
+SCOPES = "instagram_business_basic,instagram_business_content_publish,instagram_business_manage_insights"
 RUPLOAD = f"https://rupload.facebook.com/ig-api-upload/{VERSION}"
 LASTS = 60 * 86400
 REFRESH_WHEN_LEFT = 30 * 86400
@@ -20,18 +25,36 @@ LONGEST = 900
 CAPTION = 2200
 
 
-class Instagram(Platform):
-    name, label, oauth, renews = "instagram", "Instagram", False, True
+class Instagram(OAuthPlatform):
+    name, label, renews, pasteable = "instagram", "Instagram", True, True
+    env = ("CLIPPY_INSTAGRAM_APP_ID", "CLIPPY_INSTAGRAM_APP_SECRET")
+    fields, console = ("instagram_app_id", "instagram_app_secret"), "https://developers.facebook.com/apps/"
+    auth_endpoint, token_url, scopes, challenge = AUTH, TOKEN, SCOPES, None
 
-    def connect(self, http, token: str, now: float) -> Tokens:
-        """Checks a pasted token by asking who it belongs to."""
+    def connect(self, http, token: str, now: float, lasts: float = LASTS) -> Tokens:
+        """Checks a token by asking who it belongs to."""
         token = "".join(str(token or "").split())
         if len(token) < 20:
             raise ClippyError(key="error.bad_token", platform=self.label)
         me = checked(http.get(f"{GRAPH}/me", params={"fields": "user_id,username", "access_token": token},
                               timeout=TIMEOUT), self.label)
-        return Tokens(access_token=token, expires_at=now + LASTS, name=str(me.get("username") or ""),
+        return Tokens(access_token=token, expires_at=now + lasts, name=str(me.get("username") or ""),
                       user_id=str(me.get("user_id") or me.get("id") or ""))
+
+    def exchange(self, http, code: str, verifier: str, redirect: str, now: float) -> Tokens:
+        """The sign-in's code becomes a short token, the short token one that lasts 60 days."""
+        app_id, secret = self.client()
+        answer = checked(http.post(TOKEN, timeout=TIMEOUT, data={
+            "client_id": app_id, "client_secret": secret, "grant_type": "authorization_code",
+            "redirect_uri": redirect, "code": code.removesuffix("#_")}), self.label)
+        short = answer["data"][0] if isinstance(answer.get("data"), list) and answer["data"] else answer
+        if not short.get("access_token"):
+            raise ClippyError(key="error.platform_rejected", platform=self.label, detail="no access token")
+        long = checked(http.get(EXCHANGE, timeout=TIMEOUT, params={
+            "grant_type": "ig_exchange_token", "client_secret": secret, "access_token": short["access_token"]}),
+            self.label)
+        return self.connect(http, long.get("access_token") or short["access_token"], now,
+                            float(long.get("expires_in") or LASTS))
 
     def needs_refresh(self, tokens: Tokens, now: float) -> bool:
         return tokens.expires_at - now < REFRESH_WHEN_LEFT

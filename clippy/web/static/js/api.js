@@ -71,6 +71,8 @@ export const api = {
   accounts: () => request("/api/accounts"),
   connectAccount: (platform) => request(`/api/accounts/${platform}/connect`, { method: "POST" }),
   disconnectAccount: (platform) => request(`/api/accounts/${platform}`, { method: "DELETE" }),
+  setupAccount: (platform, values) => request(`/api/accounts/${platform}/app`, { method: "PUT", body: JSON.stringify({ values }) }),
+  forgetAccountApp: (platform) => request(`/api/accounts/${platform}/app`, { method: "DELETE" }),
   instagramToken: (token) => request("/api/accounts/instagram", { method: "PUT", body: JSON.stringify({ token }) }),
   publish: (id, number, body) =>
     request(`/api/chats/${id}/clips/${number}/publish`, { method: "POST", body: JSON.stringify(body) }),

@@ -115,6 +115,8 @@ change, what changed rather than how; dates are ISO 8601.
   profile / channel / playlist link, no video in the post, no sound, each with what helps.
 
 ### Changed
+- Accounts sign in from their card: Set up shows the developer page, the redirect address to copy and the app's key fields, then Save and sign in opens the platform's sign-in; no `.env` editing or restart, and Instagram signs in with Instagram instead of a pasted token (pasting stays as a fallback).
+- The account cards keep their own height and show one clear action: Set up, Sign in with the platform, or Disconnect.
 - Clips are whole moments: a pause inside a sentence is no longer a place to start or end, the clip stays open after the last word while the laugh or reaction still sounds (up to 2.5 s), and the clip picker treats the quick reaction after the last line as part of the moment.
 - Tightening keeps a natural pause (about 0.3 s inside a sentence, 0.5 s after one) instead of cutting it away.
 - Settings, AI: the model is a drop-down of what the mode can use (the models installed in Ollama, OpenRouter's free
@@ -269,6 +271,9 @@ change, what changed rather than how; dates are ISO 8601.
   complete (a crash can no longer leave a half-written file that looks finished); a version number can be stored
   only once; shared resources (one video's cache, render slots, the GPU) are locked in one fixed order, checked
   at runtime, so parallel jobs cannot deadlock; the GPU runs Demucs, Whisper and the LLM one at a time.
+
+### Fixed
+- Pages no longer scroll past the window: a stray closing tag had moved the chat composer below it.
 
 ## [1.0.0] - 2026-11-13
 

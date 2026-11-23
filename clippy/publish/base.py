@@ -10,7 +10,7 @@ from pathlib import Path
 from urllib.parse import urlencode
 
 from ..tools import ClippyError
-from . import TIMEOUT, PostResult, PostText, Tokens, Upload, checked, env_client
+from . import TIMEOUT, PostResult, PostText, Tokens, Upload, checked
 from .oauth import s256_challenge
 
 REFRESH_WHEN_LEFT = 300
@@ -18,14 +18,20 @@ POLL_SECONDS, POLL_TRIES = 5, 120
 
 
 class Platform:
-    """One card in Settings: whether it is set up, how it signs in and whether Clippy can post to it."""
+    """One card in Settings: whether it is set up, how it signs in and whether Clippy can post to it. The developer
+    app's keys come from the card's setup (`keys`, an AppKeys) or else from .env (`env`, in the order of `fields`)."""
 
     name = label = ""
     oauth = True
     posting = True
     schedules = False
     renews = False
+    pasteable = False
+    console = ""
     env: tuple[str, ...] = ()
+    fields: tuple[str, ...] = ("client_id", "client_secret")
+    optional: dict[str, str] = {}
+    keys = None
 
     def __init__(self, sleep=time.sleep):
         self.sleep = sleep
@@ -38,8 +44,21 @@ class Platform:
             self.sleep(POLL_SECONDS)
         raise ClippyError(key="error.platform_slow", platform=self.label)
 
+    def key(self, field: str, env_name: str) -> str:
+        stored = self.keys.get(self.name) if self.keys is not None else {}
+        return str(stored.get(field) or os.environ.get(env_name) or "").strip()
+
     def client(self) -> tuple[str, ...]:
-        return env_client(self.label, *self.env)
+        """The developer app's required keys; missing ones are a clear error that points to the card's setup."""
+        values = tuple(self.key(f, e) for f, e in zip(self.fields, self.env))
+        if not values or not all(values):
+            raise ClippyError(key="error.platform_not_configured", platform=self.label)
+        return values
+
+    def form(self) -> list[dict]:
+        """The setup fields the card shows, and whether each one is already set (never its value)."""
+        pairs = [(f, e, False) for f, e in zip(self.fields, self.env)] + [(f, e, True) for f, e in self.optional.items()]
+        return [{"name": f, "secret": "secret" in f, "optional": opt, "set": bool(self.key(f, e))} for f, e, opt in pairs]
 
     def configured(self) -> bool:
         try:

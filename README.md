@@ -180,9 +180,9 @@ re-render). Older versions stay playable.
 
 A finished clip goes straight to your own YouTube, Instagram, Facebook Page, TikTok and X with the **Post** button on
 its card, or from the chat (*"posztold ki a 2. klipet YouTube-ra"*). It goes up with its post text and, on YouTube, its
-title; the card then links each post. You make a free developer app per platform once and sign in on the platform's own
-page: the tokens stay in `data/web/accounts.json` on this computer. *Settings*, Connected accounts, shows all seven platforms as
-cards. **Twitch and Kick** can be connected, but neither offers apps any way to upload a video, so Clippy does not post
+title; the card then links each post. You make a free developer app per platform once: *Settings*, Accounts, **Set up**
+on its card shows where, the redirect address to copy and the fields for the app's keys, then **Save and sign in** opens
+the platform's own sign-in page (no `.env` editing). The keys and tokens stay on this computer in `data/web/`. **Twitch and Kick** can be connected, but neither offers apps any way to upload a video, so Clippy does not post
 there (and uses no unofficial way). TikTok sends the clip to your drafts (or posts it as private until it reviews your
 app); YouTube may keep uploads of a new API project private until its audit; X's API is paid per use. Setup, step by
 step, with what each platform allows: **[docs/publishing.md](docs/publishing.md)**.

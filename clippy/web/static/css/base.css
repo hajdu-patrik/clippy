@@ -260,7 +260,6 @@ label.btn:has(input:focus-visible) { outline: 2px solid var(--focus); outline-of
 .blank { list-style: none; padding: 24px 16px; border: 1px dashed var(--line-strong); border-radius: var(--r-md);
   color: var(--fg-muted); font-size: var(--fs-sm); text-align: center; text-wrap: balance; overflow-wrap: anywhere; }
 .blank p { margin: 0; }
-.token-box { margin-top: 12px; }
 .token-row { display: flex; gap: 8px; }
 .token-row input { flex: 1; min-width: 0; }
 

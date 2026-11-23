@@ -14,6 +14,7 @@ API = "https://api.kick.com/public/v1"
 class Kick(OAuthPlatform):
     name, label, posting = "kick", "Kick", False
     env = ("CLIPPY_KICK_CLIENT_ID", "CLIPPY_KICK_CLIENT_SECRET")
+    console = "https://kick.com/settings/developer"
     auth_endpoint, token_url, scopes = AUTH, TOKEN, "user:read channel:read"
 
     def identify(self, http, tokens: Tokens) -> None:

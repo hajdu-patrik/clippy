@@ -1,12 +1,11 @@
 """Connecting the user's own accounts (YouTube, Instagram, Facebook, TikTok, X, Twitch, Kick) and posting finished clips
 to the ones whose platform allows it (docs/publishing.md).
 
-The user's developer apps give the client ids (in .env); the user signs in once, the tokens stay in
+The user's own developer apps give the client ids (typed in on the account card, or in .env); the user signs in once, the tokens stay in
 data/web/accounts.json and never reach the browser; every post is the user's own action."""
 
 from __future__ import annotations
 
-import os
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -54,14 +53,6 @@ class Tokens:
 
 def bearer(token: str) -> dict:
     return {"Authorization": f"Bearer {token}"}
-
-
-def env_client(label: str, *names: str) -> tuple[str, ...]:
-    """The developer app's credentials from .env; missing ones are a clear error about the setup guide."""
-    values = tuple((os.environ.get(name) or "").strip() for name in names)
-    if not all(values):
-        raise ClippyError(key="error.platform_not_configured", platform=label)
-    return values
 
 
 def check_length(label: str, upload: Upload, longest: float) -> None:

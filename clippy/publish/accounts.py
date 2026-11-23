@@ -1,4 +1,5 @@
-"""The signed-in accounts: tokens per platform in data/web/accounts.json, refreshed before they run out."""
+"""The signed-in accounts: tokens per platform in data/web/accounts.json, refreshed before they run out, and the
+developer apps' keys each card was set up with (AppKeys)."""
 
 from __future__ import annotations
 
@@ -11,6 +12,7 @@ from typing import Callable
 from ..storage import Storage
 from ..tools import ClippyError, write_json
 from . import Tokens
+from .apps import AppKeys
 from .registry import LABELS, PLATFORMS, default_platforms
 
 
@@ -29,6 +31,9 @@ class AccountStore:
         self.platforms = platforms if platforms is not None else default_platforms()
         self.http = http if http is not None else new_http()
         self.clock = clock
+        self.apps = AppKeys(storage.apps_file)
+        for platform in self.platforms.values():
+            platform.keys = self.apps
         self._lock = threading.RLock()
 
     def _load(self) -> dict:
@@ -56,6 +61,17 @@ class AccountStore:
             write_json(self.path, data)
             return gone
 
+    def set_up(self, name: str, values: dict) -> None:
+        """Keeps the keys typed into a card's setup; only the platform's own fields."""
+        platform = self.platform(name)
+        self.apps.save(name, values, (*platform.fields, *platform.optional))
+
+    def forget_app(self, name: str) -> None:
+        """Drops a card's app keys and the sign-in made with them."""
+        self.platform(name)
+        self.apps.remove(name)
+        self.remove(name)
+
     def status(self) -> dict:
         """What the browser may see: connected or not, the account's name and when the sign-in runs out."""
         data = self._load()
@@ -65,7 +81,9 @@ class AccountStore:
             out[name] = {"label": LABELS[name], "connected": bool(entry.get("access_token")),
                          "name": str(entry.get("name") or ""), "expires": int(entry.get("expires_at") or 0),
                          "lasting": bool(entry.get("refresh_token")) or platform.renews,
-                         "configured": platform.configured(), "oauth": platform.oauth, "posting": platform.posting}
+                         "configured": platform.configured(), "oauth": platform.oauth, "posting": platform.posting,
+                         "pasteable": platform.pasteable, "console": platform.console, "fields": platform.form(),
+                         "saved": bool(self.apps.get(name))}
             if name == "youtube" and entry.get("access_token"):
                 out[name]["analytics"] = "yt-analytics" in str(entry.get("scope") or "")
         return out

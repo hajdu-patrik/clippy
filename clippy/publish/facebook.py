@@ -22,6 +22,7 @@ FAILED = {"error", "expired", "upload_failed"}
 class Facebook(OAuthPlatform):
     name, label, renews = "facebook", "Facebook", True
     env = ("CLIPPY_FACEBOOK_APP_ID", "CLIPPY_FACEBOOK_APP_SECRET")
+    fields, console = ("app_id", "app_secret"), "https://developers.facebook.com/apps/"
     auth_endpoint, token_url, scopes, challenge = AUTH, f"{GRAPH}/oauth/access_token", SCOPES, None
 
     def auth_params(self, params: dict) -> dict:

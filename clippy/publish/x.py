@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import base64
-import os
 
 from ..tools import ClippyError, report
 from . import TIMEOUT, UPLOAD_TIMEOUT, PostResult, PostText, Tokens, Upload, bearer, check_length, checked
@@ -33,12 +32,14 @@ def fit(text: str, limit: int = TEXT) -> str:
 
 class X(OAuthPlatform):
     name, label = "x", "X"
-    env = ("CLIPPY_X_CLIENT_ID",)
+    env, fields = ("CLIPPY_X_CLIENT_ID",), ("client_id",)
+    optional = {"client_secret": "CLIPPY_X_CLIENT_SECRET"}
+    console = "https://developer.x.com/en/portal/dashboard"
     auth_endpoint, token_url, scopes, lifetime = AUTH, f"{API}/oauth2/token", SCOPES, 7200
 
     def client_auth(self) -> tuple[dict, dict]:
         """A public (native app) client sends its id; a confidential one with a secret signs in with Basic auth."""
-        (client_id,), secret = self.client(), (os.environ.get("CLIPPY_X_CLIENT_SECRET") or "").strip()
+        (client_id,), secret = self.client(), self.key("client_secret", self.optional["client_secret"])
         if not secret:
             return {"client_id": client_id}, {}
         token = base64.b64encode(f"{client_id}:{secret}".encode()).decode()

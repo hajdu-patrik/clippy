@@ -10,12 +10,15 @@ platform's own page, and the tokens it gives back stay on this computer in `data
 never sent to the browser). **Disconnect** in Settings deletes them; you can also revoke Clippy's access on the
 platform's account page at any time.
 
-Accounts are connected on the computer that runs Clippy (Settings, Connected accounts). Paired phones can post, but cannot
-connect accounts.
+Accounts are connected on the computer that runs Clippy, in Settings, Accounts. **Set up** on a platform's card
+shows its developer page, the redirect address to add to your app and the fields for the app's keys; **Save and sign
+in** keeps the keys on this computer (`data/web/apps.json`, never sent back to the browser) and opens the platform's
+sign-in. After that the card only says **Sign in** or **Disconnect**. The keys can also come from `.env` (the names are
+listed under each platform below); the card's keys win. Paired phones can post, but cannot connect accounts.
 
 ## What each platform allows
 
-*Settings*, Connected accounts, shows one card per platform. Clippy only uses each platform's public, official API and its
+*Settings*, Accounts, shows one card per platform. Clippy only uses each platform's public, official API and its
 official sign-in; where a platform offers apps no way to upload a video, the card says so instead of faking it.
 
 | Platform | Connect | Post | Plan a post | What the platform requires |
@@ -47,7 +50,7 @@ The official documentation this is built on (checked November 2026):
 [Kick scopes](https://docs.kick.com/getting-started/scopes.md).
 
 Every app's redirect URI has the same shape (with your `CLIPPY_PORT` if you changed it); `<name>` is `youtube`,
-`facebook`, `tiktok`, `x`, `twitch` or `kick`:
+`instagram`, `facebook`, `tiktok`, `x`, `twitch` or `kick` (the card's setup shows it ready to copy):
 
 ```text
 http://127.0.0.1:7860/oauth/<name>/callback
@@ -74,14 +77,15 @@ http://127.0.0.1:7860/oauth/<name>/callback
    *Testing*, Google ends the sign-in after 7 days and you would have to connect again every week. A published app
    that is not verified shows a warning page at sign-in; that is expected for an app only you use: choose *Advanced*
    and continue.
-4. **Clients, Create client**: application type **Desktop app**. Put its id and secret in `.env`:
+4. **Clients, Create client**: application type **Desktop app**. Copy its id and secret into the YouTube card's
+   setup (or into `.env`):
 
    ```ini
    CLIPPY_YOUTUBE_CLIENT_ID=...apps.googleusercontent.com
    CLIPPY_YOUTUBE_CLIENT_SECRET=...
    ```
 
-5. Restart Clippy (`clippy restart`), open Settings and press **Connect** next to YouTube.
+5. Press **Save and sign in** on the card (after a `.env` change: restart Clippy and press **Sign in**).
 
 Good to know:
 
@@ -103,13 +107,15 @@ Works with an Instagram **Creator** or **Business** account; no Facebook Page is
    content on Instagram (*Instagram API with Instagram login*).
 2. Under **App roles, Roles** add your Instagram account as an **Instagram Tester**, then accept the invite in the
    Instagram app (Settings, Website permissions, Apps and websites, Tester invites).
-3. In **API setup with Instagram login** add your account and press **Generate token**. Allow the permissions it
-   asks for (`instagram_business_basic`, `instagram_business_content_publish`, and
-   `instagram_business_manage_insights` for the numbers) and copy the token.
-4. In Clippy: Settings, Connected accounts, **Paste token** next to Instagram, then **Connect**.
+3. In **API setup with Instagram login**, **Set up Instagram business login**, add the redirect address the card
+   shows (`http://127.0.0.1:7860/oauth/instagram/callback`) and copy the **Instagram app ID** and **Instagram app
+   secret** into the Instagram card's setup (or `.env`: `CLIPPY_INSTAGRAM_APP_ID`, `CLIPPY_INSTAGRAM_APP_SECRET`).
+4. Press **Save and sign in** and allow the permissions (`instagram_business_basic`,
+   `instagram_business_content_publish`, and `instagram_business_manage_insights` for the numbers).
 
-The token lasts 60 days; Clippy renews it by itself well before that, as long as it posts or checks the account now
-and then. If it has run out, generate a new token and paste it again.
+If Meta does not accept the local redirect address, use the card's **Paste an access token instead**: press
+**Generate token** in API setup with Instagram login and paste it. Either way the sign-in lasts 60 days and Clippy
+renews it by itself well before that, as long as it posts or checks the account now and then.
 
 Good to know: Reels can be 3 seconds to 15 minutes long, captions at most 2200 characters with up to 30 hashtags, and
 Instagram limits how many posts an account can publish through the API in 24 hours.
@@ -138,7 +144,8 @@ Instagram limits how many posts an account can publish through the API in 24 hou
 
 4. The scopes Clippy asks for are `user.info.basic`, `video.upload` and `video.publish`. If your app has no Direct Post,
    set `CLIPPY_TIKTOK_SCOPES=user.info.basic,video.upload` in `.env`.
-5. Put the app's keys in `.env`, restart Clippy and press **Connect** next to TikTok:
+5. Copy the app's client key and secret into the TikTok card's setup and press **Save and sign in** (or put them in
+   `.env`, restart Clippy and press **Sign in**):
 
    ```ini
    CLIPPY_TIKTOK_CLIENT_KEY=...
@@ -163,14 +170,14 @@ can create content.
 1. On [Meta for Developers](https://developers.facebook.com/apps/) create an app (the one for Instagram can be reused)
    and add the **Facebook Login** product (or **Facebook Login for Business**, see step 5).
 2. In Facebook Login, settings, add `http://127.0.0.1:7860/oauth/facebook/callback` to **Valid OAuth Redirect URIs**.
-3. Under **Settings, Basic** copy the app id and secret into `.env`:
+3. Under **Settings, Basic** copy the app id and secret into the Facebook card's setup (or `.env`):
 
    ```ini
    CLIPPY_FACEBOOK_APP_ID=...
    CLIPPY_FACEBOOK_APP_SECRET=...
    ```
 
-4. Restart Clippy and press **Connect** next to Facebook. Clippy asks for `pages_show_list`, `pages_read_engagement`
+4. Press **Save and sign in**. Clippy asks for `pages_show_list`, `pages_read_engagement`
    and `pages_manage_posts`, finds the Pages you manage and keeps the first one's access token (a Page token made from
    a long-lived sign-in does not expire). To pick another Page set `CLIPPY_FACEBOOK_PAGE_ID=<the Page's id>`.
 5. An app that uses **Facebook Login for Business** names a saved configuration instead of the permissions: create one
@@ -190,14 +197,14 @@ Good to know:
 1. In the [X Developer Console](https://developer.x.com/) create a project and an app. Under **User authentication
    settings** choose **Native App** (a public client without a secret) or **Web App** (confidential), set the app
    permissions to **Read and write** and the callback URI to `http://127.0.0.1:7860/oauth/x/callback`.
-2. Put the client id in `.env`; only a confidential app also has a client secret:
+2. Copy the client id into the X card's setup (or `.env`); only a confidential app also has a client secret:
 
    ```ini
    CLIPPY_X_CLIENT_ID=...
    CLIPPY_X_CLIENT_SECRET=...   # Web App only
    ```
 
-3. Restart Clippy and press **Connect** next to X. Clippy asks for `tweet.read`, `tweet.write`, `users.read`,
+3. Press **Save and sign in**. Clippy asks for `tweet.read`, `tweet.write`, `users.read`,
    `media.write` and `offline.access` (so it stays signed in: access tokens last 2 hours and are renewed by themselves).
 
 Good to know:
@@ -219,19 +226,19 @@ streams without any account (links, the latest stream by name, daily picks).
 
 **Twitch.** On the [Twitch developer console](https://dev.twitch.tv/console/apps) register an application (your
 account needs two-factor authentication) with client type **Confidential** and the OAuth redirect URL
-`http://127.0.0.1:7860/oauth/twitch/callback`. Click **New Secret** and put both values in `.env`:
+`http://127.0.0.1:7860/oauth/twitch/callback`. Click **New Secret** and copy both values into the Twitch card's setup (or `.env`):
 
 ```ini
 CLIPPY_TWITCH_CLIENT_ID=...
 CLIPPY_TWITCH_CLIENT_SECRET=...
 ```
 
-Twitch's authorization code flow has no PKCE, so it needs the secret, which Clippy keeps only in `.env`. Clippy asks
+Twitch's authorization code flow has no PKCE, so it needs the secret, which Clippy keeps only on this computer. Clippy asks
 for the one scope `user:read:email` (change it with `CLIPPY_TWITCH_SCOPES`); it never reads the email and only calls
 *Get Users* to show your display name.
 
 **Kick.** In your Kick account settings (two-factor authentication on) open the **Developer** tab and create an app
-with the redirect URL `http://127.0.0.1:7860/oauth/kick/callback`. Put its client id and secret in `.env`:
+with the redirect URL `http://127.0.0.1:7860/oauth/kick/callback`. Copy its client id and secret into the Kick card's setup (or `.env`):
 
 ```ini
 CLIPPY_KICK_CLIENT_ID=...
@@ -282,8 +289,8 @@ retried or Clippy restarts.
 
 | Message | What to do |
 | --- | --- |
-| not set up yet | the developer app's keys are missing from `.env`; add them and restart Clippy |
-| no account is connected | Settings, Accounts, Connect |
+| not set up yet | the developer app's keys are missing: Settings, Accounts, **Set up** on the platform's card |
+| no account is connected | Settings, Accounts, **Sign in** |
 | the sign-in has run out | connect the account again |
 | allows this only after its app review | use the private or draft mode until the platform reviews your app |
 | refused the post | the platform's own reason follows (for example the daily limit or the clip's length) |

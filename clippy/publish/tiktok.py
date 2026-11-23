@@ -31,6 +31,7 @@ def chunks(size: int) -> tuple[int, int]:
 class TikTok(OAuthPlatform):
     name, label = "tiktok", "TikTok"
     env = ("CLIPPY_TIKTOK_CLIENT_KEY", "CLIPPY_TIKTOK_CLIENT_SECRET")
+    fields, console = ("client_key", "client_secret"), "https://developers.tiktok.com/apps/"
     auth_endpoint, token_url, scopes, scope_env = AUTH, f"{API}/oauth/token/", SCOPES, "CLIPPY_TIKTOK_SCOPES"
     id_param, challenge, lifetime = "client_key", staticmethod(hex_challenge), 86400
 

@@ -44,6 +44,10 @@ class Storage:
     def accounts_file(self) -> Path:
         return self.web / "accounts.json"
 
+    @property
+    def apps_file(self) -> Path:
+        return self.web / "apps.json"
+
     def chat_clips(self, chat_id: int) -> Path:
         return self._dir("chats", int(chat_id), "clips")
 

@@ -179,6 +179,14 @@ class InstagramToken(BaseModel):
     token: str = Field(min_length=20, max_length=2000)
 
 
+KeyName = Annotated[str, StringConstraints(max_length=40)]
+KeyValue = Annotated[str, StringConstraints(max_length=300)]
+
+
+class AppSetup(BaseModel):
+    values: dict[KeyName, KeyValue] = Field(default_factory=dict, max_length=4)
+
+
 class ClosedByPeer(logging.Filter):
     """Windows reports every browser tab that closes its connection as a long asyncio traceback; that is no error."""
 
@@ -267,7 +275,27 @@ def create_app(storage: Storage | None = None, db_path: Path | None = None, runn
 
     @app.get("/api/accounts")
     def get_accounts(request: Request):
-        return {"accounts": accounts.status(), "notices": notices, "here": is_local(request)}
+        status = accounts.status()
+        for name, entry in status.items():
+            entry["redirect"] = redirect_uri(request, name)
+        return {"accounts": status, "notices": notices, "here": is_local(request)}
+
+    @app.put("/api/accounts/{platform}/app")
+    def set_up_account(platform: Platform, body: AppSetup, request: Request):
+        """The keys of the user's own developer app, typed into the card's setup."""
+        from_this_computer(request)
+        accounts.set_up(platform, body.values)
+        notices.pop(platform, None)
+        accounts_changed()
+        return {"configured": accounts.platform(platform).configured()}
+
+    @app.delete("/api/accounts/{platform}/app")
+    def forget_account_app(platform: Platform, request: Request):
+        from_this_computer(request)
+        accounts.forget_app(platform)
+        notices.pop(platform, None)
+        accounts_changed()
+        return {"ok": True}
 
     @app.post("/api/accounts/{platform}/connect")
     def connect_account(platform: Platform, request: Request):

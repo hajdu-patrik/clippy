@@ -792,7 +792,8 @@ def test_the_accounts_status_lists_all_seven_and_says_which_can_post(seven):
     accounts = here.get("/api/accounts").json()["accounts"]
     assert list(accounts) == list(PLATFORMS)
     assert {n: a["posting"] for n, a in accounts.items()} == {n: n in POSTING for n in PLATFORMS}
-    assert accounts["instagram"]["configured"] and not accounts["instagram"]["oauth"]
+    assert accounts["instagram"]["oauth"] and accounts["instagram"]["pasteable"] and not accounts["instagram"]["configured"]
+    assert accounts["youtube"]["redirect"] == "http://127.0.0.1:80/oauth/youtube/callback"
     assert accounts["x"]["configured"] and not accounts["kick"]["configured"]
     assert here.post("/api/accounts/kick/connect").json()["detail"]["key"] == "error.platform_not_configured"
 
@@ -830,3 +831,57 @@ def test_the_chat_names_facebook_and_x_but_never_twitch():
                            ("upload clip 2 on X", ["x"])]:
         asked = agent.ActionValidator({1, 2}, {"source": "x"}, message)
         assert asked.validate(raw)[0]["platforms"] == named
+
+
+def test_a_card_is_set_up_in_the_app_and_its_keys_never_go_back_to_the_browser(seven):
+    here, _, _ = seven
+    phone = TestClient(here.app, headers=CSRF, client=("192.168.1.20", 50000))
+    keys = {"client_id": "kick-id", "client_secret": "kick-secret", "token": "ignored"}
+    assert phone.put("/api/accounts/kick/app", json={"values": keys}).status_code == 403
+    assert here.put("/api/accounts/kick/app", json={"values": keys}).json() == {"configured": True}
+    page = here.get("/api/accounts")
+    card = page.json()["accounts"]["kick"]
+    assert card["configured"] and card["saved"] and card["console"].startswith("https://")
+    assert [(f["name"], f["secret"], f["set"]) for f in card["fields"]] == [("client_id", False, True),
+                                                                          ("client_secret", True, True)]
+    assert "kick-secret" not in page.text and "kick-id" not in page.text
+    assert here.post("/api/accounts/kick/connect").json()["url"].startswith(kick.AUTH)
+    assert here.put("/api/accounts/kick/app", json={"values": {"client_id": "new-id"}}).json()["configured"]
+    assert here.delete("/api/accounts/kick/app").json() == {"ok": True}
+    assert not here.get("/api/accounts").json()["accounts"]["kick"]["configured"]
+
+
+def test_x_takes_its_optional_secret_from_the_card_too(seven, tmp_path, monkeypatch):
+    here, _, _ = seven
+    fields = here.get("/api/accounts").json()["accounts"]["x"]["fields"]
+    assert [(f["name"], f["optional"]) for f in fields] == [("client_id", False), ("client_secret", True)]
+    monkeypatch.delenv("CLIPPY_X_CLIENT_ID")
+    store = AccountStore(Storage(tmp_path / "own"), {"x": x.X()}, http=object())
+    store.set_up("x", {"client_id": "xid"})
+    assert store.platform("x").client_auth() == ({"client_id": "xid"}, {})
+    store.set_up("x", {"client_secret": "xsecret"})
+    form, headers = store.platform("x").client_auth()
+    assert form == {} and headers["Authorization"].startswith("Basic ")
+
+
+def test_instagram_signs_in_and_swaps_the_short_token_for_a_lasting_one(tmp_path):
+    from urllib.parse import parse_qs, urlsplit
+
+    storage = Storage(tmp_path)
+    store = AccountStore(storage, {"instagram": instagram.Instagram()}, http=object())
+    store.set_up("instagram", {"instagram_app_id": "ig-app", "instagram_app_secret": "ig-secret"})
+    platform = store.platform("instagram")
+    url = urlsplit(platform.auth_url(REDIRECT.format("instagram"), "st", "verifier"))
+    asked = parse_qs(url.query)
+    assert url.netloc == "www.instagram.com" and asked["client_id"] == ["ig-app"]
+    assert "instagram_business_content_publish" in asked["scope"][0] and "code_challenge" not in asked
+    http = FakeHTTP({
+        ("POST", instagram.TOKEN): Resp(200, {"data": [{"access_token": "short", "user_id": "1784"}]}),
+        ("GET", instagram.EXCHANGE): Resp(200, {"access_token": "IGAA" + "l" * 40, "expires_in": 5_000_000}),
+        ("GET", f"{instagram.GRAPH}/me"): Resp(200, {"user_id": "1784", "username": "sixthstarrider"}),
+    })
+    tokens = platform.exchange(http, "thecode#_", "", REDIRECT.format("instagram"), 100.0)
+    assert (tokens.name, tokens.user_id, tokens.expires_at) == ("sixthstarrider", "1784", 5_000_100.0)
+    assert http.calls[0][2]["data"]["code"] == "thecode"
+    assert http.calls[1][2]["params"] == {"grant_type": "ig_exchange_token", "client_secret": "ig-secret",
+                                          "access_token": "short"}

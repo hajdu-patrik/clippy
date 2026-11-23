@@ -50,6 +50,7 @@ def usable_cover(image: Path) -> bool:
 class YouTube(OAuthPlatform):
     name, label = "youtube", "YouTube"
     env = ("CLIPPY_YOUTUBE_CLIENT_ID", "CLIPPY_YOUTUBE_CLIENT_SECRET")
+    console = "https://console.cloud.google.com/apis/credentials"
     auth_endpoint, token_url, scopes = AUTH, TOKEN, SCOPES
     extra_auth = {"access_type": "offline", "prompt": "consent"}
     schedules = True
