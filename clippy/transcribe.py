@@ -11,6 +11,7 @@ from functools import cache
 from pathlib import Path
 
 from .i18n import CAPTION_LANGUAGES, DEFAULT, language_name
+from .text import spoken
 from .tools import decode_audio, log, read_json, report, write_json
 
 TRANSCRIBE_VERSION = "v2"
@@ -154,4 +155,5 @@ def _transcribe(cache: Path, model_name: str, dev: str, language: str | None, vo
 
 
 def all_words(transcript: dict) -> list[dict]:
-    return [w for seg in transcript["segments"] for w in seg["words"]]
+    """Every word said, in order; emoji Whisper wrote (from a title in its hints) are not words."""
+    return spoken([w for seg in transcript["segments"] for w in seg["words"]])

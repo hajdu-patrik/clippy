@@ -25,7 +25,7 @@ from .settings import URL, Settings, site_of
 from .llm import create_llm
 from .render import RenderSettings, prepare_fonts, render_clip
 from .storage import Storage
-from .text import looks_hungarian
+from .text import hint_words, looks_hungarian
 from .tools import (ClippyError, ThreadContext, atomic_write_text, current_stop, fmt_ts, log, move_atomic, probe_media,
                     read_json, report_span, write_json)
 from .translate import CaptionTranslator
@@ -238,7 +238,7 @@ class Project:
                 if not separation.available():
                     raise ClippyError("Voice isolation needs the studio extras: pip install -r requirements-ml.txt")
                 stems = separation.separate(key, st.cache("audio"), gpu=self._gpu, sound=sound)
-            vocab = ", ".join(v for v in (o.vocab, self.title if o.title_vocab else "") if v)
+            vocab = ", ".join(v for v in (o.vocab, hint_words(self.title) if o.title_vocab else "") if v)
             voice = stems["vocals"] if stems else None
             tr = transcribe(key, st.cache("transcripts"), model_name=o.whisper, language=o.lang,
                             device=o.device, vocab=vocab, audio_source=voice, gpu=self._gpu, sound=sound)

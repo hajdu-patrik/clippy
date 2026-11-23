@@ -20,6 +20,29 @@ def fold(text: str) -> str:
     return "".join(c for c in plain if not unicodedata.combining(c)).lower()
 
 
+def unsymbolled(text: str) -> str:
+    """Text without emoji and other pictographs (and their joiners and variation selectors)."""
+    return "".join(c for c in text or "" if unicodedata.category(c) not in ("So", "Sk", "Cf", "Cs", "Co")
+                   and not 0xFE00 <= ord(c) <= 0xFE0F)
+
+
+def hint_words(title: str) -> str:
+    """A video title as words Whisper may expect: no emoji, @handles, #hashtags or links (a title full of them makes
+    Whisper write them into the speech)."""
+    text = re.sub(r"https?://\S+|[@#]\w+", " ", unsymbolled(title))
+    return " ".join(re.sub(r"[|•·]+", " ", text).split())
+
+
+def spoken(words: list[dict]) -> list[dict]:
+    """Words as said: emoji and pictographs taken out, and a "word" that was nothing else dropped."""
+    out = []
+    for w in words:
+        text = unsymbolled(w["word"]).strip()
+        if any(c.isalnum() for c in text):
+            out.append(w if text == w["word"] else {**w, "word": text})
+    return out
+
+
 def ends_sentence(word: str, following: str | None = None) -> bool:
     """Whether a word closes a sentence. A dot after an abbreviation ("Dr.", "pl.") or an initial ("J.") does not,
     nor one after a number that the next word, in lower case, carries on (a Hungarian ordinal: "2026. november")."""

@@ -401,3 +401,12 @@ def test_tightening_keeps_a_natural_pause_instead_of_cutting_it_away():
     after_sentence, inside = gaps[1], gaps[3]
     assert 0.45 <= after_sentence <= 0.56 and 0.27 <= inside <= 0.37
     assert len(ep.intervals) == 3 and kept
+
+
+def test_a_title_full_of_emoji_gives_whisper_only_its_words_and_emoji_never_become_words():
+    from clippy.text import hint_words, spoken
+    assert hint_words("🚨🚨 Jonathan Blow made me quit my job 🚨🚨 @theprimeagen #coding https://x.com/a") == \
+        "Jonathan Blow made me quit my job"
+    words = [{"word": "🚨🚨", "start": 0, "end": 1}, {"word": "🚨Find", "start": 1, "end": 2},
+             {"word": "job.", "start": 2, "end": 3}, {"word": "❤️", "start": 3, "end": 4}]
+    assert [w["word"] for w in spoken(words)] == ["Find", "job."]
