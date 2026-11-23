@@ -33,6 +33,8 @@ CATALOG: dict[str, str] = {
     "done.texts": "Done: new title and description for {count} clip{s}.",
     "done.undo": "Done: clip #{clip} is back to its previous version.",
     "done.generate": "Done: {n} clip{s} from “{title}”.",
+    "montage.made": "Here is the montage: {n} moments in one clip, the strongest first.",
+    "note.montage_failed": "The montage could not be put together ({error}); the moments are here one by one.",
     "done.generate_then_edit": "Done: {n} clip{s} from “{title}”. Now putting your edits on them.",
     "done.more": "Done: {n} more clip{s}.",
     "done.edit": "Done: new version of clip #{clip}.",

@@ -40,11 +40,16 @@ def subtract(ranges: list[list[float]], cuts) -> list[list[float]]:
     return out
 
 
+IN_SENTENCE_PADS = (0.12, 0.18)
+AFTER_SENTENCE_PADS = (0.2, 0.3)
+
+
 def build_edit(words_abs: list[dict], clip_start: float, clip_end: float, fps: float,
                env: np.ndarray | None = None, hop: float = HOP, tighten: bool = True,
-               max_gap: float = 0.45, pad_in: float = 0.07, pad_out: float = 0.12,
-               exclude: tuple[tuple[float, float], ...] = ()) -> EditPlan:
-    """`exclude`: source ranges the user cut out (absolute seconds), removed on top of the tight edit."""
+               max_gap: float = 0.45, exclude: tuple[tuple[float, float], ...] = ()) -> EditPlan:
+    """Dead air longer than `max_gap` is shortened, never removed: about 0.3 s stays inside a sentence and 0.5 s after
+    one, so the speech keeps its rhythm and a line can land; a sound that goes on past the last word (a trailing
+    word, a laugh) stays whole. `exclude`: source ranges the user cut out (absolute seconds), removed on top."""
     span = clip_end - clip_start
     rel = [
         {**w, "start": w["start"] - clip_start, "end": w["end"] - clip_start}
@@ -81,6 +86,9 @@ def build_edit(words_abs: list[dict], clip_start: float, clip_end: float, fps: f
         first, last = g[0], g[-1]
         prev_end = groups[gi - 1][-1]["end"] if gi else None
         next_start = groups[gi + 1][0]["start"] if gi + 1 < len(groups) else None
+        before = groups[gi - 1][-1] if gi else None
+        pad_in = (AFTER_SENTENCE_PADS if before and ends_sentence(before["word"]) else IN_SENTENCE_PADS)[0]
+        pad_out = (AFTER_SENTENCE_PADS if ends_sentence(last["word"]) else IN_SENTENCE_PADS)[1]
         a = 0.0 if gi == 0 else first["start"] - pad_in
         b = span if next_start is None else last["end"] + pad_out
         if thr is not None and gi > 0:
@@ -90,7 +98,7 @@ def build_edit(words_abs: list[dict], clip_start: float, clip_end: float, fps: f
         if thr is not None and next_start is not None:
             v = _voiced(env, hop, last["end"] - 0.3, min(last["end"] + 0.3, next_start - 0.08), thr)
             if len(v):
-                b = max(min(b, v[-1] * hop + 0.09), last["end"] - 0.02)
+                b = max(b, min(v[-1] * hop + 0.09, next_start - 0.08))
         raw.append([max(0.0, a), min(span, b)])
     if exclude:
         raw = subtract(raw, [(a - clip_start, b - clip_start) for a, b in exclude])

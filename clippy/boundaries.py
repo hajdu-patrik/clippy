@@ -1,7 +1,10 @@
 """Where a clip may start and end. A clip starts where a sentence starts and ends where a thought is complete: the
 sentence is over and the next one does not carry it on (a connector such as "and" / "de", the answer to a question
 it just asked, what a colon announces). Streams and music often come without punctuation, so a clear pause counts
-too, a little lower. Nothing here guesses with an LLM; the clip picker's payoff check only moves between these."""
+too, a little lower, unless it is a pause inside a sentence: the word before it cannot end one ("the", "and", "a")
+or, in a cased transcript, the words after it go on in lower case. Nothing here guesses with an LLM; the clip
+picker's payoff check only moves between these. After the last word the moment may still sound (laughter, a shout,
+the reaction to a punchline): `landing` keeps the clip open until it has died down."""
 
 from __future__ import annotations
 
@@ -9,10 +12,26 @@ import re
 from bisect import bisect_left, bisect_right
 from typing import Sequence
 
+import numpy as np
+
 from .playbook import CONNECTORS
 from .text import ends_sentence
 
 PAUSE = 0.7
+HELD_PAUSE = 2.0
+CASED_SHARE = 0.6
+BEAT = 0.5
+MAX_LANDING = 2.5
+QUIET_DROP_DB = 12.0
+QUIET_HOLD = 0.3
+SPEECH_WINDOW = 2.0
+HANGING = frozenset({
+    "the", "a", "an", "to", "of", "in", "on", "at", "for", "with", "from", "by", "into", "about", "my", "your", "his",
+    "her", "our", "their", "its", "this", "these", "those", "is", "are", "was", "were", "be", "been", "am", "i", "you",
+    "we", "they", "he", "she", "if", "than", "like", "um", "uh", "just", "very", "really", "gonna", "wanna", "kind",
+    "az", "egy", "hogy", "ha", "mint", "is", "sem", "csak", "már", "még", "nagyon", "olyan", "ilyen", "ez", "ezt",
+    "azt", "én", "te", "ő", "mi", "ti", "ők", "volt", "van", "lesz", "ööö", "öö", "hát",
+}) | {w for w in ("and", "but", "or", "so", "because", "és", "de", "mert", "vagy", "meg")}
 ANSWER_GAP = 1.5
 START_REACH = 3.0
 LEAN_BACK = 10.0
@@ -47,11 +66,43 @@ def _plain(word: str) -> str:
     return re.sub(r"[^\wáéíóöőúüű]", "", word.lower())
 
 
+def _cased(words: Sequence[dict]) -> bool:
+    """Whether the transcript writes sentence starts in capitals (then a lower-case word after a pause goes on)."""
+    firsts = [words[i + 1]["word"].lstrip("\"“„'(¿¡") for i in range(len(words) - 1) if ends_sentence(words[i]["word"])]
+    letters = [w[0] for w in firsts if w and w[0].isalpha()]
+    return len(letters) >= 3 and sum(c.isupper() for c in letters) >= CASED_SHARE * len(letters)
+
+
+def landing(env_db: np.ndarray, hop: float, speech_s: float, room: float) -> float:
+    """How long after the last word a clip stays open: at least a beat, and while the sound right after it (laughter,
+    a shout, the reaction to the punchline) is still about as loud as the speech before it, until it has stayed quiet
+    for a moment, never past `room` (the next words) or MAX_LANDING. `env_db` starts `speech_s` before the last
+    word's end."""
+    room = max(0.0, room)
+    lead = int(round(speech_s / hop))
+    if len(env_db) <= lead + 1:
+        return min(BEAT, room)
+    k = max(1, int(round(0.1 / hop)))
+    smooth = np.convolve(env_db, np.ones(k) / k, mode="same")
+    speech = smooth[:lead] if lead else smooth[:1]
+    quiet = float(np.percentile(speech, 80)) - QUIET_DROP_DB
+    tail = smooth[lead:]
+    hold = max(1, int(round(QUIET_HOLD / hop)))
+    loud = tail >= quiet
+    settled = len(tail)
+    for j in range(len(tail) - hold + 1):
+        if not loud[j:j + hold].any():
+            settled = j
+            break
+    return round(min(room, MAX_LANDING, max(BEAT, settled * hop + 0.2)), 3)
+
+
 class Boundaries:
     """Every lookup is a binary search over the word times (a long podcast has tens of thousands of words)."""
 
     def __init__(self, words: Sequence[dict]):
         self.words = list(words)
+        self.cased = _cased(self.words)
         self.starts = [w["start"] for w in self.words]
         self.ends = [w["end"] for w in self.words]
         self.level = [self._end_level(i) for i in range(len(self.words))]
@@ -63,10 +114,22 @@ class Boundaries:
     def _gap_after(self, i: int) -> float:
         return self.words[i + 1]["start"] - self.words[i]["end"] if i + 1 < len(self.words) else 99.0
 
+    def _held(self, i: int) -> bool:
+        """A pause inside a sentence: the word before it cannot end one, or (in a cased transcript) the next word goes
+        on in lower case without a long silence in between."""
+        if _plain(self.words[i]["word"]) in HANGING:
+            return True
+        if i + 1 >= len(self.words) or not self.cased or self._gap_after(i) >= HELD_PAUSE:
+            return False
+        nxt = self.words[i + 1]["word"].lstrip("\"“„'(¿¡")
+        return bool(nxt) and nxt[0].isalpha() and nxt[0].islower()
+
     def _end_level(self, i: int) -> int:
         word = self.words[i]["word"]
         sentence, pause = ends_sentence(word), self._gap_after(i) >= PAUSE
         if not sentence and not pause:
+            return NONE
+        if not sentence and self._held(i):
             return NONE
         if i + 1 >= len(self.words):
             return COMPLETE_SENTENCE if sentence else COMPLETE_PAUSE
@@ -78,7 +141,8 @@ class Boundaries:
         return OPEN_PAUSE if carried else COMPLETE_PAUSE
 
     def _starts(self, i: int) -> bool:
-        return i == 0 or ends_sentence(self.words[i - 1]["word"]) or self._gap_after(i - 1) >= PAUSE
+        return i == 0 or ends_sentence(self.words[i - 1]["word"]) or (self._gap_after(i - 1) >= PAUSE
+                                                                     and not self._held(i - 1))
 
     def duration(self, i0: int, i1: int) -> float:
         return self.ends[i1] - self.starts[i0]

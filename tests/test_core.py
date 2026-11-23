@@ -389,3 +389,15 @@ def test_a_face_in_the_middle_is_a_full_screen_camera_not_a_facecam_overlay():
     assert guess_facecam(middle) is None and mostly_faces(middle)
     assert guess_facecam(corner) is not None
     assert not mostly_faces(_fake_analysis(100, lambda i: []))
+
+
+def test_tightening_keeps_a_natural_pause_instead_of_cutting_it_away():
+    ws = [{"word": "First", "start": 0.0, "end": 0.4}, {"word": "line.", "start": 0.5, "end": 0.9},
+          {"word": "Then", "start": 3.0, "end": 3.3}, {"word": "this", "start": 3.4, "end": 3.7},
+          {"word": "goes", "start": 5.0, "end": 5.3}, {"word": "on.", "start": 5.4, "end": 5.8}]
+    ep = build_edit(ws, 0.0, 6.0, 30.0)
+    kept = [round(b2 - a2, 2) for (_, a2), (b2, _) in zip(ep.intervals, ep.intervals[1:])]
+    gaps = [ep.words[k + 1]["start"] - ep.words[k]["end"] for k in range(len(ep.words) - 1)]
+    after_sentence, inside = gaps[1], gaps[3]
+    assert 0.45 <= after_sentence <= 0.56 and 0.27 <= inside <= 0.37
+    assert len(ep.intervals) == 3 and kept

@@ -15,6 +15,7 @@ change, what changed rather than how; dates are ISO 8601.
   an outro or music, write how to edit it, and Clippy cuts the clip and then puts your edits on it as a new version.
 - A video attached to a message is clipped when the message has no link; the other attachments and an edit prompt's
   wishes go on the new clips once they are made.
+- 🤣 Funny montage, a sixth ready-made prompt: five complete jokes of 5-10 s, then joined into one montage, the strongest first, the rest building up and the second strongest last.
 - Every ready-made prompt ends with what you get.
 - Each finished job keeps how long each of its steps took (on the progress card's data and as a `[timing]` line in the
   server log).
@@ -114,6 +115,8 @@ change, what changed rather than how; dates are ISO 8601.
   profile / channel / playlist link, no video in the post, no sound, each with what helps.
 
 ### Changed
+- Clips are whole moments: a pause inside a sentence is no longer a place to start or end, the clip stays open after the last word while the laugh or reaction still sounds (up to 2.5 s), and the clip picker treats the quick reaction after the last line as part of the moment.
+- Tightening keeps a natural pause (about 0.3 s inside a sentence, 0.5 s after one) instead of cutting it away.
 - Settings, AI: the model is a drop-down of what the mode can use (the models installed in Ollama, OpenRouter's free
   models, Claude's sonnet, opus and haiku), with the default first and "Other model…" for any name.
 - Settings, accounts: each card shows a Connected / Not connected badge and one clear button (Connect, Paste token or

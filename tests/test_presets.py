@@ -41,7 +41,7 @@ def test_every_button_has_a_prompt():
 def test_a_preset_prompt_gives_the_same_settings_every_time(model):
     expected = {"podcast": (4, 20, 45, "face", True), "gameplay": (5, 15, 60, "stream", False),
                 "promo": (4, 15, 30, "face", True), "quick": (3, 10, 25, "auto", False),
-                "edit": (1, 15, 90, "auto", False)}
+                "edit": (1, 15, 90, "auto", False), "montage": (5, 5, 10, "auto", False)}
     for key, text in templates().items():
         out = run_agent(model, {"id": 1}, [], [], text + LINK)
         [action] = [a for a in out["actions"] if a["type"] == "generate"]
@@ -81,3 +81,17 @@ def test_an_extra_wish_does_not_let_the_model_add_an_opening_text_nobody_asked_f
     assert action["options"]["hook"] is False and action["options"]["layout"] == "face"
     asked = base.replace("Extra wishes: " + chr(10), "Extra wishes: add an opening text" + chr(10))
     assert presets.apply(asked, guessed)[0]["options"]["hook"] is True
+
+
+def test_a_montage_opens_strong_builds_up_and_ends_on_the_second_best():
+    from clippy.web import montage
+
+    rows = [{"number": n, "clip": {"score": s}} for n, s in ((1, 70), (2, 95), (3, 60), (4, 88), (5, 75))]
+    assert [r["number"] for r in montage.order(rows)] == [2, 3, 1, 5, 4]
+    base, ops = montage.joins(rows)
+    assert base["number"] == 2 and [o.clip for o in ops] == [3, 1, 5, 4]
+    assert all(o.transition_duration == montage.CUT for o in ops)
+    assert montage.joins(rows[:1]) is None
+    text = templates()["montage"]
+    action = presets.apply(text + LINK, [{"type": "generate", "url": LINK, "n": 5, "options": {}}])[0]
+    assert action["montage"] is True and action["n"] == 5 and action["options"]["max_len"] == 10

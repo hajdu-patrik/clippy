@@ -25,7 +25,7 @@ from ..publish.registry import LABELS, POSTING
 from ..render import prepare_fonts
 from ..settings import Settings
 from ..tools import ClippyError, SharedProgress, atomic_write_text, log, report_span
-from . import cover_retry, results, schedule
+from . import cover_retry, montage, results, schedule
 from .agent import RENDER_KEYS
 from .clips import caption_of, slim_info
 from .kit import StyleKit
@@ -295,6 +295,10 @@ class GenerateJob(JobHandler):
             self.post_new(ctx, first, p["post"])
             p["posted"] = True
             ctx.remember()
+        if p.get("montage") and not p.get("montage_done"):
+            self.build_montage(ctx, proj, first)
+            p["montage_done"] = True
+            ctx.remember()
         if p.get("then_edit") and not p.get("edit_queued"):
             numbers = [c["number"] for c in ctx.current_clips() if c["number"] >= first]
             if numbers:
@@ -304,6 +308,21 @@ class GenerateJob(JobHandler):
             if numbers:
                 return tx("done.generate_then_edit", n=n, title=title)
         return tx("done.generate", n=n, title=title)
+
+    @staticmethod
+    def build_montage(ctx, proj: Project, first: int) -> None:
+        """The new moments joined into one clip, as a new version of the one that opens it."""
+        planned = montage.joins([c for c in ctx.current_clips() if c["number"] >= first])
+        if planned is None:
+            return
+        row, ops = planned
+        log(f"[render] montage of {len(ops) + 1} moments on #{row['number']}")
+        try:
+            outcome = ctx.runner.edit_service(proj).apply(proj, ctx.chat, row, ops, t("montage.made", n=len(ops) + 1))
+        except ClippyError as exc:
+            ctx.note("note.montage_failed", error=short_error(exc))
+            return
+        EditJob.report(ctx, row, outcome)
 
     @staticmethod
     def post_new(ctx, first: int, post: dict) -> None:
@@ -341,6 +360,10 @@ class MoreJob(JobHandler):
         first = ctx.db.next_number(chat["id"])
         n = self.render_new(ctx, proj, clips, render_options({**(chat.get("options") or {}), **p.get("options", {})}))
         self.apply_kit(ctx, proj, first)
+        if p.get("montage") and not p.get("montage_done"):
+            GenerateJob.build_montage(ctx, proj, first)
+            p["montage_done"] = True
+            ctx.remember()
         return tx("done.more", n=n)
 
 

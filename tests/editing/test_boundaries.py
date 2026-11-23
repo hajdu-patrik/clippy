@@ -237,3 +237,44 @@ def test_a_recording_that_ends_on_a_finished_sentence_keeps_it():
     _check_endings(Reply({"clips": [{"id": 0, "verdict": "trim", "words": 3}]}), [clip], words, bounds, 2, 60,
                    "English")
     assert ending(clip, words) == ("the way back.", "")
+
+
+def test_a_pause_inside_a_sentence_is_no_place_to_end_or_start():
+    from clippy.boundaries import NONE
+
+    words = speech("So I went to the shop. And then I saw the biggest dog of my life. It was huge.",
+                   pause_after={4: 1.2, 13: 1.0})
+    bounds = Boundaries(words)
+    the = next(i for i, w in enumerate(words) if w["word"] == "the")
+    biggest = next(i for i, w in enumerate(words) if w["word"] == "biggest")
+    assert bounds.level[the] == NONE and not bounds.opens[the + 1]
+    assert bounds.level[biggest - 1] == NONE
+    plain = speech("we waited for hours and nobody came we just sat there", pause_after={3: 1.0})
+    assert Boundaries(plain).level[3] >= 0
+
+
+def test_a_lower_case_word_after_a_dramatic_pause_carries_the_sentence_on():
+    from clippy.boundaries import NONE
+
+    words = speech("He told me. I could not believe it. And the winner is you. Wow.", pause_after={9: 1.4})
+    i = next(i for i, w in enumerate(words) if w["word"] == "is")
+    words[i + 1]["word"] = "you."
+    bounds = Boundaries(words)
+    assert bounds.cased and bounds.level[i] == NONE
+    long_pause = speech("He told me. I could not believe it. And the winner is you. Wow.", pause_after={9: 2.5})
+    assert Boundaries(long_pause).level[9] == NONE
+
+
+def test_a_clip_stays_open_until_the_laugh_has_died_down():
+    import numpy as np
+
+    from clippy.boundaries import BEAT, MAX_LANDING, landing
+
+    hop, speech_s = 0.01, 2.0
+    talk = np.full(int(speech_s / hop), -20.0)
+    laugh = np.concatenate([np.full(120, -22.0), np.full(200, -60.0)])
+    assert 1.2 <= landing(np.concatenate([talk, laugh]), hop, speech_s, room=5.0) <= 1.6
+    quiet = np.concatenate([talk, np.full(300, -60.0)])
+    assert landing(quiet, hop, speech_s, room=5.0) == BEAT
+    assert landing(np.concatenate([talk, np.full(400, -21.0)]), hop, speech_s, room=5.0) == MAX_LANDING
+    assert landing(np.concatenate([talk, laugh]), hop, speech_s, room=0.3) == 0.3

@@ -22,7 +22,7 @@ function prefill(text, append = false) {
   autoGrow();
 }
 
-const PROMPT_START = /^\s*(🎙|🎮|📣|⚡|✂)/u;
+const PROMPT_START = /^\s*(🎙|🎮|📣|⚡|🤣|✂)/u;
 const LINK = /https?:\/\/\S+/g;
 
 function usePrompt(template) {

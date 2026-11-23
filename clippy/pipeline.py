@@ -14,7 +14,8 @@ from dataclasses import asdict, dataclass, field, fields, replace
 from pathlib import Path
 from urllib.parse import urlsplit
 
-from . import align, covers, i18n, separation, signals, speakers
+from . import align, audio, covers, i18n, separation, signals, speakers
+from .boundaries import MAX_LANDING, SPEECH_WINDOW, Boundaries, landing
 from .analysis import ClipAnalysis, analyze
 from .captions import CaptionStyle
 from .concurrency import GPU, SOURCE, GuardedLLM
@@ -310,7 +311,34 @@ class Project:
         if short:
             clips[0].start, clips[0].end = 0.0, min(duration, o.max_len)
             clips[0].hook = clips[0].alt_hook = ""
-        return clips[:1] if short else clips
+            return clips[:1]
+        return self.land(clips, duration)
+
+    def land(self, clips: list[Clip], duration: float) -> list[Clip]:
+        """Each clip stays open after its last word until the moment has landed: a beat at least, and the laughter,
+        shout or reaction that follows, as long as it sounds (heard on the voice track when there is one), never into
+        the next words."""
+        if not self.words:
+            return clips
+        bounds = Boundaries(self.words)
+        voice = Path(self.stems["vocals"]) if self.stems and self.stems.get("vocals") else self.sound
+        for clip in clips:
+            i = bounds.index_at_end(clip.end)
+            if i is None or voice is None:
+                continue
+            last = self.words[i]["end"]
+            following = self.words[i + 1]["start"] - 0.06 if i + 1 < len(self.words) else duration or last + MAX_LANDING
+            t0 = max(0.0, last - SPEECH_WINDOW)
+            try:
+                env = audio.envelope(voice, t0, (last - t0) + MAX_LANDING)
+            except Exception as exc:
+                log(f"[hook] landing skipped: {type(exc).__name__}")
+                return clips
+            end = round(last + landing(env, audio.HOP, last - t0, following - last), 3)
+            if end > clip.end + 0.05:
+                log(f"[hook] end lands: {clip.end:.1f} s -> {end:.1f} s (the moment finishes)")
+                clip.end = end
+        return clips
 
     def whole_moment(self, llm, duration: float, o: Options, hashtags: list[str]) -> Clip:
         """All of a short source as the clip, with its title, description and question written from what is said and

@@ -24,6 +24,7 @@ class Preset:
     options: dict = field(default_factory=dict)
     instructions: str = ""
     edit: bool = False
+    montage: bool = False
 
 
 PRESETS = (
@@ -52,13 +53,19 @@ PRESETS = (
            {"n": 3, "min_len": 10, "max_len": 25, "layout": "auto", "tighten": True, "hook": False, "punch": False},
            "Quick shorts. Pick the punchiest moments that work alone: a joke, a punchline, a surprising line or "
            "reaction. Start on the point and end right after the payoff."),
+    Preset("montage", "🤣",
+           {"n": 5, "min_len": 5, "max_len": 10, "layout": "auto", "audio": "natural", "tighten": False,
+            "hook": False, "punch": False},
+           "Funny montage. Pick the funniest moments that each work alone as a complete joke: the set-up, the punchline "
+           "and the laugh or reaction after it, never cut before it lands. Different moments, not the same joke twice; "
+           "skip insults and anything mean.", montage=True),
     Preset("edit", "✂",
            {"n": 1, "min_len": 15, "max_len": 90, "layout": "auto", "audio": "voice", "tighten": True,
             "hook": False, "punch": True},
            "The user's own video, to be edited as they describe. Pick the part that best fits their wishes and works "
            "on its own: it opens on its strongest moment and ends on a complete thought.", edit=True),
 )
-WATCH_PRESETS = tuple(p for p in PRESETS if not p.edit)
+WATCH_PRESETS = tuple(p for p in PRESETS if not (p.edit or p.montage))
 
 
 def preset_of(message: str) -> Preset | None:
@@ -100,13 +107,15 @@ def apply(message: str, actions: list[dict]) -> list[dict]:
             options = {**fixed, **given} if extra else fixed
             if lengths:
                 low, high = sorted(float(x) for x in lengths.groups())
-                options["min_len"], options["max_len"] = min(max(low, 8.0), 120.0), min(max(high, 10.0), 180.0)
+                options["min_len"], options["max_len"] = min(max(low, 4.0), 120.0), min(max(high, 6.0), 180.0)
             if cta:
                 options["cta"] = cta.group(1).strip()
             parts = [preset.instructions, f"Also: {extra.group(1)}" if extra else "",
                      str(action.get("instructions") or "")]
             action = {**action, "n": max(1, min(12, int(count.group(1)))) if count else preset.options["n"],
                       "options": options, "instructions": "\n".join(p for p in parts if p)[:MAX_INSTRUCTIONS]}
+            if preset.montage and action["type"] in ("generate", "more"):
+                action["montage"] = True
             if preset.edit and action["type"] == "generate" and "then_edit" not in action:
                 action["then_edit"] = {"request": edit_request(message), "attachments": []}
         out.append(action)

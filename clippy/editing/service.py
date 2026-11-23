@@ -87,7 +87,8 @@ class EditService:
         return EditOutcome(number, plan.reply, changes, version=version)
 
     def apply(self, project, chat: dict, row: dict, ops: list, reply: str = "") -> EditOutcome:
-        """Fixed edits without the planner (the style kit's logo and outro): applied, rendered, a new version."""
+        """Fixed edits without the planner (the style kit's logo and outro, a montage's joins): applied, rendered, a
+        new version."""
         chat_id, number = chat["id"], row["number"]
         timeline = self.repo.of(row, chat.get("options") or {})
         renderer = TimelineRenderer(project, BaseStore(self.storage.chat_base(chat_id)))
@@ -95,9 +96,10 @@ class EditService:
         captions = next(iter(timeline.layers_of("captions")), None)
         words = corrected(base.words, captions.fixes if captions else ())
         index = self.assets.index(chat_id)
+        others = {c["number"]: c["version"] for c in self.db.current_clips(chat_id) if c["number"] != number}
         ctx = EditContext(assets=index, resolver=TimeResolver(base.duration, words), clock=base.clock,
                           source_duration=float((project.transcript or {}).get("duration") or timeline.cut.source.end),
-                          number=number, clips={}, source_words=tuple(getattr(project, "words", None) or ()))
+                          number=number, clips=others, source_words=tuple(getattr(project, "words", None) or ()))
         result = Editor().run(timeline, ops, ctx)
         if not result.ok or not result.changes:
             return EditOutcome(number, reply, errors=[i.for_model() for i in result.issues] or ["no change"])
