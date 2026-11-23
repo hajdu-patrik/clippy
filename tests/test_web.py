@@ -664,3 +664,35 @@ def test_a_clipping_campaign_clips_its_sources_and_pays_its_posts_by_views(env):
     assert client.delete(f"/api/campaigns/{made['id']}/posts/{view['posts'][1]['id']}").json() == {"ok": True}
     assert client.delete(f"/api/campaigns/{made['id']}").json() == {"ok": True}
     assert client.get("/api/campaigns").json()["campaigns"] == []
+
+
+def test_the_app_page_closes_every_element_it_opens_so_the_composer_stays_in_the_chat():
+    from html.parser import HTMLParser
+
+    void = {"area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "source", "track", "wbr"}
+
+    class Nesting(HTMLParser):
+        def __init__(self):
+            super().__init__()
+            self.open, self.errors, self.parent = [], [], {}
+
+        def handle_starttag(self, tag, attrs):
+            if tag in void or tag in ("use", "path", "symbol", "svg"):
+                return
+            name = dict(attrs).get("class", "") or ""
+            if tag == "footer" and "composer-wrap" in name:
+                self.parent["composer"] = [t for t, _ in self.open]
+            self.open.append((tag, self.getpos()[0]))
+
+        def handle_endtag(self, tag):
+            if tag in void or tag in ("use", "path", "symbol", "svg"):
+                return
+            if not self.open or self.open[-1][0] != tag:
+                self.errors.append((tag, self.getpos()[0]))
+                return
+            self.open.pop()
+
+    page = Nesting()
+    page.feed(Path("clippy/web/static/index.html").read_text(encoding="utf-8"))
+    assert page.errors == [] and page.open == []
+    assert "main" in page.parent["composer"]
