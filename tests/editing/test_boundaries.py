@@ -332,3 +332,13 @@ def test_two_picks_of_one_thought_become_one_clip_or_the_stronger_one():
 def test_a_clip_may_run_past_the_maximum_only_by_a_quarter():
     from clippy.boundaries import overflow
     assert overflow(10) == 3.0 and overflow(30) == 7.5 and overflow(90) == 12.0
+
+
+def test_a_stammer_or_a_long_pause_inside_a_sentence_is_no_end():
+    from clippy.text import ends_sentence
+    assert not ends_sentence("I...", "I") and not ends_sentence("I...", "would") and ends_sentence("fight...", "Hey")
+    words = speech("We tried. It failed. I think the answer is just do it. It is really not hard.", pause_after={5: 2.6})
+    bounds = Boundaries(words)
+    assert bounds.cased and bounds.level[5] < OPEN_SENTENCE
+    plain = speech("are you ready find a better job immediately or stay here forever and ever", pause_after={3: 2.6})
+    assert Boundaries(plain).level[3] >= 0

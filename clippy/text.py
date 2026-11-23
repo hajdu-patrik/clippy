@@ -45,15 +45,19 @@ def spoken(words: list[dict]) -> list[dict]:
 
 def ends_sentence(word: str, following: str | None = None) -> bool:
     """Whether a word closes a sentence. A dot after an abbreviation ("Dr.", "pl.") or an initial ("J.") does not,
-    nor one after a number that the next word, in lower case, carries on (a Hungarian ordinal: "2026. november")."""
+    nor one after a number that the next word, in lower case, carries on (a Hungarian ordinal: "2026. november"), nor
+    a trailing "..." that the next word carries on in lower case or repeats (a stammer: "I... would", "I... I")."""
     bare = word.rstrip(_CLOSERS)
     if not bare.endswith((".", "!", "?", "…")):
+        return False
+    nxt = (following or "").lstrip("\"“„'(")
+    if bare.endswith(("...", "…")) and nxt[:1].isalpha() and (
+            nxt[:1].islower() or fold(bare.rstrip(".…")) == fold(nxt.rstrip(".,!?…"))):
         return False
     if bare.endswith(".") and not bare.endswith("..."):
         stem = bare[:-1].lstrip("\"“„'(")
         if fold(stem) in ABBREVIATIONS or re.fullmatch(r"[A-ZÁÉÍÓÖŐÚÜŰ]", stem):
             return False
-        nxt = (following or "").lstrip("\"“„'(")
         if stem.isdigit() and nxt[:1].isalpha() and nxt[:1].islower():
             return False
     return True

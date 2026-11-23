@@ -128,7 +128,8 @@ class Boundaries:
 
     def _held(self, i: int) -> bool:
         """A pause inside a sentence: the word before it cannot end one, it ends on a comma or semicolon (the clause
-        goes on), or (in a cased transcript) the next word goes on in lower case without a long silence in between."""
+        goes on), or (in a cased transcript, where the stretch before it has punctuation) the next word goes on in
+        lower case without a long silence in between."""
         if _plain(self.words[i]["word"]) in HANGING:
             return True
         bare = self.words[i]["word"].rstrip(_CLOSERS)
@@ -136,7 +137,8 @@ class Boundaries:
             return True
         if bare.endswith(".") and not self._ends(i):
             return True
-        if i + 1 >= len(self.words) or not self.cased or self._gap_after(i) >= HELD_PAUSE:
+        if (i + 1 >= len(self.words) or not self.cased or self._gap_after(i) >= CLAUSE_PAUSE
+                or not any(self._ends(k) for k in range(max(0, i - LIST_REACH), i))):
             return False
         nxt = self.words[i + 1]["word"].lstrip("\"“„'(¿¡")
         return bool(nxt) and nxt[0].isalpha() and nxt[0].islower()
@@ -204,8 +206,9 @@ class Boundaries:
 
     def end_near(self, i0: int, t: float, min_len: float, max_len: float) -> int | None:
         """The end for a clip from word i0 whose picker wanted it to end near `t`: a complete thought inside the
-        length limits (the one nearest `t`), else the first complete one a little past the maximum, else a sentence
-        end that the next sentence carries on, else the clearest pause. Never inside a run of words."""
+        length limits (the one nearest `t`), else the first complete one a little past the maximum (up to 12 s past
+        it when nothing nearer is complete), else a sentence end that the next sentence carries on, else the clearest
+        pause. Never inside a run of words."""
         extra = overflow(max_len)
         span = self._upto(i0, max_len + extra)
         if not span:
@@ -221,6 +224,11 @@ class Boundaries:
         for found in (near(COMPLETE_SENTENCE, min_len, max_len), near(COMPLETE_PAUSE, min_len, max_len),
                       first(COMPLETE_SENTENCE, max_len, max_len + extra),
                       first(COMPLETE_PAUSE, max_len, max_len + extra)):
+            if found is not None:
+                return found
+        wider = self._upto(i0, max_len + END_OVERFLOW)
+        for level in (COMPLETE_SENTENCE, COMPLETE_PAUSE):
+            found = next((j for j in wider if self.level[j] == level and self.duration(i0, j) > max_len), None)
             if found is not None:
                 return found
         loose = [j for j in span if self.level[j] >= OPEN_PAUSE and self.duration(i0, j) >= 0.6 * min_len]
