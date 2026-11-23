@@ -13,7 +13,7 @@ MAX_ATTEMPTS = 3
 PAUSES = (5.0, 20.0)
 
 FINAL = frozenset({
-    "error.chat_deleted", "error.cookies_file_missing", "error.download_gone", "error.download_live",
+    "error.chat_deleted", "error.cookies_file_missing", "error.cookies_unreadable", "error.download_gone", "error.download_live",
     "error.download_login", "error.download_playlist", "error.download_unsupported", "error.empty_transcript",
     "error.no_clip", "error.no_sound", "error.no_video", "error.not_public", "error.only_http", "error.unresolvable",
     "error.account_missing", "error.account_expired", "error.platform_not_configured", "error.platform_audit",

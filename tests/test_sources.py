@@ -266,3 +266,57 @@ def test_yt_dlp_keeps_its_warnings_but_not_the_missing_ffprobe(capsys):
     opts["logger"].error("ERROR: broken")
     err = capsys.readouterr().err
     assert "ffprobe" not in err and "WARNING: Falling back to generic" in err and "ERROR: broken" in err
+
+
+class _Refusing:
+    """A yt-dlp stand-in: browser cookies that cannot be read fail every link; without them `answer` decides."""
+
+    def __init__(self, answer):
+        self.answer, self.tries = answer, []
+
+    def module(self):
+        import yt_dlp
+        test = self
+
+        class FakeYDL:
+            def __init__(self, opts):
+                self.opts = opts
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *exc):
+                return False
+
+            def extract_info(self, url, download=False):
+                test.tries.append("cookiesfrombrowser" in self.opts)
+                if "cookiesfrombrowser" in self.opts:
+                    raise yt_dlp.utils.DownloadError('ERROR: could not find opera cookies database in "C:\\x"')
+                return test.answer(url)
+
+        return type("M", (), {"YoutubeDL": FakeYDL, "utils": yt_dlp.utils})
+
+
+def test_unreadable_browser_cookies_do_not_hold_back_a_public_video(tmp_path, monkeypatch):
+    from clippy import download
+    fake = _Refusing(lambda url: {"id": "v1", "title": "Public", "duration": 60})
+    monkeypatch.setattr(download, "_yt_dlp", fake.module)
+    monkeypatch.delenv("CLIPPY_COOKIES_FILE", raising=False)
+    remote = download.probe("https://www.twitch.tv/videos/1", tmp_path, cookies_from_browser="opera")
+    assert remote.title == "Public" and fake.tries == [True, False]
+
+
+def test_a_video_that_needs_a_sign_in_names_the_unreadable_browser(tmp_path, monkeypatch):
+    import yt_dlp
+    from clippy import download
+
+    def private(url):
+        raise yt_dlp.utils.DownloadError("ERROR: [youtube] x: Sign in to confirm you're not a bot")
+
+    monkeypatch.setattr(download, "_yt_dlp", _Refusing(private).module)
+    monkeypatch.delenv("CLIPPY_COOKIES_FILE", raising=False)
+    with pytest.raises(ClippyError) as caught:
+        download.probe("https://www.youtube.com/watch?v=x", tmp_path, cookies_from_browser="opera")
+    assert caught.value.key == "error.cookies_unreadable"
+    assert caught.value.params == {"host": "www.youtube.com", "browser": "opera"}
+    assert "opera" in i18n.t(caught.value.key, **caught.value.params)

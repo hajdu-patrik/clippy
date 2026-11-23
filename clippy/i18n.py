@@ -67,6 +67,7 @@ CATALOG: dict[str, str] = {
     "error.download_missing": "The download finished but the video file is missing.",
     "error.download_failed": "Could not download the video from {host}: {detail}",
     "error.download_login": "{host} shows this video only to signed-in users. Sign in on {host} in Firefox, add CLIPPY_COOKIES_FROM_BROWSER=firefox to .env and restart Clippy (clippy restart). Another browser: export a cookies.txt with an extension and set CLIPPY_COOKIES_FILE=path in .env.",
+    "error.cookies_unreadable": "{host} shows this video only to signed-in users, and Clippy cannot read the cookies of {browser} (CLIPPY_COOKIES_FROM_BROWSER in .env): that browser or profile is not on this computer, or it is open and keeps them locked. Close it and try again, name the browser you are signed in with, or export a cookies.txt and set CLIPPY_COOKIES_FILE=path in .env.",
     "error.cookies_file_missing": "The cookies file set in CLIPPY_COOKIES_FILE ({path}) does not exist; fix the path in .env or remove the line, then restart Clippy (clippy restart).",
     "error.download_gone": "This video is not available on {host}: deleted, private or blocked in your region.",
     "error.download_busy": "{host} is limiting downloads right now; try again in a few minutes.",

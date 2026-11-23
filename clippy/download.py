@@ -179,6 +179,7 @@ REASONS = (
     ("error.download_unsupported", ("unsupported url", "no video formats", "no video could be found",
                                     "there's no video", "no video in")),
 )
+UNREADABLE_COOKIES = ("cookies database", "cookie database", "failed to decrypt", "could not copy", "keyring")
 LIST_EXTRACTORS = ("tab", "playlist", "user", "channel", "profile", "search", "feed", "collection")
 LIST_PATH = re.compile(r"^/(@[^/]+/?$|channel/|c/|user/|playlist|feed/)")
 PROFILE_HOSTS = ("instagram.com", "twitch.tv", "kick.com", "x.com", "twitter.com", "facebook.com")
@@ -249,6 +250,28 @@ def _session(opts: dict):
             yield ydl
 
 
+def _extract(url: str, opts: dict, download: bool = False) -> dict:
+    """Runs yt-dlp on a link. When the browser named for cookies cannot give them (not installed, another profile,
+    open and locking them, encrypted), a public video is not held back: it is tried again without them, and one that
+    needs a sign-in says that the browser's cookies could not be read."""
+    try:
+        with _session(opts) as ydl:
+            return ydl.extract_info(url, download=download)
+    except _yt_dlp().utils.DownloadError as exc:
+        browser = (opts.get("cookiesfrombrowser") or (None,))[0]
+        if not browser or not any(w in str(exc).lower() for w in UNREADABLE_COOKIES):
+            raise
+    log(f"[download] the cookies of {browser} cannot be read; trying without them")
+    try:
+        with _session({k: v for k, v in opts.items() if k != "cookiesfrombrowser"}) as ydl:
+            return ydl.extract_info(url, download=download)
+    except _yt_dlp().utils.DownloadError as exc:
+        parts = urlsplit(url)
+        if explain(str(exc), parts.hostname or url, parts.path).key == "error.download_login":
+            raise ClippyError(key="error.cookies_unreadable", host=parts.hostname or url, browser=browser) from None
+        raise
+
+
 def _yt_dlp():
     try:
         import yt_dlp
@@ -270,8 +293,8 @@ def _site_errors(url: str):
 
 def probe(source: str, downloads: Path, max_height: int = 2160, cookies_from_browser: str | None = None) -> Remote:
     downloads.mkdir(parents=True, exist_ok=True)
-    with _site_errors(source), _session(_ydl_options(downloads, max_height, cookies_from_browser)) as ydl:
-        info = ydl.extract_info(source, download=False)
+    with _site_errors(source):
+        info = _extract(source, _ydl_options(downloads, max_height, cookies_from_browser))
     info, single, item = _single(info, urlsplit(source).hostname or source)
     vid = _video_id(info)
     return Remote(source, info, vid, info.get("title") or vid, single, item)
@@ -333,8 +356,7 @@ def _download_once(remote: Remote, downloads: Path, name: str, opts: dict, parts
                 **({"playlist_items": str(remote.item)} if remote.item else {})}
         if remote.streamed:
             opts.pop("http_chunk_size", None)
-        with _session(opts) as ydl:
-            ydl.extract_info(remote.url, download=True)
+        _extract(remote.url, opts, download=True)
         done = next((f for f in sorted(partial.iterdir()) if f.is_file() and f.name.startswith(f"{name}.")
                      and f.suffix != ".part"), None)
         if done is None:
