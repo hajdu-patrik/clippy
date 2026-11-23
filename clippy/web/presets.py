@@ -34,14 +34,14 @@ PRESETS = (
            "Podcast or interview. Pick standalone moments a new viewer understands without the rest: a strong or "
            "debatable opinion, a surprising fact or number, a personal story with its payoff, funny banter, an honest "
            "or emotional confession. The first sentence is the hook: open on the claim, the question or the punchline, "
-           "never on a greeting, set-up or filler. One idea per clip, stop right after the payoff, no politics."),
+           "never on a greeting, set-up or filler. One idea per clip, end once the payoff has landed, no politics."),
     Preset("gameplay", "🎮",
            {"n": 5, "min_len": 15, "max_len": 60, "layout": "stream", "audio": "natural", "tighten": False,
             "hook": False, "punch": False, "captions": "en"},
            "Facecam stream. Pick the peaks: clutch or skilful plays, wins, big fails, unexpected twists, the "
            "streamer's loud reactions, laughter, rage, funny lines, jokes with chat or teammates. The reaction or what "
-           "causes it is on screen in the first second: start at most 1-2 s before the peak, stop right after the "
-           "reaction, one moment per clip; skip loading, menus, ads and idle talk."),
+           "causes it is on screen in the first second: start at most 1-2 s before the peak, end once the reaction "
+           "has died down, one moment per clip; skip loading, menus, ads and idle talk."),
     Preset("promo", "📣",
            {"n": 4, "min_len": 15, "max_len": 30, "layout": "face", "audio": "voice", "tighten": True,
             "hook": True, "punch": False},
@@ -52,7 +52,7 @@ PRESETS = (
     Preset("quick", "⚡",
            {"n": 3, "min_len": 10, "max_len": 25, "layout": "auto", "tighten": True, "hook": False, "punch": False},
            "Quick shorts. Pick the punchiest moments that work alone: a joke, a punchline, a surprising line or "
-           "reaction. Start on the point and end right after the payoff."),
+           "reaction. Start on the point and end once the payoff has landed."),
     Preset("montage", "🤣",
            {"n": 5, "min_len": 5, "max_len": 10, "layout": "auto", "audio": "natural", "tighten": False,
             "hook": False, "punch": False},

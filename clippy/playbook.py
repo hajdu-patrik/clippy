@@ -93,7 +93,8 @@ def selection_rules(min_len: int, max_len: int) -> str:
   or surprising statement, a specific number, real tension, a direct question, the middle of an action or a
   demonstration. Most viewers who leave, leave before the third second, so the clip starts ON that moment.
 - STANDALONE (20): a new viewer understands it without the rest of the video; no unresolved "he/that/it".
-- PAYOFF (20): a complete arc (setup -> tension -> payoff, punchline or insight) that ends right after the payoff.
+- PAYOFF (20): a complete arc (setup -> tension -> payoff, punchline or insight) that ends once the payoff has
+  landed: the speaker has said it all and the laugh or reaction to it is over, never on a pause mid-thought.
 - EMOTION (15): strong emotion, humour, conflict, vulnerability or a surprising twist.
 - QUOTABLE (10): a line people would share, comment on or stitch.
 - RELEVANCE (10): matters to the people who watch this kind of video; one sharp idea, not a summary.

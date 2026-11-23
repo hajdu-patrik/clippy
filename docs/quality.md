@@ -26,7 +26,7 @@ The LLM scores every candidate from 0 to 100 (the rules are in `clippy/playbook.
 - **Hook, 25 pts:** the first sentence grabs attention within 2-3 s: a specific claim, a question, tension, or it
   starts mid-action. It never starts with a filler or bridge word.
 - **Standalone, 20 pts:** it makes sense without the rest of the video.
-- **Payoff, 20 pts:** a complete mini-arc that ends right after the punchline.
+- **Payoff, 20 pts:** a complete mini-arc that ends once the punchline has landed and the laugh or reaction after it is over.
 - **Emotion, 15 pts:** humour, conflict or surprise.
 - **Quotable, 10 pts:** it has a line people would share.
 - **Relevance, 10 pts:** one sharp idea that matters to this audience.
