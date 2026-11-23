@@ -8,7 +8,7 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
 from . import i18n, playbook
-from .boundaries import END_OVERFLOW, Boundaries, end_time, start_time
+from .boundaries import Boundaries, end_time, overflow, start_time
 from .llm import LLM, think_enabled
 from .signals import Signals
 from .text import ends_sentence, post_clean
@@ -411,6 +411,30 @@ def _edge_verdicts(llm: LLM, prompt: str, lines: dict[int, str], what: str) -> l
     return verdicts
 
 
+TOUCH = 1.0
+
+
+def join_touching(clips: list[Clip], max_len: float) -> list[Clip]:
+    """Two picked clips that overlap or run straight into each other hold one thought cut in two: one clip of both
+    when that still fits the length (with the stronger one's texts), else only the stronger one."""
+    kept = sorted(clips, key=lambda c: c.start)
+    k = 0
+    while k + 1 < len(kept):
+        a, b = kept[k], kept[k + 1]
+        if b.start >= a.end + TOUCH:
+            k += 1
+            continue
+        strong, weak = (a, b) if a.score >= b.score else (b, a)
+        if max(a.end, b.end) - a.start <= max_len + overflow(max_len):
+            strong.start, strong.end = a.start, max(a.end, b.end)
+            log(f"[hook] one thought in two clips: joined ({strong.start:.1f} s -> {strong.end:.1f} s)")
+        else:
+            log(f"[hook] one thought in two clips: kept the stronger ({strong.start:.1f} s)")
+        kept.remove(weak)
+    order = {id(c): n for n, c in enumerate(clips)}
+    return sorted(kept, key=lambda c: order[id(c)])
+
+
 def _collides(moved: Clip, clip: Clip, others: list[Clip]) -> bool:
     return any(o is not clip and _overlap(moved, o) >= OVERLAP for o in others)
 
@@ -436,7 +460,7 @@ def _check_starts(llm: LLM, clips: list[Clip], words: list[dict], bounds: Bounda
     for v in _edge_verdicts(llm, prompt, lines, "start"):
         clip, (i0, i1, before) = clips[v.clip], spans[v.clip]
         if v.move == "extend":
-            fits = [i for i in before[-v.sentences:] if bounds.duration(i, i1) <= max_len + END_OVERFLOW]
+            fits = [i for i in before[-v.sentences:] if bounds.duration(i, i1) <= max_len + overflow(max_len)]
             target = fits[0] if fits else None
         else:
             later = [i for i in bounds.open_at if i0 < i <= i1 and bounds.duration(i, i1) >= min_len]
@@ -467,7 +491,7 @@ def _check_endings(llm: LLM, clips: list[Clip], words: list[dict], bounds: Bound
     prompt = ENDINGS_PROMPT.format(language=language, max_steps=MAX_STEPS)
     for v in _edge_verdicts(llm, prompt, lines, "ending"):
         clip, (i0, i1) = clips[v.clip], spans[v.clip]
-        ends = bounds.complete_ends(i0, max_len + END_OVERFLOW)
+        ends = bounds.complete_ends(i0, max_len + overflow(max_len))
         if v.move == "extend":
             later = [j for j in ends if j > i1]
             target = later[min(v.sentences, len(later)) - 1] if later else None
@@ -764,6 +788,7 @@ def find_highlights(transcript: dict, llm: LLM, max_clips: int = 5, min_len: flo
         for _ in range(CHECK_ROUNDS):
             again = _check_endings(llm, again, words, bounds, min_len, max_len, language, chosen, floors) if again else []
             floors |= {id(c): c.end for c in again}
+    chosen = join_touching(chosen, max_len)
     untitled = [c for c in chosen if not c.description]
     if llm.backend != "none" and untitled:
         try:

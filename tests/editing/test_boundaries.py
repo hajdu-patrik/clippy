@@ -292,3 +292,43 @@ def test_a_second_check_never_takes_back_what_the_first_found_part_of_the_moment
     _check_endings(Reply({"clips": [{"id": 0, "verdict": "trim", "sentences": 1}]}), moved, words, bounds, 2, 60,
                    "English", floors=floors)
     assert clip.end == extended
+
+
+def test_an_abbreviation_or_an_initial_is_no_sentence_end():
+    from clippy.text import ends_sentence
+    assert not ends_sentence("dr.") and not ends_sentence("Mrs.") and not ends_sentence("J.")
+    assert not ends_sentence("2026.", "november") and ends_sentence("2026.", "Then")
+    assert ends_sentence("King.") and ends_sentence("thesis.") and ends_sentence("ID?")
+    words = speech("they came to hear dr. King speak that day. Nobody sent invitations.", pause_after={4: 0.8})
+    bounds = Boundaries(words)
+    assert bounds.level[4] < OPEN_SENTENCE and bounds.level[8] == COMPLETE_SENTENCE
+
+
+def test_a_comma_before_a_pause_keeps_the_clause_open():
+    words = speech("Keep it an absolute bean with you bro. Next, we are taking a classic map back.",
+                   pause_after={8: 2.5})
+    bounds = Boundaries(words)
+    assert bounds.level[8] < OPEN_SENTENCE and not bounds.opens[9]
+
+
+def test_a_list_of_parallel_lines_is_not_over_after_its_first_line():
+    words = speech("Her room was full of people like me. People who could not sit still. People who had to move "
+                   "to think. That was the day she found her calling.")
+    bounds = Boundaries(words)
+    still = next(i for i, w in enumerate(words) if w["word"] == "still.")
+    think = next(i for i, w in enumerate(words) if w["word"] == "think.")
+    assert bounds.level[still] == OPEN_SENTENCE and bounds.level[think] == COMPLETE_SENTENCE
+
+
+def test_two_picks_of_one_thought_become_one_clip_or_the_stronger_one():
+    from clippy.highlights import join_touching
+    first, second, apart = Clip(398.2, 435.9, 95), Clip(435.7, 463.8, 90), Clip(561.1, 588.4, 93)
+    kept = join_touching([first, apart, second], 60)
+    assert kept == [first, apart] and (first.start, first.end) == (398.2, 463.8)
+    long_a, long_b = Clip(0.0, 30.0, 80), Clip(30.5, 58.0, 92)
+    assert join_touching([long_a, long_b], 30) == [long_b] and long_b.start == 30.5
+
+
+def test_a_clip_may_run_past_the_maximum_only_by_a_quarter():
+    from clippy.boundaries import overflow
+    assert overflow(10) == 3.0 and overflow(30) == 7.5 and overflow(90) == 12.0

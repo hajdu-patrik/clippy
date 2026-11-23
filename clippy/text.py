@@ -6,6 +6,10 @@ import re
 import unicodedata
 
 _CLOSERS = "\"”»)'"
+ABBREVIATIONS = frozenset({
+    "mr", "mrs", "ms", "dr", "prof", "st", "vs", "jr", "sr", "mt", "e.g", "i.e", "approx", "dept", "fig", "gen", "gov",
+    "sgt", "capt", "lt", "col", "rev", "pl", "kb", "ill", "un", "ifj", "ozv", "vo", "ld", "tel",
+})
 FILLERS = {"ö", "öö", "ööö", "őő", "ööh", "öhm", "hmm", "hm", "mhm", "mm", "eee", "ee", "e",
            "um", "umm", "uh", "uhm", "erm", "er", "ah", "eh"}
 
@@ -16,8 +20,20 @@ def fold(text: str) -> str:
     return "".join(c for c in plain if not unicodedata.combining(c)).lower()
 
 
-def ends_sentence(word: str) -> bool:
-    return word.rstrip(_CLOSERS).endswith((".", "!", "?", "…"))
+def ends_sentence(word: str, following: str | None = None) -> bool:
+    """Whether a word closes a sentence. A dot after an abbreviation ("Dr.", "pl.") or an initial ("J.") does not,
+    nor one after a number that the next word, in lower case, carries on (a Hungarian ordinal: "2026. november")."""
+    bare = word.rstrip(_CLOSERS)
+    if not bare.endswith((".", "!", "?", "…")):
+        return False
+    if bare.endswith(".") and not bare.endswith("..."):
+        stem = bare[:-1].lstrip("\"“„'(")
+        if fold(stem) in ABBREVIATIONS or re.fullmatch(r"[A-ZÁÉÍÓÖŐÚÜŰ]", stem):
+            return False
+        nxt = (following or "").lstrip("\"“„'(")
+        if stem.isdigit() and nxt[:1].isalpha() and nxt[:1].islower():
+            return False
+    return True
 
 
 def ends_clause(word: str) -> bool:

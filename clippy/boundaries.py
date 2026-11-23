@@ -33,14 +33,22 @@ HANGING = frozenset({
     "azt", "én", "te", "ő", "mi", "ti", "ők", "volt", "van", "lesz", "ööö", "öö", "hát",
 }) | {w for w in ("and", "but", "or", "so", "because", "és", "de", "mert", "vagy", "meg")}
 ANSWER_GAP = 1.5
+CLAUSE_PAUSE = 4.0
+LIST_REACH = 40
 START_REACH = 3.0
 LEAN_BACK = 10.0
 END_OVERFLOW = 12.0
+OVERFLOW_SHARE, MIN_OVERFLOW = 0.25, 3.0
 SNAP_REACH = 6.0
 STRETCHED = 0.8
 
 COMPLETE_SENTENCE, COMPLETE_PAUSE, OPEN_SENTENCE, OPEN_PAUSE, NONE = 3, 2, 1, 0, -1
 _CLOSERS = "\"”»)'"
+
+
+def overflow(max_len: float) -> float:
+    """How far past the asked maximum a clip may run to finish its thought: a quarter of it, 3 to 12 seconds."""
+    return min(END_OVERFLOW, max(MIN_OVERFLOW, OVERFLOW_SHARE * max_len))
 
 
 def start_time(words: Sequence[dict], i: int) -> float:
@@ -114,19 +122,41 @@ class Boundaries:
     def _gap_after(self, i: int) -> float:
         return self.words[i + 1]["start"] - self.words[i]["end"] if i + 1 < len(self.words) else 99.0
 
+    def _ends(self, i: int) -> bool:
+        following = self.words[i + 1]["word"] if i + 1 < len(self.words) else None
+        return ends_sentence(self.words[i]["word"], following)
+
     def _held(self, i: int) -> bool:
-        """A pause inside a sentence: the word before it cannot end one, or (in a cased transcript) the next word goes
-        on in lower case without a long silence in between."""
+        """A pause inside a sentence: the word before it cannot end one, it ends on a comma or semicolon (the clause
+        goes on), or (in a cased transcript) the next word goes on in lower case without a long silence in between."""
         if _plain(self.words[i]["word"]) in HANGING:
+            return True
+        bare = self.words[i]["word"].rstrip(_CLOSERS)
+        if bare.endswith((",", ";")) and self._gap_after(i) < CLAUSE_PAUSE:
+            return True
+        if bare.endswith(".") and not self._ends(i):
             return True
         if i + 1 >= len(self.words) or not self.cased or self._gap_after(i) >= HELD_PAUSE:
             return False
         nxt = self.words[i + 1]["word"].lstrip("\"“„'(¿¡")
         return bool(nxt) and nxt[0].isalpha() and nxt[0].islower()
 
+    def _list_goes_on(self, i: int) -> bool:
+        """The next sentence opens like this one ("People who couldn't sit still. People who had to move."): a list
+        or a run of parallel lines that is not over yet."""
+        if i + 2 >= len(self.words) or self._gap_after(i) >= HELD_PAUSE:
+            return False
+        s = i
+        while s > 0 and i - s < LIST_REACH and not self._ends(s - 1):
+            s -= 1
+        if i - s < 1:
+            return False
+        head = [_plain(self.words[k]["word"]) for k in (s, s + 1)]
+        return all(head) and head == [_plain(self.words[k]["word"]) for k in (i + 1, i + 2)]
+
     def _end_level(self, i: int) -> int:
         word = self.words[i]["word"]
-        sentence, pause = ends_sentence(word), self._gap_after(i) >= PAUSE
+        sentence, pause = self._ends(i), self._gap_after(i) >= PAUSE
         if not sentence and not pause:
             return NONE
         if not sentence and self._held(i):
@@ -135,14 +165,13 @@ class Boundaries:
             return COMPLETE_SENTENCE if sentence else COMPLETE_PAUSE
         bare = word.rstrip(_CLOSERS)
         carried = (_plain(self.words[i + 1]["word"]) in CONNECTORS or bare.endswith(":")
-                   or (bare.endswith("?") and self._gap_after(i) < ANSWER_GAP))
+                   or (bare.endswith("?") and self._gap_after(i) < ANSWER_GAP) or (sentence and self._list_goes_on(i)))
         if sentence:
             return OPEN_SENTENCE if carried else COMPLETE_SENTENCE
         return OPEN_PAUSE if carried else COMPLETE_PAUSE
 
     def _starts(self, i: int) -> bool:
-        return i == 0 or ends_sentence(self.words[i - 1]["word"]) or (self._gap_after(i - 1) >= PAUSE
-                                                                     and not self._held(i - 1))
+        return i == 0 or self._ends(i - 1) or (self._gap_after(i - 1) >= PAUSE and not self._held(i - 1))
 
     def duration(self, i0: int, i1: int) -> float:
         return self.ends[i1] - self.starts[i0]
@@ -173,11 +202,12 @@ class Boundaries:
                 return earlier
         return start
 
-    def end_near(self, i0: int, t: float, min_len: float, max_len: float, overflow: float = END_OVERFLOW) -> int | None:
+    def end_near(self, i0: int, t: float, min_len: float, max_len: float) -> int | None:
         """The end for a clip from word i0 whose picker wanted it to end near `t`: a complete thought inside the
         length limits (the one nearest `t`), else the first complete one a little past the maximum, else a sentence
         end that the next sentence carries on, else the clearest pause. Never inside a run of words."""
-        span = self._upto(i0, max_len + overflow)
+        extra = overflow(max_len)
+        span = self._upto(i0, max_len + extra)
         if not span:
             return None
 
@@ -189,8 +219,8 @@ class Boundaries:
             return next((j for j in span if self.level[j] == level and lo < self.duration(i0, j) <= hi), None)
 
         for found in (near(COMPLETE_SENTENCE, min_len, max_len), near(COMPLETE_PAUSE, min_len, max_len),
-                      first(COMPLETE_SENTENCE, max_len, max_len + overflow),
-                      first(COMPLETE_PAUSE, max_len, max_len + overflow)):
+                      first(COMPLETE_SENTENCE, max_len, max_len + extra),
+                      first(COMPLETE_PAUSE, max_len, max_len + extra)):
             if found is not None:
                 return found
         loose = [j for j in span if self.level[j] >= OPEN_PAUSE and self.duration(i0, j) >= 0.6 * min_len]
