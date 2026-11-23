@@ -19,7 +19,7 @@ TRANSITIONS = ("fade", "fadeblack", "fadewhite", "wipeleft", "wiperight", "slide
 FORMATS = {"9:16": (1080, 1920), "1:1": (1080, 1080), "4:5": (1080, 1350), "16:9": (1920, 1080)}
 TEXT_ANIMATIONS = ("none", "fade", "pop", "slide", "typewriter")
 STICKER_MOTIONS = ("none", "fade", "pop", "bounce", "float")
-EFFECTS = ("zoom", "shake", "flash", "fade_black", "black_white", "blur", "vignette")
+EFFECTS = ("zoom", "slow_zoom", "shake", "flash", "fade_black", "black_white", "blur", "vignette")
 SOUNDS = ("pop", "ding", "boom", "click", "whoosh", "riser", "bleep")
 
 

@@ -115,6 +115,8 @@ class TimeResolver:
             t = ref.at
         elif isinstance(ref, Edge):
             t = (0.0 if ref.edge == "start" else self.duration) + ref.offset
+        elif isinstance(ref, Word) and len(ref.word.split()) > 1:
+            t = self._phrase(Phrase(phrase=ref.word))
         elif isinstance(ref, Word):
             t = self._word(ref).get("start", 0.0)
         else:
@@ -138,7 +140,9 @@ class TimeResolver:
         return TimeRange(start=round(start, 3), end=round(end, 3))
 
     def _end_of(self, ref: TimeRef) -> float:
-        """A word as an end means "until that word is said"."""
+        """A word or a phrase as an end means "until it is said"."""
+        if isinstance(ref, Phrase) or (isinstance(ref, Word) and len(ref.word.split()) > 1):
+            return self._phrase_end(ref.phrase if isinstance(ref, Phrase) else ref.word)
         return self._word(ref)["end"] if isinstance(ref, Word) else self.at(ref)
 
     def _word(self, ref: Word) -> dict:
@@ -150,9 +154,15 @@ class TimeResolver:
                     return word
         raise ClippyError(key="edit.no_word", word=ref.word)
 
-    def _phrase(self, ref: Phrase) -> float:
-        target = [fold(w) for w in ref.phrase.split() if fold(w)]
+    def _find(self, phrase: str) -> tuple[int, int]:
+        target = [fold(w) for w in phrase.split() if fold(w)]
         for i in range(len(self.folded) - len(target) + 1):
-            if all(self.folded[i + k].startswith(t) for k, t in enumerate(target)):
-                return self.words[i]["start"]
-        raise ClippyError(key="edit.no_word", word=ref.phrase)
+            if target and all(self.folded[i + k].startswith(t) for k, t in enumerate(target)):
+                return i, i + len(target) - 1
+        raise ClippyError(key="edit.no_word", word=phrase)
+
+    def _phrase(self, ref: Phrase) -> float:
+        return self.words[self._find(ref.phrase)[0]]["start"]
+
+    def _phrase_end(self, phrase: str) -> float:
+        return self.words[self._find(phrase)[1]]["end"]

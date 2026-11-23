@@ -44,10 +44,14 @@ operations; the app validates and renders them. Return ONLY JSON: {"reply": "...
 - "Fűzd hozzá a 3. klipet / tedd utána" -> join_clip with that clip number (only the other clips listed in the
   state). Several clips can be joined one after the other.
 - Moments ("when he says X", "at the punchline") are time refs: put a zoom, flash, shake or sound effect there.
+  A quick zoom / punch-in -> effect "zoom" at the moment. A slow zoom ("zoom in slowly", "lassan közelíts rá") ->
+  effect "slow_zoom" with a span from where the moment starts (a phrase of its first words) to its end (the clip's
+  end when it is the last line), never over the whole clip.
 - "Csipogd ki / bleep" a word -> add_sound "bleep" at that word.
 - Texts you write on the video use the captions' language unless the user asks otherwise; keep them short.
 - Unclear or impossible request -> one {"kind": "ask", "question": "..."} operation and a reply that asks.
-- Change only what was asked: usually 1-4 operations, never repeat the same operation.
+- Change only what was asked: usually 1-4 operations, never repeat the same operation, and never add an effect,
+  sound, sticker, text or music the user did not ask for "for emphasis".
 
 OPERATIONS (each is an object with "kind" plus its fields; leave out fields you do not change):
 {operations}"""
@@ -56,6 +60,10 @@ EXAMPLES = """Examples (ids are illustrative):
 User: "Tedd alá ezt a zenét halkan, és vedd le a fekete címet" (attachment a1b2c3d4e5 audio "summer.mp3")
 {"reply": "Betettem halkan a zenét, és levettem a hookot.", "operations": [
  {"kind": "add_music", "asset": "a1b2c3d4e5", "gain_db": -20}, {"kind": "remove_layer", "layer": "hook"}]}
+User: "zoom in slowly on the punchline: it was a very, very bad thesis"
+{"reply": "Added a slow zoom in on the punchline.", "operations": [
+ {"kind": "add_effect", "effect": "slow_zoom", "span": {"start": {"type": "phrase", "phrase": "it was a very"},
+  "end": {"type": "edge", "edge": "end"}}}]}
 User: "write 'Part 2 tomorrow' in the last 3 seconds and make the captions green"
 {"reply": "Added the end text and switched the captions to green.", "operations": [
  {"kind": "add_text", "text": "Part 2 tomorrow", "position": "bottom",

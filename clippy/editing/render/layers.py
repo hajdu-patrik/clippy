@@ -209,7 +209,8 @@ class OverlayStage(VideoStage):
 
 
 class EffectStage(VideoStage):
-    """Effects as timeline-enabled filters (no split, no buffering); zoom and shake share one zoompan."""
+    """Effects as timeline-enabled filters (no split, no buffering). Zoom, slow zoom and shake share one scale and
+    crop evaluated per frame (zoompan buffers the whole clip in front of a transition and runs out of memory)."""
 
     def apply(self, ctx: CompileContext, video: Pad) -> Pad:
         effects = ctx.timeline.layers_of("effect")
@@ -219,13 +220,15 @@ class EffectStage(VideoStage):
         zoom, dx, dy, filters = ["1"], ["0"], ["0"], []
         for layer in effects:
             s, e = ctx.window(layer.span)
-            on, k = f"between(it,{s:.3f},{e:.3f})", layer.strength
+            on, k = f"between(t,{s:.3f},{e:.3f})", layer.strength
             if layer.effect == "zoom":
                 zoom.append(f"{0.35 * k:.3f}*{on}")
+            elif layer.effect == "slow_zoom":
+                zoom.append(f"{0.3 * k:.3f}*clip((t-{s:.3f})/{max(0.1, e - s):.3f},0,1)*{on}")
             elif layer.effect == "shake":
                 zoom.append(f"{0.08 * k:.3f}*{on}")
-                dx.append(f"{0.025 * w * k:.1f}*sin(it*47)*{on}")
-                dy.append(f"{0.02 * h * k:.1f}*cos(it*53)*{on}")
+                dx.append(f"{0.025 * w * k:.1f}*sin(t*47)*{on}")
+                dy.append(f"{0.02 * h * k:.1f}*cos(t*53)*{on}")
             elif layer.effect in ("flash", "fade_black"):
                 d = max(0.05, e - s)
                 curve = (f"{k:.3f}*(1-(t-{s:.3f})/{d:.3f})" if layer.effect == "flash"
@@ -239,9 +242,11 @@ class EffectStage(VideoStage):
                 filters.append(Filter.of("vignette", angle=round(0.3 + 0.6 * k, 3), enable=Expr.between(s, e)))
         if len(zoom) > 1:
             z = "+".join(zoom)
-            filters.insert(0, Filter.of(
-                "zoompan", z=Expr(z), x=Expr(f"iw/2-iw/zoom/2+({'+'.join(dx)})"),
-                y=Expr(f"ih/2-ih/zoom/2+({'+'.join(dy)})"), d=1, s=f"{w}x{h}", fps=ctx.base.rate))
+            filters[:0] = [
+                Filter.of("scale", w=Expr(f"2*trunc(iw*({z})/2)"), h=Expr(f"2*trunc(ih*({z})/2)"), eval="frame"),
+                Filter.of("crop", w, h, x=Expr(f"(in_w-{w})/2+({'+'.join(dx)})"),
+                          y=Expr(f"(in_h-{h})/2+({'+'.join(dy)})")),
+            ]
         return g.chain(video, *filters)
 
 

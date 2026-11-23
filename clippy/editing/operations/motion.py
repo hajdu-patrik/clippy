@@ -17,7 +17,7 @@ from ..timeref import Span, TimeRef
 from . import Applied, EditContext, Operation, operation
 from .placement import Position, place
 
-MOMENT_SECONDS = {"zoom": 0.8, "shake": 0.6, "flash": 0.35, "fade_black": 0.8}
+MOMENT_SECONDS = {"zoom": 0.8, "slow_zoom": 3.0, "shake": 0.6, "flash": 0.35, "fade_black": 0.8}
 MIN_SPED_SECONDS = 1.0
 
 
@@ -56,8 +56,9 @@ class SetFormat(Operation):
 
 @operation
 class AddEffect(Operation):
-    """A visual effect over a span: zoom (punch-in), shake, flash, fade_black (dip to black), black_white, blur,
-    vignette. The first four are moments: a span with only a start gets a short default length."""
+    """A visual effect over a span: zoom (a quick punch-in), slow_zoom (a slow push in over the whole span, e.g. on
+    a punchline), shake, flash, fade_black (dip to black), black_white, blur, vignette. The first five are moments: a
+    span with only a start gets a default length."""
 
     kind: Literal["add_effect"] = "add_effect"
     effect: Literal[EFFECTS]

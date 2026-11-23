@@ -193,3 +193,19 @@ def test_other_aspect_ratios(setup, fmt, size):
     assert probe_media(out)["video"] == size
     b, g, r = frame_at(out, 2.5, root / f"{fmt.replace(':', 'x')}.png")[size[1] // 2, size[0] // 2].astype(int)
     assert (g > 100 and r < 90) if fmt == "16:9" else abs(int(g) - int(r)) < 30
+
+
+def test_a_slow_zoom_on_the_last_line_renders_into_a_picture_outro(setup):
+    root = setup[0]
+    service = AssetService(Storage(root / "data", root / "library"))
+    picture = service.add(1, "outro.png", io.BytesIO(solid_png((40, 40, 200), (1080, 1920))))
+    at = lambda s: {"type": "at", "at": s}
+    ops = [{"kind": "add_effect", "effect": "slow_zoom", "span": {"start": {"type": "phrase", "phrase": "egy próba"},
+                                                                  "end": {"type": "edge", "edge": "end"}}},
+           {"kind": "add_effect", "effect": "zoom", "span": {"start": at(0.3)}},
+           {"kind": "set_outro", "asset": picture.id, "duration": 2}]
+    timeline, assets = edited(setup, ops)
+    effects = {layer.effect: layer.span for layer in timeline.layers_of("effect")}
+    assert effects["slow_zoom"].start == 0.7 and effects["slow_zoom"].end == 5.0
+    out, info = render_timeline(setup, timeline, assets, "slowzoom")
+    assert abs(info["duration_out"] - 6.5) < 0.01 and probe_media(out)["video"] == (540, 960)
