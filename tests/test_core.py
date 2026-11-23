@@ -430,3 +430,13 @@ def test_a_failed_ffmpeg_run_and_an_internal_error_read_as_plain_words():
     assert "memory" in i18n.t(memory.key, **memory.params) and "[fc#0]" not in short_error(memory)
     text = short_error(IndexError("list assignment index out of range"))
     assert "internal error (IndexError)" in text and "list assignment" not in text
+
+
+def test_the_facecam_is_the_corner_face_not_the_people_in_a_video_the_streamer_watches():
+    from clippy.director import guess_facecam
+    watched = [FaceObs(0.19, 0.27, 0.045, 0.11, 0.9, 0.3), FaceObs(0.48, 0.23, 0.043, 0.1, 0.9, 0.27),
+               FaceObs(0.81, 0.24, 0.045, 0.11, 0.9, 0.28)]
+    camera = FaceObs(0.78, 0.72, 0.07, 0.15, 0.9, 0.76)
+    an = _fake_analysis(100, lambda i: watched + ([camera] if i % 10 else []))
+    x, y, w, h = guess_facecam(an)
+    assert x < 0.81 < x + w and y < 0.79 < y + h

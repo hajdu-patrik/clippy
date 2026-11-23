@@ -317,10 +317,11 @@ def mostly_faces(an: ClipAnalysis) -> bool:
 
 
 def guess_facecam(an: ClipAnalysis) -> tuple[float, float, float, float] | None:
-    """For stream layouts: a 16:9 box (normalised) around the usually small, static streamer face: the spot where a face
-    is found in the most frames, so the faces of game characters around it do not pull it away. A spot without a face
-    in enough frames (only moving faces, a cutscene) is no facecam, and neither is a face in the middle of the picture:
-    a camera overlay sits at an edge or in a corner, a face in the middle is a full-screen camera."""
+    """For stream layouts: a 16:9 box (normalised) around the usually small, static streamer face. Every spot where a
+    face stays in enough frames is looked at, so the faces of game characters, or of a video the streamer watches, do
+    not hide the camera: of the spots that can be a camera overlay, the one nearest a corner wins. A spot without a
+    face in enough frames (only moving faces, a cutscene) is no facecam, and neither is a face in the middle of the
+    picture: a camera overlay sits at an edge or in a corner, a face in the middle is a full-screen camera."""
     flat = [f for fl in an.faces for f in fl]
     if len(flat) < max(3, an.n_frames * 0.3):
         return None
@@ -329,16 +330,28 @@ def guess_facecam(an: ClipAnalysis) -> tuple[float, float, float, float] | None:
         return abs(f.cx - c.cx) <= FACECAM_DRIFT and abs(f.cy - c.cy) <= FACECAM_DRIFT
 
     step = max(1, len(flat) // 200)
-    anchor = max(flat[::step], key=lambda c: sum(any(near(f, c) for f in fl) for fl in an.faces))
-    held = [f for f in flat if near(f, anchor)]
-    cx = float(np.median([f.cx for f in held]))
-    cy = float(np.median([f.cy for f in held]))
-    fw = float(np.median([f.w for f in held]))
-    steady = sum(any(near(f, anchor) for f in fl) for fl in an.faces)
-    if steady < FACECAM_PRESENCE * an.n_frames or fw > FACECAM_MAX_WIDTH:
+    steadiness = {id(c): sum(any(near(f, c) for f in fl) for fl in an.faces) for c in flat[::step]}
+    tried, spots = [], []
+    for anchor in sorted(flat[::step], key=lambda c: -steadiness[id(c)]):
+        if steadiness[id(anchor)] < FACECAM_PRESENCE * an.n_frames:
+            break
+        if any(near(anchor, t) for t in tried):
+            continue
+        tried.append(anchor)
+        held = [f for f in flat if near(f, anchor)]
+        cx = float(np.median([f.cx for f in held]))
+        cy = float(np.median([f.cy for f in held]))
+        fw = float(np.median([f.w for f in held]))
+        middle = FACECAM_CENTRE[0] < cx < FACECAM_CENTRE[1] and FACECAM_MIDDLE[0] < cy < FACECAM_MIDDLE[1]
+        if fw <= FACECAM_MAX_WIDTH and not middle:
+            spots.append((cx, cy, fw))
+    if not spots:
         return None
-    if FACECAM_CENTRE[0] < cx < FACECAM_CENTRE[1] and FACECAM_MIDDLE[0] < cy < FACECAM_MIDDLE[1]:
-        return None
+    cx, cy, fw = max(spots, key=lambda s: (s[0] - 0.5) ** 2 + (s[1] - 0.5) ** 2)
+    return _camera_box(an, cx, cy, fw)
+
+
+def _camera_box(an: ClipAnalysis, cx: float, cy: float, fw: float) -> tuple[float, float, float, float]:
     bw = min(1.0, fw * 3.4)
     bh = min(1.0, bw * an.width / an.height * 9 / 16)
     x = max(0.0, min(1.0 - bw, cx - bw / 2))
