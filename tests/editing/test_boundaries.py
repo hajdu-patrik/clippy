@@ -278,3 +278,17 @@ def test_a_clip_stays_open_until_the_laugh_has_died_down():
     assert landing(quiet, hop, speech_s, room=5.0) == BEAT
     assert landing(np.concatenate([talk, np.full(400, -21.0)]), hop, speech_s, room=5.0) == MAX_LANDING
     assert landing(np.concatenate([talk, laugh]), hop, speech_s, room=0.3) == 0.3
+
+
+def test_a_second_check_never_takes_back_what_the_first_found_part_of_the_moment():
+    words = speech(GTA)
+    bounds = Boundaries(words)
+    clip = _snap(Clip(0.0, 6.0, 50), words, 2, 60, bounds)
+    floors = {}
+    moved = _check_endings(Reply({"clips": [{"id": 0, "verdict": "extend", "sentences": 1}]}), [clip], words,
+                           bounds, 2, 60, "English", floors=floors)
+    floors |= {id(c): c.end for c in moved}
+    extended = clip.end
+    _check_endings(Reply({"clips": [{"id": 0, "verdict": "trim", "sentences": 1}]}), moved, words, bounds, 2, 60,
+                   "English", floors=floors)
+    assert clip.end == extended

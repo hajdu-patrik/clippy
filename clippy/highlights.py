@@ -453,10 +453,12 @@ def _check_starts(llm: LLM, clips: list[Clip], words: list[dict], bounds: Bounda
 
 
 def _check_endings(llm: LLM, clips: list[Clip], words: list[dict], bounds: Boundaries, min_len: float,
-                   max_len: float, language: str, neighbours: list[Clip] | None = None) -> list[Clip]:
+                   max_len: float, language: str, neighbours: list[Clip] | None = None,
+                   floors: dict[int, float] | None = None) -> list[Clip]:
     """The picker's last word on each ending: an end moves by whole sentences (to another complete boundary within
-    the length limit) until the clip's topic is finished, never into the middle of one. Returns the clips whose end
-    moved later, which may still need more."""
+    the length limit) until the clip's topic is finished, never into the middle of one. `floors` (by id of the clip)
+    are ends an earlier round already found part of the moment: a later round may go on from there, never back.
+    Returns the clips whose end moved later, which may still need more."""
     spans = {k: span for k, c in enumerate(clips) if (span := _clip_span(bounds, c))}
     lines = {k: f"id={k}\n{_words_text(words[max(i0, i1 - TAIL_WORDS + 1):i1 + 1])}\nNEXT: "
                 f"{_words_text(words[i1 + 1:i1 + 1 + NEXT_WORDS]) or '(the video ends)'}"
@@ -476,6 +478,9 @@ def _check_endings(llm: LLM, clips: list[Clip], words: list[dict], bounds: Bound
             earlier = [j for j in ends if j < i1 and bounds.duration(i0, j) >= min_len]
             target = earlier[-1] if earlier else None
         if target is None or bounds.duration(i0, target) < 0.6 * min_len:
+            continue
+        if v.move != "extend" and end_time(words, target) < (floors or {}).get(id(clip), 0.0) - 0.01:
+            log(f"[hook] end kept: an earlier check found the moment goes on to {clip.end:.1f} s")
             continue
         if v.move == "extend" and _collides(Clip(clip.start, end_time(words, target), clip.score), clip, neighbours or clips):
             log(f"[hook] end kept: extending would run into another clip ({clip.end:.1f} s)")
@@ -755,9 +760,10 @@ def find_highlights(transcript: dict, llm: LLM, max_clips: int = 5, min_len: flo
     spoken = [c for c in chosen if _speaks(c, words)]
     if llm.backend != "none" and spoken:
         _check_starts(llm, spoken, words, bounds, min_len, max_len, language, chosen)
-        again = spoken
+        again, floors = spoken, {}
         for _ in range(CHECK_ROUNDS):
-            again = _check_endings(llm, again, words, bounds, min_len, max_len, language, chosen) if again else []
+            again = _check_endings(llm, again, words, bounds, min_len, max_len, language, chosen, floors) if again else []
+            floors |= {id(c): c.end for c in again}
     untitled = [c for c in chosen if not c.description]
     if llm.backend != "none" and untitled:
         try:
