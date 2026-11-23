@@ -9,7 +9,7 @@ from typing import Callable
 
 from ...audio import loudnorm_options, parse_loudnorm
 from ...render import VIDEO_TAGS, Encoder, write_cover
-from ...tools import ClippyError, ffmpeg_path
+from ...tools import ffmpeg_failed, ffmpeg_path
 from ..assets import AssetIndex
 from ..timeline import Timeline
 from ..timeref import corrected
@@ -116,5 +116,4 @@ class FinishingRenderer:
     def _run(cmd: list[str], work: Path) -> None:
         proc = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", errors="replace", cwd=work)
         if proc.returncode != 0:
-            tail = "\n".join(proc.stderr.strip().splitlines()[-12:])
-            raise ClippyError(f"ffmpeg finishing failed (exit {proc.returncode}):\n{tail}")
+            raise ffmpeg_failed("finishing the edit", proc.stderr)

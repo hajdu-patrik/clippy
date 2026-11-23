@@ -4,6 +4,7 @@ to render, store and show a clip version) and returns the text of its finished c
 from __future__ import annotations
 
 import time
+import traceback
 from abc import ABC, abstractmethod
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
@@ -68,7 +69,9 @@ class Job:
 def short_error(exc: Exception) -> str:
     if isinstance(exc, ClippyError) and exc.key:
         return english(tx(exc.key, **exc.params))
-    return f"{type(exc).__name__}: {str(exc)[:160]}"
+    if isinstance(exc, ClippyError):
+        return str(exc)[:160]
+    return english(tx("error.internal", kind=type(exc).__name__))
 
 
 def expected_clips(payload: dict) -> int:
@@ -247,6 +250,8 @@ class JobHandler(ABC):
                 except Exception as again:
                     exc = again
             lost.append((k, exc))
+            if not isinstance(exc, ClippyError):
+                log("".join(traceback.format_exception(exc)).rstrip())
         if lost and not stored:
             raise lost[0][1]
         for k, exc in lost:
@@ -500,7 +505,7 @@ def post_of(row: dict, variant: str = "a") -> PostText:
 def problem_of(exc: Exception) -> dict:
     if isinstance(exc, ClippyError):
         return tx(exc.key, **exc.params) if exc.key else tx("error.plain", error=str(exc))
-    return tx("error.unexpected", error=f"{type(exc).__name__}: {str(exc)[:160]}")
+    return tx("error.internal", kind=type(exc).__name__)
 
 
 class PublishJob(JobHandler):

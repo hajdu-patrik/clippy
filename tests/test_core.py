@@ -410,3 +410,23 @@ def test_a_title_full_of_emoji_gives_whisper_only_its_words_and_emoji_never_beco
     words = [{"word": "🚨🚨", "start": 0, "end": 1}, {"word": "🚨Find", "start": 1, "end": 2},
              {"word": "job.", "start": 2, "end": 3}, {"word": "❤️", "start": 3, "end": 4}]
     assert [w["word"] for w in spoken(words)] == ["Find", "job."]
+
+
+def test_a_stream_shot_shorter_than_the_camera_check_never_reaches_past_the_clip():
+    from clippy.director import cam_gone, plan_frames
+    an = _fake_analysis(n=30)
+    assert cam_gone(an, 0, 30, (0.0, 0.0, 0.3, 0.3)) == []
+    plans, _ = plan_frames(an, "stream", facecam=(0.0, 0.0, 0.3, 0.3))
+    assert len(plans) == 30
+
+
+def test_a_failed_ffmpeg_run_and_an_internal_error_read_as_plain_words():
+    from clippy import i18n
+    from clippy.tools import ffmpeg_failed
+    from clippy.web.handlers import short_error
+    memory = ffmpeg_failed("finishing the edit", "[fc#0] Error requesting a frame: Cannot allocate memory\n")
+    other = ffmpeg_failed("rendering the clip", "Invalid argument\n")
+    assert (memory.key, other.key) == ("error.ffmpeg_memory", "error.ffmpeg_failed")
+    assert "memory" in i18n.t(memory.key, **memory.params) and "[fc#0]" not in short_error(memory)
+    text = short_error(IndexError("list assignment index out of range"))
+    assert "internal error (IndexError)" in text and "list assignment" not in text

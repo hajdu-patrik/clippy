@@ -22,8 +22,8 @@ from .captions import CaptionStyle, TextEvent, write_ass
 from .compositing import OUT_H, OUT_W, CropCompositor, LayoutCompositor, Prebuilt, StreamCompositor
 from .director import guess_facecam, mostly_faces, plan_frames, reaction_windows
 from .edit import EditPlan, build_edit
-from .tools import (ROOT, ClippyError, atomic_path, ffmpeg_features, ffmpeg_path, fps_rational, log, probe_video,
-                    read_exact, report, report_span)
+from .tools import (ROOT, atomic_path, ffmpeg_failed, ffmpeg_features, ffmpeg_path, fps_rational, log,
+                    probe_video, read_exact, report, report_span)
 
 LAYOUTS = ("auto", "face", "center", "blur", "stream")
 COVER_PAUSE = 0.6
@@ -337,8 +337,7 @@ class ClipRenderer:
                     pass
                 enc.wait()
         if enc.returncode != 0:
-            tail = "\n".join(log_path.read_text(encoding="utf-8", errors="replace").splitlines()[-15:])
-            raise ClippyError(f"ffmpeg encode failed:\n{tail}")
+            raise ffmpeg_failed("rendering the clip", log_path.read_text(encoding="utf-8", errors="replace"))
         return written
 
 

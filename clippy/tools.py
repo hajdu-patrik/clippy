@@ -267,6 +267,17 @@ def _notify(callback: Callable, value) -> None:
         print(f"[progress] callback failed: {type(exc).__name__}: {exc}", file=sys.stderr, flush=True)
 
 
+OUT_OF_MEMORY = ("cannot allocate memory", "out of memory", "error code: -12")
+
+
+def ffmpeg_failed(step: str, stderr: str) -> "ClippyError":
+    """An ffmpeg run that failed: its own words go to the log, the user gets what happened and what helps."""
+    tail = "\n".join(stderr.strip().splitlines()[-15:])
+    log(f"[ffmpeg] {step} failed:\n{tail}")
+    memory = any(m in tail.lower() for m in OUT_OF_MEMORY)
+    return ClippyError(key="error.ffmpeg_memory" if memory else "error.ffmpeg_failed", step=step)
+
+
 def log(msg: str) -> None:
     """Print progress; a thread may register a sink (web app jobs) that also receives every line."""
     check_stop()

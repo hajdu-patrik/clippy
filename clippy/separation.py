@@ -9,7 +9,7 @@ from pathlib import Path
 
 import numpy as np
 
-from .tools import ClippyError, atomic_path, decode_audio, ffmpeg_path, log, report
+from .tools import ClippyError, atomic_path, decode_audio, ffmpeg_failed, ffmpeg_path, log, report
 
 SR = 44100
 
@@ -100,5 +100,5 @@ def ducked_mix(stems: dict[str, Path], cache_dir: Path, video: Path, duck_db: fl
                "-map", "[a]", "-c:a", "flac", str(tmp)]
         proc = subprocess.run(cmd, capture_output=True, text=True)
         if proc.returncode != 0:
-            raise ClippyError(f"Ducking mix failed: {proc.stderr[-300:]}")
+            raise ffmpeg_failed("mixing the voice and the music", proc.stderr)
     return out

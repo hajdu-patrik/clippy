@@ -64,6 +64,8 @@ def cam_gone(an: ClipAnalysis, s: int, e: int, facecam) -> list[tuple[int, int]]
     if facecam is None:
         return []
     win = max(1, int(CAM_GONE_SECONDS * an.fps))
+    if e - s < win:
+        return []
     seen = np.array([any(in_box(f, facecam) for f in an.faces[i]) for i in range(s, e)], dtype=float)
     share = np.convolve(seen, np.ones(win) / win, mode="same")
     gone = share < CAM_PRESENCE
