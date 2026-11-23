@@ -440,3 +440,33 @@ def test_the_facecam_is_the_corner_face_not_the_people_in_a_video_the_streamer_w
     an = _fake_analysis(100, lambda i: watched + ([camera] if i % 10 else []))
     x, y, w, h = guess_facecam(an)
     assert x < 0.81 < x + w and y < 0.79 < y + h
+
+
+def _said(text: str) -> list[dict]:
+    return [{"word": w, "start": float(i), "end": i + 0.5} for i, w in enumerate(text.split())]
+
+
+def test_a_long_stretch_without_punctuation_is_found():
+    from clippy.transcribe import BARE_RUN, bare_runs
+    run = " ".join(["word"] * BARE_RUN)
+    words = _said(f"It starts. {run} and ends. Short one.")
+    assert bare_runs(words) == [(2, 2 + BARE_RUN + 1)]
+    assert bare_runs(_said("Short. Sentences. Only.")) == []
+
+
+def test_a_second_take_gives_the_words_their_punctuation_and_keeps_their_times():
+    from clippy.transcribe import carry_marks
+    old = _said("a dvr from apple but as i said before apple's just a computer company")
+    times = [(w["start"], w["end"]) for w in old]
+    fresh = "a DVR from Apple. But as I said before, Apple's just a computer company.".split()
+    assert carry_marks(old, fresh) > 0
+    assert " ".join(w["word"] for w in old) == " ".join(fresh)
+    assert [(w["start"], w["end"]) for w in old] == times
+
+
+def test_a_second_take_that_heard_other_words_changes_nothing():
+    from clippy.transcribe import carry_marks
+    old = _said("the doom slayer is coming to siege this december take a look")
+    assert carry_marks(old, ["from."]) == 0
+    assert carry_marks(old, "the doom slayer is coming to siege this december take a look".split()) == 0
+    assert old[0]["word"] == "the"
