@@ -20,6 +20,7 @@ from clippy.web.media import MediaStore
 from clippy.web.server import create_app
 
 CSRF = {"X-Clippy-Request": "1"}
+SAMPLE = Path(__file__).parent / "sample" / "sample.mp4"
 
 
 class FakeLLM:
@@ -603,15 +604,13 @@ def test_a_connection_closed_by_the_browser_is_not_logged_as_an_error():
     assert ClosedByPeer().filter(record(ValueError("real")))
 
 
+@pytest.mark.skipif(not SAMPLE.exists(), reason="sample video missing")
 def test_an_attached_video_is_clipped_and_then_edited_with_the_other_attachments(env):
-    from pathlib import Path
-
     from clippy.web import presets
 
     client, runner, storage = env
     cid = client.post("/api/chats").json()["id"]
-    sample = Path(__file__).parent / "sample" / "sample.mp4"
-    video = client.put(f"/api/chats/{cid}/assets?name=My trip.mp4", content=sample.read_bytes()).json()
+    video = client.put(f"/api/chats/{cid}/assets?name=My trip.mp4", content=SAMPLE.read_bytes()).json()
     logo = client.put(f"/api/chats/{cid}/assets?name=logo.png", content=png_bytes()).json()
     assert video["kind"] == "video"
     edit = next(p for p in presets.PRESETS if p.edit)

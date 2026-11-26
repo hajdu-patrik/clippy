@@ -100,7 +100,7 @@ def reaction_windows(an: ClipAnalysis, env_db, hop: float, facecam) -> list[tupl
     edge = int(REACTION_EDGE * an.fps)
     want = min(REACTION_MAX, max(1, int(an.n_frames / an.fps / REACTION_EVERY)))
     picked: list[int] = []
-    for i in np.argsort(-loud):
+    for i in np.argsort(-loud, kind="stable"):
         i = int(i)
         if loud[i] < floor or len(picked) >= want:
             break

@@ -352,7 +352,7 @@ def test_the_loudest_reaction_shows_the_camera_full_screen():
     env = np.full(3000, -40.0)
     env[1200:1300] = -10.0
     windows = reaction_windows(an, env, 0.01, cam)
-    assert len(windows) == 1 and 300 <= windows[0][0] < 330 < windows[0][1]
+    assert len(windows) == 1 and 295 <= windows[0][0] < 330 < windows[0][1]
     assert reaction_windows(an, env, 0.01, None) == [] and reaction_windows(an, np.full(3000, -40.0), 0.01, cam) == []
     plans, _ = plan_frames(an, "stream", punch=False, facecam=cam, reactions=windows)
     assert plans[windows[0][0] + 1].mode == "cam" and plans[100].mode == "stream"

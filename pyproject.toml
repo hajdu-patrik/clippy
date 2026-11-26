@@ -59,3 +59,4 @@ include = ["clippy*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+faulthandler_timeout = 300
