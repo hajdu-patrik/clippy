@@ -115,6 +115,7 @@ change, what changed rather than how; dates are ISO 8601.
   profile / channel / playlist link, no video in the post, no sound, each with what helps.
 
 ### Changed
+- yt-dlp 2026.11.23 or newer; Demucs 4.1.0 for voice isolation (its model now comes from the Hugging Face Hub, once).
 - Accounts sign in from their card: Set up shows the developer page, the redirect address to copy and the app's key fields, then Save and sign in opens the platform's sign-in; no `.env` editing or restart, and Instagram signs in with Instagram instead of a pasted token (pasting stays as a fallback).
 - The account cards keep their own height and show one clear action: Set up, Sign in with the platform, or Disconnect.
 - Clips are whole moments: a pause inside a sentence is no longer a place to start or end, the clip stays open after the last word while the laugh or reaction still sounds (up to 2.5 s), and the clip picker treats the quick reaction after the last line as part of the moment.
@@ -273,6 +274,7 @@ change, what changed rather than how; dates are ISO 8601.
   at runtime, so parallel jobs cannot deadlock; the GPU runs Demucs, Whisper and the LLM one at a time.
 
 ### Fixed
+- The biggest stream reaction is picked the same way on every system when several moments are equally loud.
 - Pages no longer scroll past the window: a stray closing tag had moved the chat composer below it.
 
 ## [1.0.0] - 2026-11-13

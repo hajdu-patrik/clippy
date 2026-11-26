@@ -5,4 +5,4 @@
 # Pinned to torch/torchaudio 2.8: torchaudio removed the forced_align / MMS_FA API after that.
 torch==2.8.0
 torchaudio==2.8.0
-demucs==4.0.1
+demucs==4.1.0

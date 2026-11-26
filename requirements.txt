@@ -1,4 +1,4 @@
-yt-dlp[default,curl-cffi]>=2026.10.26
+yt-dlp[default,curl-cffi]>=2026.11.23
 faster-whisper>=1.2
 pillow>=11.3             # colour emoji stickers
 opencv-python>=4.10,<5   # 5.x removed the Haar face detector we use
