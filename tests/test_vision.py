@@ -129,3 +129,24 @@ def test_the_rerank_sees_what_is_on_screen_next_to_the_reactions(video):
     [rerank] = [p for p in llm.prompts if "first score" in p]
     assert "reactions: loud; on screen 9/10: boss falls" in rerank
     assert rerank.count("on screen 2/10: a quiet menu screen") == 2
+
+
+def test_the_request_names_a_small_context_the_images_and_a_timeout(monkeypatch):
+    sent = {}
+
+    class Reply:
+        ok, status_code, text = True, 200, ""
+
+        def json(self):
+            return {"load_duration": 12_500_000_000, "message": {"content": '{"score": 6, "what": "a jump"}'}}
+
+    def post(url, json=None, timeout=None):
+        sent.update(url=url, body=json, timeout=timeout)
+        return Reply()
+
+    monkeypatch.setattr(vision.requests, "post", post)
+    seer = vision.VisionLLM("qwen2.5vl:7b")
+    assert seer.see("look", ["aGk="]) == {"score": 6, "what": "a jump"}
+    assert sent["url"].endswith("/api/chat") and sent["timeout"] == vision.TIMEOUT
+    assert sent["body"]["options"]["num_ctx"] == vision.CONTEXT and sent["body"]["messages"][0]["images"] == ["aGk="]
+    assert seer.loaded == 12.5

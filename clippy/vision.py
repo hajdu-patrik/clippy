@@ -25,12 +25,13 @@ from .signals import Signals
 from .tools import check_stop, ffmpeg_path, log, report
 
 FRAMES = (-3.0, -1.0, 0.5, 2.0)
-WIDTH = 512
+WIDTH = 448
 MAX_LOOKS = 8
 PEAKS = 30
 AROUND = 15.0
 SPARSE = 0.5
 TIMEOUT = 300
+CONTEXT = 8192
 MAX_WHAT = 80
 CONTROL = re.compile(r"[\x00-\x1f\x7f  ⟪⟫|]")
 
@@ -127,7 +128,7 @@ class VisionLLM(OllamaLLM):
     def see(self, prompt: str, images: list[str]) -> dict:
         payload = {"model": self.model, "stream": False, "format": SCHEMA, "keep_alive": "5m",
                    "messages": [{"role": "user", "content": prompt, "images": images}],
-                   "options": {"temperature": 0.2, "num_predict": 200}}
+                   "options": {"temperature": 0.2, "num_predict": 200, "num_ctx": CONTEXT}}
         r = requests.post(f"{self.base_url}/api/chat", json=payload, timeout=TIMEOUT)
         if not r.ok:
             raise OSError(f"vision model answered {r.status_code}: {r.text[:200]}")
