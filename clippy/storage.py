@@ -1,4 +1,4 @@
-"""Where files live: data/cache (shared), data/chats/<id> (per chat), data/work, and the library."""
+"""Where files live: data/cache (shared), data/chats/<id> (per chat), data/work, data/eval, and the library."""
 
 from __future__ import annotations
 
@@ -47,6 +47,13 @@ class Storage:
     @property
     def apps_file(self) -> Path:
         return self.web / "apps.json"
+
+    @property
+    def golden_file(self) -> Path:
+        return self._dir("eval") / "golden.json"
+
+    def eval_report(self, stamp: str) -> Path:
+        return self._dir("eval", "reports") / f"{safe_name(stamp)}.json"
 
     def chat_clips(self, chat_id: int) -> Path:
         return self._dir("chats", int(chat_id), "clips")

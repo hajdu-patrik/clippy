@@ -1,0 +1,19 @@
+{
+  "format": 1,
+  "videos": [
+    {
+      "id": "talk",
+      "title": "A synthetic talk",
+      "transcript": "talk.0123456789.aligned.json",
+      "signals": null,
+      "speakers": null,
+      "clips": 3,
+      "min_len": 10,
+      "max_len": 25,
+      "moments": [
+        {"start": 18.9, "end": 37.4, "grade": 3, "note": "stories 4 to 6"},
+        {"start": 75.6, "end": 94.1, "grade": 1, "note": "stories 13 to 15"}
+      ]
+    }
+  ]
+}

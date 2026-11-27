@@ -30,6 +30,8 @@ COMMANDS: dict[str, tuple[str, dict[str, str]]] = {
              {"--reset": "Forget every paired device"}),
     "logs": ("The end of the server log", {}),
     "clip": ("Make clips from the command line: clippy clip <link> [options]", {}),
+    "eval": ("Measure the clip picks on your golden set of good moments: clippy eval [--bootstrap | --compare A B]",
+             {}),
     "llm": ("Choose the AI: ollama, openrouter, claude, codex or none (clippy llm <mode>)",
             {"--model": "Model name for that mode (empty: its default)",
              "--test": "Do one tiny round trip to check that the AI answers"}),
@@ -42,12 +44,10 @@ def command_doc(cmd: str) -> str:
     return COMMANDS[cmd][0]
 
 
-def clip_flags() -> list[tuple[str, str, list[str]]]:
-    """(long flag, help, choices) of `clippy clip`, straight from its argparse parser."""
-    from .cli import build_parser
-
+def parser_flags(parser) -> list[tuple[str, str, list[str]]]:
+    """(long flag, help, choices) of an argparse parser."""
     out = []
-    for action in build_parser()._actions:
+    for action in parser._actions:
         longs = [o for o in action.option_strings if o.startswith("--")]
         if not longs or longs[0] in ("--help", "--version"):
             continue
@@ -55,9 +55,20 @@ def clip_flags() -> list[tuple[str, str, list[str]]]:
     return out
 
 
+def clip_flags() -> list[tuple[str, str, list[str]]]:
+    """The flags of `clippy clip`, straight from its argparse parser."""
+    from .cli import build_parser
+
+    return parser_flags(build_parser())
+
+
 def flags_of(cmd: str) -> list[tuple[str, str, list[str]]]:
     if cmd == "clip":
         return clip_flags()
+    if cmd == "eval":
+        from .cli import build_eval_parser
+
+        return parser_flags(build_eval_parser())
     return [(f, d, []) for f, d in COMMANDS[cmd][1].items()]
 
 
@@ -117,7 +128,7 @@ def clink_script() -> str:
         parser = "p()"
         if entries:
             parser += ":addflags({" + ", ".join(entries) + "}):adddescriptions({" + ", ".join(docs) + "})"
-        if c != "clip":
+        if c not in ("clip", "eval"):
             parser += ":nofiles()"
         out.append(f"local k_{c} = {parser}")
         args.append(f"{_lq(c)} .. k_{c}")

@@ -15,6 +15,7 @@ clippy pair           :: one-time pairing link + QR code   (--reset: forget ever
 clippy clip <link>    :: make clips from the command line (clippy clip -h: every option)
 clippy llm            :: the AI in use and whether each mode is ready
 clippy llm claude     :: use your Claude subscription (also: ollama, openrouter, codex, none)
+clippy eval           :: score the clip picks on your golden set of good moments (--bootstrap, --compare A B)
 clippy install        :: set up the command and tab completion (PATH, PowerShell profile, Clink)
 ```
 
@@ -31,6 +32,15 @@ each can answer (installed, signed in, key set). `clippy llm <mode>` switches (`
 `--test` asks the AI one tiny question). OpenRouter asks for its API key without showing it; `claude` and `codex` need
 the Claude Code and Codex apps installed and signed in (`claude`, `codex login`). `clippy install` asks once when no
 AI was ever chosen. The same choice is in the web app under *Settings*; it applies from the next request.
+
+## Measuring the picks: `clippy eval`
+
+`clippy eval` runs the clip picker on the cached transcripts of your golden set (`data/eval/golden.json`), prints
+recall, precision, how the clips start and end and the time of every picking step, and writes a JSON report to
+`data/eval/reports/`. `clippy eval --bootstrap` makes the first golden set from the clips you kept in
+`data/projects/`; `clippy eval --compare A.json B.json` puts two reports side by side. `--video <id>` runs one video,
+`--llm`/`--model` pick the AI, `--data` reads another data folder's cache. The golden set format and the metrics are in
+[quality.md](quality.md#measuring-the-picks-clippy-eval).
 
 ## Clipping: `clippy clip`
 
@@ -89,6 +99,7 @@ Every stage is cached, so re-runs are fast.
 | `data/chats/<id>/` | every version of a chat's clips and its scratch files | when the chat is deleted |
 | `data/work/` | render scratch of the command line | after every render |
 | `data/projects/<video title>/` | `clips.json` plans and render reports of the command line | by hand |
+| `data/eval/` | the golden set of good moments and the `clippy eval` reports | by hand |
 | `data/web/` | chat database, server log | by hand |
 
 Web clips are named `chat<id>_clip_<nn>_<title>.mp4` in the library, so two chats on the same video never collide.

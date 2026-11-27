@@ -6,6 +6,9 @@ change, what changed rather than how; dates are ISO 8601.
 ## [Unreleased]
 
 ### Added
+- `clippy eval`: scores the clip picker on a golden set of good moments from cached transcripts (recall@k, precision,
+  sentence-start and complete-ending rates, mid-sentence cuts) and times every picking step with its LLM calls;
+  `--bootstrap` makes the first set from the kept clips, `--compare` puts two reports side by side.
 - Campaigns (sidebar): clipping campaigns for a streamer, a podcast or a brand, with a brief, a rate per 1,000 views,
   a cap per post and the moments to clip; Clippy clips every source with the brief, collects the clippers' post links,
   reads their public views and works out the payout.
