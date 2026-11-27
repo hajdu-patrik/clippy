@@ -33,10 +33,10 @@ CLI_ENV = frozenset(("PATH PATHEXT SYSTEMROOT SYSTEMDRIVE COMSPEC WINDIR USERPRO
                      "LOCALAPPDATA PROGRAMDATA TEMP TMP USERNAME LANG CLAUDE_CONFIG_DIR CODEX_HOME HTTP_PROXY "
                      "HTTPS_PROXY NO_PROXY").split())
 CLI_ENV_PREFIXES = ("PROGRAMFILES", "LC_")
-PARALLEL = 1
+PARALLEL = 2
 THINK_STEPS = {"all": ("windows", "rerank"), "windows": ("windows",), "rerank": ("rerank",), "off": ()}
 THINK_ALIASES = {"1": "all", "0": "off", "on": "all", "none": "off"}
-DEFAULT_THINK = "all"
+DEFAULT_THINK = "rerank"
 THINK_BUDGET = 0
 ANSWER_TOKENS = 2048
 NOTES_RULE = ("\n\nYOUR NOTES SO FAR (your reasoning was cut short here; do not reason further, answer now from "
