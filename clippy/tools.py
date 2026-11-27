@@ -11,15 +11,18 @@ import sys
 import threading
 import uuid
 from collections.abc import Callable, Iterator
+from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 from functools import lru_cache
 from pathlib import Path
+from typing import BinaryIO
 
 import numpy as np
 
 ROOT = Path(__file__).resolve().parent.parent
 PROBE_TIMEOUT = 60
+FRAME_PIPE = 1 << 20
 
 
 class ClippyError(RuntimeError):
@@ -51,28 +54,49 @@ def ffmpeg_path() -> str:
 
 @lru_cache(maxsize=1)
 def ffmpeg_features() -> dict:
-    """Which optional ffmpeg features this build has."""
+    """Which optional ffmpeg features this build has; the GPU ones are tried at the same time (each starts CUDA)."""
     ff = ffmpeg_path()
-    filters = subprocess.run([ff, "-hide_banner", "-filters"], capture_output=True, text=True,
-                             timeout=PROBE_TIMEOUT).stdout
-    encoders = subprocess.run([ff, "-hide_banner", "-encoders"], capture_output=True, text=True,
-                              timeout=PROBE_TIMEOUT).stdout
-    return {
-        "subtitles": bool(re.search(r"\bsubtitles\b", filters)),
-        "nvenc": "h264_nvenc" in encoders and _nvenc_works(ff),
-    }
+    filters, encoders, hwaccels = (
+        subprocess.run([ff, "-hide_banner", flag], capture_output=True, text=True, timeout=PROBE_TIMEOUT).stdout
+        for flag in ("-filters", "-encoders", "-hwaccels"))
+    tries = {"nvenc": "h264_nvenc" in encoders and
+             ["-f", "lavfi", "-i", "color=black:s=256x256:d=0.1", "-c:v", "h264_nvenc"],
+             "nvdec": bool(re.search(r"^cuda$", hwaccels, re.M) and re.search(r"\bscale_cuda\b", filters)) and
+             ["-init_hw_device", "cuda=gpu", "-filter_hw_device", "gpu", "-f", "lavfi", "-i",
+              "color=black:s=256x256:d=0.1", "-vf",
+              "format=nv12,hwupload,scale_cuda=format=yuv420p,hwdownload,format=yuv420p"]}
+    with ThreadPoolExecutor(max_workers=len(tries)) as pool:
+        works = {name: pool.submit(_ffmpeg_ok, ff, args) for name, args in tries.items() if args}
+        return {"subtitles": bool(re.search(r"\bsubtitles\b", filters)),
+                **{name: name in works and works[name].result() for name in tries}}
 
 
-def _nvenc_works(ff: str) -> bool:
-    """h264_nvenc may be listed but unusable (no NVIDIA GPU, an old or hung driver)."""
+def _ffmpeg_ok(ff: str, args: list[str]) -> bool:
+    """A GPU feature may be listed but unusable (no NVIDIA GPU, an old or hung driver): a tiny run tells."""
     try:
-        probe = subprocess.run(
-            [ff, "-hide_banner", "-loglevel", "error", "-f", "lavfi", "-i", "color=black:s=256x256:d=0.1",
-             "-c:v", "h264_nvenc", "-f", "null", "-"],
-            capture_output=True, text=True, timeout=PROBE_TIMEOUT)
-    except subprocess.TimeoutExpired:
+        probe = subprocess.run([ff, "-hide_banner", "-loglevel", "error", *args, "-f", "null", "-"],
+                               capture_output=True, text=True, timeout=PROBE_TIMEOUT)
+    except (OSError, subprocess.TimeoutExpired):
         return False
     return probe.returncode == 0
+
+
+GPU_BUSY = 50
+
+
+def gpu_busy() -> bool:
+    """Whether the NVIDIA GPU is busy computing (Whisper, a local LLM, another program): NVDEC then waits its turn
+    for every frame and decodes several times slower than the CPU."""
+    smi = shutil.which("nvidia-smi")
+    if not smi:
+        return False
+    try:
+        out = subprocess.run([smi, "--query-gpu=utilization.gpu", "--format=csv,noheader,nounits"],
+                             capture_output=True, text=True, timeout=10).stdout
+    except (OSError, subprocess.TimeoutExpired):
+        return True
+    loads = [int(v) for v in re.findall(r"\d+", out)]
+    return not loads or max(loads) >= GPU_BUSY
 
 
 def _ffmpeg_info(path: Path) -> str:
@@ -118,8 +142,11 @@ def probe_video(path: Path) -> dict:
         matrix = "bt709" if h >= 720 else "bt601"
     rng = "pc" if re.search(r"\((?:pc|jpeg)[,)]", low) or "yuvj" in low else "tv"
     a = re.search(r"Audio: .*?(mono|stereo|5\.1|7\.1)", out)
+    codec = re.match(r"(\w+)", line)
+    pix = re.match(r"\S+(?: \([^)]*\))*, (\w+)", line)
     return {"width": w, "height": h, "fps": fps, "duration": duration, "matrix": matrix, "range": rng,
-            "audio": a.group(1) if a else None}
+            "audio": a.group(1) if a else None, "codec": codec.group(1) if codec else "",
+            "pix_fmt": pix.group(1) if pix else "", "rotated": bool(rot and int(float(rot.group(1))) % 360)}
 
 
 def probe_media(path: Path) -> dict:
@@ -223,6 +250,32 @@ def json_cache(path: Path, make, decode=lambda data: data, encode=lambda value: 
 
 def read_json(path: Path):
     return json.loads(path.read_text(encoding="utf-8"))
+
+
+def frame_pipe() -> tuple[int, int]:
+    """A pipe for raw frames as (read fd, write fd). The pipes subprocess makes on Windows hold 4 KB, and moving 4K
+    frames through them takes longer than decoding them; a 1 MB pipe moves them about twice as fast."""
+    if sys.platform != "win32":
+        return os.pipe()
+    import _winapi
+    import msvcrt
+
+    r, w = _winapi.CreatePipe(None, FRAME_PIPE)
+    return msvcrt.open_osfhandle(r, os.O_RDONLY), msvcrt.open_osfhandle(w, 0)
+
+
+def spawn_piped(cmd: list[str], out: bool, **kw) -> tuple[subprocess.Popen, BinaryIO]:
+    """Start `cmd` with its stdout (`out`) or stdin on a frame pipe; returns the process and our end of the pipe."""
+    r, w = frame_pipe()
+    ours, theirs = (r, w) if out else (w, r)
+    try:
+        proc = subprocess.Popen(cmd, **({"stdout": theirs} if out else {"stdin": theirs}), **kw)
+    except BaseException:
+        os.close(ours)
+        raise
+    finally:
+        os.close(theirs)
+    return proc, open(ours, "rb", buffering=0) if out else open(ours, "wb")
 
 
 def read_exact(stream, view: memoryview) -> int:

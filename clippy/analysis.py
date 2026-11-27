@@ -14,7 +14,8 @@ from pathlib import Path
 import cv2
 import numpy as np
 
-from .tools import ROOT, ffmpeg_path, fps_rational, log, probe_video, report
+from .tools import (PROBE_TIMEOUT, ROOT, ffmpeg_features, ffmpeg_path, fps_rational, gpu_busy, log, probe_video,
+                    read_exact, report, spawn_piped)
 
 YUNET_URL = ("https://github.com/opencv/opencv_zoo/raw/main/models/face_detection_yunet/"
              "face_detection_yunet_2023mar.onnx")
@@ -147,20 +148,87 @@ def _iou(a, b) -> float:
 
 
 def decode_cmd(video: Path, start: float, duration: float, w: int, h: int, rate: str, matrix: str = "bt709",
-               rng: str = "tv", columns: tuple[int, int] | None = None, graph: str | None = None) -> list[str]:
+               rng: str = "tv", columns: tuple[int, int] | None = None, graph: str | None = None,
+               hw: bool = False) -> list[str]:
     """Raw BGR frames at a fixed CFR rate (same grid for analysis and render). `columns` (x0, x1): only that
     vertical strip of the converted frame is sent, with exactly the pixels the full frame has there. `graph`: a
-    filter chain that builds the w x h frame itself (a fixed layout), converted to BGR at the end."""
+    filter chain that builds the w x h frame itself (a fixed layout), converted to BGR at the end. `hw`: NVDEC
+    decodes and the GPU only repacks its NV12 frames to the decoder's own yuv420p, so every filter after that is
+    the CPU one and the frames are the same bit for bit (scale_cuda's Lanczos is not swscale's: 35-41 dB PSNR)."""
     strip = f",crop={columns[1] - columns[0]}:{h}:{columns[0]}:0" if columns else ""
-    if graph:
-        return [ffmpeg_path(), "-hide_banner", "-loglevel", "error", "-ss", f"{start:.3f}", "-t", f"{duration:.3f}",
-                "-i", str(video), "-an", "-sn", "-dn",
-                "-vf", f"{graph},scale=in_color_matrix={matrix}:in_range={rng},format=bgr24",
-                "-fps_mode", "cfr", "-r", rate, "-f", "rawvideo", "-"]
-    return [ffmpeg_path(), "-hide_banner", "-loglevel", "error", "-ss", f"{start:.3f}", "-t", f"{duration:.3f}",
-            "-i", str(video), "-an", "-sn", "-dn",
-            "-vf", f"scale={w}:{h}:flags=lanczos:in_color_matrix={matrix}:in_range={rng},format=bgr24{strip}",
-            "-fps_mode", "cfr", "-r", rate, "-f", "rawvideo", "-"]
+    vf = f"{graph},scale=in_color_matrix={matrix}:in_range={rng},format=bgr24" if graph else \
+        f"scale={w}:{h}:flags=lanczos:in_color_matrix={matrix}:in_range={rng},format=bgr24{strip}"
+    pre = ["-hwaccel", "cuda", "-hwaccel_output_format", "cuda"] if hw else []
+    if hw:
+        vf = f"scale_cuda=format=yuv420p,hwdownload,format=yuv420p,{vf}"
+    return [ffmpeg_path(), "-hide_banner", "-loglevel", "error", *pre, "-ss", f"{start:.3f}", "-t", f"{duration:.3f}",
+            "-i", str(video), "-an", "-sn", "-dn", "-vf", vf, "-fps_mode", "cfr", "-r", rate,
+            "-avioflags", "direct", "-f", "rawvideo", "-"]
+
+
+NVDEC_CODECS = frozenset({"h264", "hevc", "av1", "vp9", "vp8", "mpeg2video", "mpeg4", "vc1"})
+NVDEC_PIXELS = frozenset({"yuv420p", "yuvj420p", "nv12"})
+
+
+NVDEC_MIN_HEIGHT = 1440
+
+
+def use_nvdec(meta: dict, height: int) -> bool:
+    """NVDEC where it measured faster: a 1440p or larger source decoded to at most half its height (a 4K frame
+    fitted or analysed). At full size the download of every frame costs what the GPU decode saves, and a busy GPU
+    makes it several times slower. Only the 8-bit 4:2:0 codecs NVDEC has, on an unrotated source."""
+    return (meta.get("height", 0) >= NVDEC_MIN_HEIGHT and 2 * height <= meta["height"]
+            and meta.get("codec") in NVDEC_CODECS and meta.get("pix_fmt") in NVDEC_PIXELS and not meta.get("rotated")
+            and ffmpeg_features()["nvdec"] and not gpu_busy())
+
+
+class Decoder:
+    """The frames of `decode_cmd`, read one at a time. A hardware decode that stops with an error (a codec profile
+    or driver NVDEC cannot handle) is started again on the CPU, skipping the frames already read: the same grid."""
+
+    def __init__(self, video: Path, start: float, duration: float, w: int, h: int, rate: str, matrix: str = "bt709",
+                 rng: str = "tv", columns: tuple[int, int] | None = None, graph: str | None = None,
+                 hw: bool = False):
+        self._args = (video, start, duration, w, h, rate, matrix, rng, columns, graph)
+        self.hw, self.frames = hw, 0
+        self._start()
+
+    def _start(self) -> None:
+        self.proc, self.stdout = spawn_piped(decode_cmd(*self._args, hw=self.hw), out=True,
+                                             stderr=subprocess.DEVNULL)
+
+    def read(self, view: memoryview) -> bool:
+        """Fill `view` with the next frame; False at the end."""
+        while read_exact(self.stdout, view) < len(view):
+            if not self.hw or self._ended_well():
+                return False
+            log(f"[decode] NVDEC stopped after {self.frames} frames (exit code {self.proc.returncode}): "
+                "decoding on the CPU")
+            self.close()
+            self.hw = False
+            self._start()
+            for _ in range(self.frames):
+                if read_exact(self.stdout, view) < len(view):
+                    return False
+        self.frames += 1
+        return True
+
+    def _ended_well(self) -> bool:
+        try:
+            return self.proc.wait(timeout=PROBE_TIMEOUT) == 0
+        except subprocess.TimeoutExpired:
+            return False
+
+    def close(self) -> None:
+        self.stdout.close()
+        self.proc.kill()
+        self.proc.wait()
+
+    def __enter__(self) -> "Decoder":
+        return self
+
+    def __exit__(self, *exc) -> None:
+        self.close()
 
 
 def _detector(w: int, h: int) -> FaceDetector:
@@ -191,8 +259,7 @@ def analyze(video: Path, start: float, duration: float) -> ClipAnalysis:
     ah -= ah % 2
     det = FaceDetector(aw, ah)
 
-    proc = subprocess.Popen(decode_cmd(video, start, duration, aw, ah, rate, meta["matrix"], meta["range"]),
-                            stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, bufsize=aw * ah * 3 * 4)
+    dec = Decoder(video, start, duration, aw, ah, rate, meta["matrix"], meta["range"], hw=use_nvdec(meta, ah))
     fb = aw * ah * 3
     faces_all: list[list[FaceObs]] = []
     cuts = [0]
@@ -212,8 +279,8 @@ def analyze(video: Path, start: float, duration: float) -> ClipAnalysis:
             while True:
                 if read % 24 == 0:
                     report(read / expected)
-                buf = proc.stdout.read(fb)
-                if len(buf) < fb:
+                buf = bytearray(fb)
+                if not dec.read(memoryview(buf)):
                     break
                 ahead.append(pool.submit(_look, np.frombuffer(buf, np.uint8).reshape(ah, aw, 3), aw, ah))
                 read += 1
@@ -263,6 +330,5 @@ def analyze(video: Path, start: float, duration: float) -> ClipAnalysis:
             obs.append(FaceObs(x / aw, y / ah, w / aw, h / ah, score, eye_y / ah, best, act))
         faces_all.append(obs)
         i += 1
-    proc.stdout.close()
-    proc.wait()
+    dec.close()
     return ClipAnalysis(fps, i, W, H, faces_all, cuts, det.kind)
