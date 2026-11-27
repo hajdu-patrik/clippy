@@ -1,4 +1,4 @@
-"""`clippy clip`: link/file in -> vertical clips with hooks and captions out."""
+"""`clippy clip`: link/file in -> vertical clips with hooks and captions out; `clippy eval`: how good the picks are."""
 
 from __future__ import annotations
 
@@ -7,10 +7,11 @@ import sys
 import time
 from pathlib import Path
 
-from . import __version__
+from . import __version__, evaluation, i18n
 from .captions import COLORS
+from .concurrency import GuardedLLM
 from .i18n import CAPTION_LANGUAGES
-from .llm import BACKENDS
+from .llm import BACKENDS, create_llm
 from .pipeline import Options, Project
 from .render import LAYOUTS
 from .storage import Storage
@@ -68,6 +69,58 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--from-json", default=None, help="render from an (edited) clips.json")
     p.add_argument("--version", action="version", version=f"clippy {__version__}")
     return p
+
+
+def build_eval_parser() -> argparse.ArgumentParser:
+    p = argparse.ArgumentParser(
+        prog="clippy eval",
+        description="How good the clip picks are: runs the picker on the cached transcripts of a golden set of good "
+                    "moments, scores the picks against them and times every step. See docs/quality.md.",
+    )
+    p.add_argument("--bootstrap", action="store_true",
+                   help="make or extend the golden set from the clips kept in data/projects, then edit it by hand")
+    p.add_argument("--compare", nargs=2, metavar=("A", "B"), default=None,
+                   help="two reports side by side: every rate, the LLM calls and the seconds of each step")
+    p.add_argument("--golden", default=None, help="golden set file (default: data/eval/golden.json)")
+    p.add_argument("--out", default=None, help="report file (default: data/eval/reports/<time>.json)")
+    p.add_argument("--data", default=None, help="data folder to read the cache from (default: this checkout's data)")
+    p.add_argument("--video", action="append", default=None, help="only this video of the golden set (repeatable)")
+    p.add_argument("--overlap", type=float, default=evaluation.OVERLAP,
+                   help="share of the shorter span a pick and a labelled moment must share to count as found (default: 0.5)")
+    p.add_argument("--llm", default=None, choices=list(BACKENDS),
+                   help="the AI to pick with (default: the one set with clippy llm)")
+    p.add_argument("--model", default=None, help="LLM model name (default: the one saved for that mode)")
+    return p
+
+
+def eval_main(argv: list[str] | None = None) -> int:
+    load_env()
+    args = build_eval_parser().parse_args(argv)
+    try:
+        if args.compare:
+            a, b = (evaluation.load_report(Path(p)) for p in args.compare)
+            print(evaluation.compare_table(a, b))
+            return 0
+        storage = Storage(data=args.data) if args.data else Storage()
+        golden = Path(args.golden) if args.golden else storage.golden_file
+        if args.bootstrap:
+            done = evaluation.bootstrap(storage, golden)
+            log(i18n.t("cli.eval_bootstrap", added=done["added"], kept=done["kept"], missing=len(done["missing"]),
+                       path=done["path"]))
+            return 0
+        llm = GuardedLLM(create_llm(args.llm, args.model, storage))
+        report = evaluation.run(golden, storage, llm, only=args.video, threshold=args.overlap)
+        out = Path(args.out) if args.out else storage.eval_report(time.strftime("%Y%m%d-%H%M%S"))
+        write_json(out, report)
+        print(evaluation.table(report))
+        log(i18n.t("cli.eval_report", path=out))
+        return 0
+    except ClippyError as exc:
+        log(f"\nERROR: {exc}")
+        return 1
+    except KeyboardInterrupt:
+        log("\nInterrupted.")
+        return 130
 
 
 def facecam_box(text: str | None) -> tuple[int, int, int, int] | None:

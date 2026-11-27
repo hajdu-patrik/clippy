@@ -88,3 +88,67 @@ A clip starts where a sentence starts and ends where a thought is complete (`cli
   after the word before it, so a clip never ends on a clipped last word.
 
 On the cached GTA stream transcript, 200 random picks ended mid-thought 60% of the time before this and 0% after.
+
+## Measuring the picks: `clippy eval`
+
+A faster picker is only better when it still finds the moments worth posting. `clippy eval` runs the picker
+(`find_highlights`, with the AI set by `clippy llm`) on the cached transcripts of a **golden set**, scores the picks
+against the moments labelled good in it and times every step, so two picker versions can be compared on the same
+videos. No video is downloaded or transcribed: a video whose transcript is not in `data/cache/transcripts` is skipped.
+
+```bat
+clippy eval --bootstrap                       :: first golden set from the clips you kept (data/projects/*/clips.json)
+clippy eval                                   :: run it: a table, and a report in data/eval/reports/<time>.json
+clippy eval --video Pbho1EO5ou8 --llm none    :: one video, with the heuristic picker
+clippy eval --compare before.json after.json  :: two reports side by side
+```
+
+### The golden set
+
+`data/eval/golden.json` (per user, not in the repository; `--golden` picks another file). Cache file names are
+relative to `data/cache/transcripts` and `data/cache/signals` (an absolute path works too):
+
+```json
+{
+  "format": 1,
+  "videos": [
+    {
+      "id": "Pbho1EO5ou8",
+      "title": "The video's title, as the picker sees it",
+      "transcript": "Pbho1EO5ou8.e9f5abd279.aligned.json",
+      "signals": "Pbho1EO5ou8.v.json",
+      "speakers": "Pbho1EO5ou8.speakers.498.json",
+      "clips": 5, "min_len": 20, "max_len": 90,
+      "moments": [
+        {"start": 5.7, "end": 46.06, "grade": 3, "note": "the only-child story"}
+      ]
+    }
+  ]
+}
+```
+
+- `transcript` is required; `signals` (reactions) and `speakers` (speaker turns) are optional, `null` leaves them out.
+- `clips`, `min_len`, `max_len`: what the picker is asked for (defaults 5, 20, 90).
+- `moments`: the good moments, in seconds. `grade` is optional: 3 = must find, 2 = good (the default), 1 = fine.
+  The list does not have to be complete, but a pick that matches no label counts against precision.
+- `--bootstrap` adds every video of `data/projects/*/clips.json` that has a cached transcript (its newest aligned
+  one), with its clips as moments of grade 2. Videos already in the file are never changed, so run it again after
+  new projects. Then edit the file: delete the weak moments, grade the rest and add the ones the picker missed.
+
+The tests use a tiny synthetic set in `tests/fixtures/eval/`.
+
+### What it measures
+
+| Metric | Meaning |
+|---|---|
+| **R@1, R@3, R@5, recall** | share of the labelled moments found among the first 1, 3, 5 or all picks (in the picker's order) |
+| **graded recall** | the same over all picks, each moment weighed by its grade |
+| **precision** | share of the picks that match a labelled moment (videos with labels only) |
+| **start ok** | share of the picks that start where a sentence starts (`boundaries.py`) |
+| **end ok** | share of the picks that end where a thought is complete (a complete sentence or a clear pause) |
+| **mid-cut** | share of the picks with an edge inside a sentence or inside a word |
+| **steps** | LLM calls, seconds and failed calls of the window picks, the re-rank, the start and end checks, the post texts, the hook polish and the proofreading, and the seconds spent without the LLM |
+
+A pick matches a moment when they share at least half of the shorter of the two (`--overlap` changes it). The
+total row pools every video, so each label and each pick weighs the same. The rates leave out the landing after the
+last word, which the full pipeline adds when it has the sound.

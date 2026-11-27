@@ -463,6 +463,12 @@ def _clip(args: list[str]) -> int:
     return clip_main(args)
 
 
+def _eval(args: list[str]) -> int:
+    from .cli import eval_main
+
+    return eval_main(args)
+
+
 def _install(args: list[str]) -> int:
     from .llm_setup import first_run
     from .shell import install
@@ -493,6 +499,7 @@ ACTIONS: dict[str, Callable[[list[str]], int]] = {
     "pair": lambda args: pair(reset="--reset" in args),
     "logs": _logs,
     "clip": _clip,
+    "eval": _eval,
     "llm": _llm,
     "install": _install,
     "help": _help,
