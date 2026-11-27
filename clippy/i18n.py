@@ -299,6 +299,9 @@ CATALOG: dict[str, str] = {
                            "day. Post it tomorrow at {time} ({ny} in New York).",
     "error.no_campaign": "That campaign is gone.",
     "error.post_known": "That post link is already on this campaign.",
+    "error.post_link": "Paste the link of your YouTube Short or Instagram Reel (youtube.com/shorts/... or "
+                       "instagram.com/reel/...).",
+    "error.post_linked": "That post is already on clip #{n}.",
     "error.views_unread": "The views could not be read ({error}); the last count stays.",
     "campaign.chat_note": "Campaign {name} for {client}: clips picked with the campaign's brief.",
     "error.daily_nothing": "No new {game} moment from the last day yet; trying again at the next daily run.",

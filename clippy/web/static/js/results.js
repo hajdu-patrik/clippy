@@ -21,6 +21,25 @@ function findingRow(f) {
     <b>${esc(t("results.factor", { x: new Intl.NumberFormat(document.documentElement.lang || undefined).format(f.factor) }))}</b></li>`;
 }
 
+const percent = (x) => Math.round(100 * Math.min(1, x));
+
+function holdRow(f) {
+  const detail = [t("results.count", { n: f.count }), t("results.holdUsual", { p: percent(f.usual) })].join(" · ");
+  return `<li class="finding ${f.hold >= f.usual ? "up" : "down"}">
+    <span>${esc(t(`results.dim.${f.dimension}`, { value: valueText(f) }))}<small>${esc(detail)}</small></span>
+    <b>${esc(t("results.holdValue", { p: percent(f.hold) }))}</b></li>`;
+}
+
+function renderHolds() {
+  const held = found.held || 0, holds = found.holds || [];
+  const summary = $("#resultsHoldsSummary");
+  $("#resultsHoldsTitle").hidden = summary.hidden = !held;
+  if (held < 5) summary.textContent = t("results.holdsFew", { n: held });
+  else if (!holds.length) summary.textContent = t("results.holdsNothing", { n: held });
+  else summary.textContent = t("results.holdsSummary", { n: held });
+  $("#resultsHolds").innerHTML = holds.map(holdRow).join("");
+}
+
 function render() {
   const list = $("#resultsList");
   if (!list || !found) return;
@@ -30,6 +49,7 @@ function render() {
   else if (!found.findings.length) summary.textContent = t("results.nothing", { n: found.compared });
   else summary.textContent = t("results.summary", { n: found.compared });
   list.innerHTML = found.findings.map(findingRow).join("");
+  renderHolds();
   $("#resultsAnalytics").hidden = found.analytics !== false;
 }
 

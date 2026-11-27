@@ -1,0 +1,21 @@
+{
+ "data": [
+  {
+   "id": "17900000000000001",
+   "shortcode": "DAAAAAAAAA1",
+   "timestamp": "2026-11-20T18:00:00+0000"
+  },
+  {
+   "id": "17900000000000002",
+   "shortcode": "DAAAAAAAAA2",
+   "timestamp": "2026-11-18T18:00:00+0000"
+  }
+ ],
+ "paging": {
+  "cursors": {
+   "before": "QVFI1",
+   "after": "QVFI2"
+  },
+  "next": "https://graph.instagram.com/v26.0/me/media?after=QVFI2"
+ }
+}

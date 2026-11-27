@@ -233,6 +233,9 @@
         <p class="hint" id="resultsSummary" data-i18n="results.hint">Clippy reads back how your posted clips do and picks more of what works.</p>
         <p class="hint warn" id="resultsAnalytics" hidden data-i18n="results.reconnect">Connect YouTube again so Clippy can also read how much of each clip people watch.</p>
         <ul class="findings" id="resultsList"></ul>
+        <h2 class="results-sub" id="resultsHoldsTitle" hidden data-i18n="results.holdsTitle">Openings that keep viewers past 3 seconds</h2>
+        <p class="hint" id="resultsHoldsSummary" hidden></p>
+        <ul class="findings" id="resultsHolds" aria-labelledby="resultsHoldsTitle"></ul>
         <button type="button" class="btn sm ghost" id="resultsRefresh" data-i18n="results.refresh">Read the numbers now</button>
       </section>
         </div>
@@ -541,6 +544,19 @@
         <button type="button" class="btn ghost" id="postSettings" hidden data-i18n="publish.toSettings">Settings</button>
         <button type="button" class="btn ghost" id="postCancel" data-i18n="settings.cancel">Cancel</button>
         <button type="submit" class="btn primary" id="postSend" data-i18n="publish.send">Post</button>
+      </div>
+    </form>
+  </dialog>
+  <dialog class="settings-dialog" id="linkDialog" aria-labelledby="linkTitle">
+    <form method="dialog" id="linkForm">
+      <h2 id="linkTitle" data-i18n="link.titlePlain">Link your post</h2>
+      <p class="hint" id="linkHint" data-i18n="link.hint">Posted this clip yourself? Paste the link of the Short or Reel, and Clippy reads back how it does, including how many viewers stay past the first 3 seconds.</p>
+      <label for="linkUrl" data-i18n="link.url">Post link</label>
+      <input class="field" id="linkUrl" type="url" inputmode="url" autocomplete="off" required maxlength="500"
+        placeholder="https://www.youtube.com/shorts/..." aria-describedby="linkHint">
+      <div class="dialog-btns">
+        <button type="button" class="btn ghost" id="linkCancel" data-i18n="settings.cancel">Cancel</button>
+        <button type="submit" class="btn primary" id="linkSend" data-i18n="link.send">Link</button>
       </div>
     </form>
   </dialog>

@@ -49,8 +49,9 @@ SPEAKERS_RULE = """
 Each line starts with its speaker (A, B…), told apart by their voices: a strong moment is often an exchange
 between two of them (a question and its answer, a joke and the laugh, a disagreement)."""
 PEAK_REASON = "reaction peak"
-LESSONS_RULE = ("\n\nHow this creator's posted clips did so far, against their usual views (a soft preference: a "
-                "clearly better moment still wins):\n")
+LESSONS_RULE = ("\n\nHow this creator's posted clips did so far, against their usual views and their usual share "
+                "of viewers still watching after the first 3 seconds (a soft preference: a clearly better moment "
+                "still wins):\n")
 PEAK_LEAD = 0.6
 
 RERANK_PROMPT = """You are the head editor of a viral clips channel. Your team proposed candidate clips from

@@ -76,6 +76,10 @@ export const api = {
   instagramToken: (token) => request("/api/accounts/instagram", { method: "PUT", body: JSON.stringify({ token }) }),
   publish: (id, number, body) =>
     request(`/api/chats/${id}/clips/${number}/publish`, { method: "POST", body: JSON.stringify(body) }),
+  linkPost: (id, number, url) =>
+    request(`/api/chats/${id}/clips/${number}/posts`, { method: "POST", body: JSON.stringify({ url }) }),
+  unlinkPost: (id, number, postId) =>
+    request(`/api/chats/${id}/clips/${number}/posts/${postId}`, { method: "DELETE" }),
   cancelScheduled: (id) => request(`/api/scheduled/${id}`, { method: "DELETE" }),
   reschedule: (id, at) => request(`/api/scheduled/${id}`, { method: "PATCH", body: JSON.stringify({ at }) }),
   schedule: () => request("/api/schedule"),

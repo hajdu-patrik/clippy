@@ -21,6 +21,18 @@ function whenText(seconds) {
 
 const count = (n) => new Intl.NumberFormat(document.documentElement.lang || undefined, { notation: "compact" }).format(n || 0);
 
+const percent = (x) => Math.round(100 * Math.min(1, x));
+
+function curveHtml(s) {
+  const curve = (s.curve || []).filter((p) => Array.isArray(p) && p.length === 2);
+  if (curve.length < 2) return "";
+  const top = Math.max(1, ...curve.map((p) => p[1]));
+  const points = [[0, curve[0][1]], ...curve].map(([x, y]) => `${(100 * x).toFixed(1)},${(30 - 28 * y / top).toFixed(1)}`);
+  const label = t("results.curve", { p: percent(s.hold ?? curve[0][1]) });
+  return `<svg class="retention" viewBox="0 0 100 30" preserveAspectRatio="none" role="img" aria-label="${esc(label)}">
+    <polyline points="${points.join(" ")}"/></svg>`;
+}
+
 function statsHtml(s) {
   if (!s) return "";
   const parts = [
@@ -29,8 +41,9 @@ function statsHtml(s) {
     s.comments ? `💬 ${count(s.comments)}` : "",
     s.shares ? `↗ ${count(s.shares)}` : "",
     s.watched != null ? t("results.watched", { p: Math.round(100 * s.watched) }) : "",
+    s.hold != null ? t("results.hold", { p: percent(s.hold) }) : "",
   ].filter(Boolean);
-  return `<span class="post-stats">${esc(parts.join(" · "))}</span>`;
+  return `<span class="post-stats">${esc(parts.join(" · "))}</span>${curveHtml(s)}`;
 }
 
 function plannedHtml(c) {
@@ -50,7 +63,9 @@ export function postsHtml(c) {
     }
     const what = esc(t(`publish.state.${p.state}`));
     const link = p.url ? ` <a href="${esc(p.url)}" target="_blank" rel="noopener noreferrer">${esc(t("publish.open"))}</a>` : "";
-    return `<li class="post ok"><b>${label}</b> ${what}${link}${statsHtml(p.stats)}</li>`;
+    const unlink = p.state === "linked"
+      ? ` <button type="button" class="link-btn" data-act="unlink" data-pid="${Number(p.id)}">${esc(t("publish.unlink"))}</button>` : "";
+    return `<li class="post ok"><b>${label}</b> ${what}${link}${unlink}${statsHtml(p.stats)}</li>`;
   }).join("");
   return `<ul class="posts" aria-label="${esc(t("publish.posts"))}">${planned}${items}</ul>`;
 }
@@ -130,6 +145,42 @@ async function send(event) {
   }
 }
 
+let linking = null;
+
+export function openLinkDialog(clip) {
+  linking = clip;
+  $("#linkTitle").textContent = t("link.title", { n: clip.number });
+  $("#linkUrl").value = "";
+  $("#linkDialog").showModal();
+  $("#linkUrl").focus();
+}
+
+async function sendLink(event) {
+  event.preventDefault();
+  const url = $("#linkUrl").value.trim();
+  if (!linking || !url) return;
+  const button = $("#linkSend");
+  button.disabled = true;
+  try {
+    await api.linkPost(state.current, linking.number, url);
+    $("#linkDialog").close();
+    toast(t("link.done"));
+  } catch (err) {
+    toast(tx(err.t, err.message));
+  } finally {
+    button.disabled = false;
+  }
+}
+
+export async function unlinkPost(clip, postId) {
+  try {
+    await api.unlinkPost(state.current, clip.number, postId);
+    toast(t("publish.unlinked"));
+  } catch (err) {
+    toast(tx(err.t, err.message));
+  }
+}
+
 export async function cancelPlanned(id) {
   try {
     await api.cancelScheduled(id);
@@ -155,6 +206,8 @@ export function bindPublish() {
   $("#postWhen").addEventListener("change", syncWhen);
   $("#postCancel").addEventListener("click", () => $("#postDialog").close());
   $("#postForm").addEventListener("submit", send);
+  $("#linkForm").addEventListener("submit", sendLink);
+  $("#linkCancel").addEventListener("click", () => $("#linkDialog").close());
   $("#postPlatforms").addEventListener("change", syncOptions);
   $("#postSettings").addEventListener("click", () => {
     $("#postDialog").close();

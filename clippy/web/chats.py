@@ -12,6 +12,7 @@ from ..editing.assets import Asset, AssetKind, AssetService
 from ..editing.repository import TimelineRepository
 from ..llm import LLM
 from ..publish.registry import LABELS, POSTING
+from ..publish.stats import post_of_link
 from ..storage import Storage
 from ..tools import ClippyError
 from . import agent
@@ -127,6 +128,27 @@ class ChatService:
             return out
         job = self.runner.submit(chat_id, "publish", {"clip": number, "platforms": platforms, "options": options})
         return {"job": job.id}
+
+    def link_post(self, chat_id: int, number: int, url: str) -> dict:
+        """Ties a post the creator made by hand to the clip by its link, so its numbers are read back like any post."""
+        self.get(chat_id)
+        row = self.db.current_clip(chat_id, number)
+        if row is None:
+            raise NotFound(number)
+        platform, remote_id, clean = post_of_link(url)
+        known = self.db.linked_post(platform, clean, remote_id)
+        if known is not None:
+            raise ClippyError(key="error.post_linked", n=known["number"])
+        self.db.add_post(row, platform, "linked", clean, remote_id)
+        self._show_clip(chat_id, number)
+        return self.presenter.present(row, current=True)
+
+    def unlink_post(self, chat_id: int, number: int, post_id: int) -> bool:
+        self.get(chat_id)
+        gone = self.db.unlink_post(chat_id, number, post_id)
+        if gone:
+            self._show_clip(chat_id, number)
+        return gone
 
     def cancel_scheduled(self, item_id: int) -> bool:
         item = self.db.get_scheduled(item_id)

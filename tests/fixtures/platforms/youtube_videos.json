@@ -1,0 +1,23 @@
+{
+ "kind": "youtube#videoListResponse",
+ "items": [
+  {
+   "kind": "youtube#video",
+   "id": "AbCdEfGhIj0",
+   "snippet": {
+    "publishedAt": "2026-10-01T17:30:00Z",
+    "title": "A short"
+   },
+   "statistics": {
+    "viewCount": "15230",
+    "likeCount": "611",
+    "favoriteCount": "0",
+    "commentCount": "42"
+   }
+  }
+ ],
+ "pageInfo": {
+  "totalResults": 1,
+  "resultsPerPage": 1
+ }
+}

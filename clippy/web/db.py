@@ -419,14 +419,36 @@ class DB:
                           (state, item_id, only_from)).rowcount > 0
 
     def posts_to_measure(self, now: float, every: float, max_age: float) -> list[dict]:
-        """Posts that went up (not failed) on a platform that tells how they did, not read for `every` seconds."""
+        """Posts that went up (not failed) on a platform that tells how they did, not read for `every` seconds; a
+        post linked by hand is read at least once however old it is."""
         return self._all(
             "SELECT p.*, c.info AS info FROM posts p JOIN clips c ON c.id = p.clip_id WHERE p.state != 'failed' "
-            "AND p.remote_id != '' AND p.platform IN ('youtube', 'instagram') AND p.created > ? AND p.stats_at < ? "
-            "ORDER BY p.stats_at, p.id", (now - max_age, now - every))
+            "AND p.remote_id != '' AND p.platform IN ('youtube', 'instagram') AND (p.created > ? OR "
+            "(p.state = 'linked' AND p.stats_at = 0)) AND p.stats_at < ? ORDER BY p.stats_at, p.id",
+            (now - max_age, now - every))
 
     def set_post_stats(self, post_id: int, stats: dict, at: float) -> None:
         self._exec("UPDATE posts SET stats = ?, stats_at = ? WHERE id = ?", (json.dumps(stats), at, post_id))
+
+    def linked_post(self, platform: str, url: str, remote_id: str = "") -> dict | None:
+        """The post (not failed) already known under this link or platform id."""
+        return self._one(
+            "SELECT * FROM posts WHERE platform = ? AND state != 'failed' AND (url = ? OR (remote_id != '' AND "
+            "remote_id = ?)) ORDER BY id LIMIT 1", (platform, url, remote_id))
+
+    def posts_to_find(self, platform: str) -> list[dict]:
+        """Posts linked by hand whose id on the platform is not known yet."""
+        return self._all("SELECT * FROM posts WHERE platform = ? AND state = 'linked' AND remote_id = '' ORDER BY id",
+                         (platform,))
+
+    def set_post_found(self, post_id: int, remote_id: str, created: float | None) -> None:
+        """A post linked by hand gets its id on the platform and the time it really went up."""
+        self._exec("UPDATE posts SET remote_id = ?, created = COALESCE(?, created) WHERE id = ? AND state = 'linked'",
+                   (remote_id, created, post_id))
+
+    def unlink_post(self, chat_id: int, number: int, post_id: int) -> bool:
+        return self._exec("DELETE FROM posts WHERE id = ? AND chat_id = ? AND number = ? AND state = 'linked'",
+                          (post_id, chat_id, number)).rowcount > 0
 
     def measured_posts(self) -> list[dict]:
         """Every post with stats, with its clip: what was posted and how it did."""
