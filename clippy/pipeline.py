@@ -14,7 +14,7 @@ from dataclasses import asdict, dataclass, field, fields, replace
 from pathlib import Path
 from urllib.parse import urlsplit
 
-from . import align, audio, covers, i18n, separation, signals, speakers
+from . import align, audio, covers, i18n, separation, signals, speakers, vision
 from .boundaries import MAX_LANDING, SPEECH_WINDOW, Boundaries, landing
 from .analysis import ClipAnalysis, analyze
 from .captions import CaptionStyle
@@ -294,7 +294,11 @@ class Project:
             min_len, max_len, n = min(min_len, max(3.0, 0.6 * duration)), min(max_len, duration), 1
             log(f"[hook] short video ({duration:.0f} s): one clip of all of it")
         with report_span(0.0, 0.05):
-            reactions = None if short else self.reactions(duration)
+            with report_span(0.0, 0.5):
+                reactions = None if short else self.reactions(duration)
+            with report_span(0.5, 1.0):
+                ready = self._video_task is None or self._video_task.done()
+                reactions = vision.look(reactions, self.video if ready else None, self.words, self.title)
         llm = GuardedLLM(create_llm(o.llm, o.model, self.storage))
         self.llm_desc = llm.describe()
         clips = find_highlights(self.transcript, llm, max_clips=n, min_len=min_len, max_len=max_len,
