@@ -146,12 +146,15 @@ def test_the_picker_hears_the_lessons():
 
         def chat_json(self, system, prompt, **kwargs):
             seen.append(system)
+            if prompt.startswith("TRANSCRIPT:"):
+                return {"clips": [{"start": s, "end": s + 6.0, "score": 60} for s in (0.0, 20.0)]}
             return {}
 
-    words = [{"word": w, "start": i * 0.5, "end": i * 0.5 + 0.4} for i, w in enumerate(["Hello", "there."] * 20)]
+    words = [{"word": w, "start": i * 0.5, "end": i * 0.5 + 0.4} for i, w in enumerate(["Hello", "there."] * 40)]
     find_highlights({"segments": [{"words": words}], "language": "en"}, LLM(), max_clips=1, min_len=5, max_len=15,
                     lessons="- hook type 'question': 2.1x the usual views (4 clips)")
-    assert "How this creator's posted clips did" in seen[0] and "2.1x" in seen[0]
+    window, rerank = seen[0], next(s for s in seen if s.startswith("You are the head editor"))
+    assert "How this creator's posted clips did" in rerank and "2.1x" in rerank and "2.1x" not in window
 
 
 def test_results_route(tmp_path):

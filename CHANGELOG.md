@@ -247,6 +247,10 @@ change, what changed rather than how; dates are ISO 8601.
   of seconds away.
 
 ### Performance
+- Clip picking asks two transcript windows at once under one hold of the GPU (`CLIPPY_LLM_PARALLEL`, with
+  `OLLAMA_NUM_PARALLEL=2`), can reason only in the windows or only in the re-ranking (`CLIPPY_LLM_THINK=windows`,
+  `rerank`, `all`, `off`) with a cap on the reasoning (`CLIPPY_LLM_THINK_BUDGET`), and a new lesson from the posted
+  clips weighs in at the re-ranking, so the cached window answers stay valid.
 - Rendering a clip from a 4K source is about 2.7x faster (45 s -> 16 s for a 28 s clip): the stream layout is
   built by the decoder, so the full 4K frames never pass through Python, and other layouts decode only at the
   resolution the output uses.

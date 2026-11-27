@@ -4,15 +4,17 @@ from __future__ import annotations
 
 import hashlib
 import json
+from concurrent.futures import ThreadPoolExecutor
+from contextlib import nullcontext
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
 from . import i18n, playbook
 from .boundaries import Boundaries, end_time, overflow, start_time
-from .llm import LLM, think_enabled
+from .llm import LLM, thinks
 from .signals import Signals
 from .text import ends_sentence, post_clean
-from .tools import ClippyError, fmt_ts, log, report, report_span, write_json
+from .tools import ClippyError, SharedProgress, fmt_ts, log, report, report_span, write_json
 
 LANG_NAMES = i18n.LANGUAGES
 
@@ -259,7 +261,8 @@ def _rerank(llm: LLM, cands: list[Clip], words: list[dict], n: int, title: str, 
         return f" | reactions: {found}" if found else ""
 
     lines = [
-        f"id={i} | {c.duration:.0f}s | first score {c.score:.0f} | hook: {c.hook}"
+        f"id={i} | {c.duration:.0f}s | first score {c.score:.0f} | hook{f' ({c.hook_type})' if c.hook_type else ''}: "
+        f"{c.hook}"
         f"{' | risks: ' + ', '.join(c.risks) if c.risks else ''}{reactions(c)}\n"
         f"{_clip_text(c, words) or '(no speech)'}"
         for i, c in enumerate(cands)
@@ -269,7 +272,7 @@ def _rerank(llm: LLM, cands: list[Clip], words: list[dict], n: int, title: str, 
                                       max_words=playbook.HOOK_MAX_WORDS) + (LESSONS_RULE + lessons if lessons else "")
         reply = llm.chat_json(prompt,
                               "\n\n".join(lines),
-                              think=think_enabled(), schema=RERANK_SCHEMA)
+                              think=thinks("rerank"), schema=RERANK_SCHEMA)
     except ClippyError as exc:
         log(f"[hook] re-ranking skipped: {exc}")
         return cands
@@ -339,24 +342,45 @@ def _words_text(words: list[dict]) -> str:
     return " ".join(w["word"] for w in words)
 
 
+def _together(llm: LLM):
+    together = getattr(llm, "together", None)
+    return together() if callable(together) else nullcontext(llm)
+
+
 def _ask_windows(llm: LLM, system: str, wins: list[list[dict]], cache: PickCache | None,
                  signals: Signals | None = None) -> tuple[list[Clip], bool]:
-    """Every window's candidates, and whether all of them came from the cache."""
-    raw, all_cached = [], True
-    for n, win in enumerate(wins, 1):
-        report(0.8 * (n - 1) / len(wins))
-        log(f"[hook] window {n}/{len(wins)}  ({fmt_ts(win[0]['start'])}-{fmt_ts(win[-1]['end'])})  {llm.describe()}")
-        text = "TRANSCRIPT:\n" + _format_window(win, signals)
-        if cache is None:
-            reply, hit = llm.chat_json(system, text, think=think_enabled(), schema=CLIPS_SCHEMA), False
-        else:
-            reply, hit = cache.ask(llm, system, text)
-        all_cached = all_cached and hit
+    """Every window's candidates in window order, and whether all of them came from the cache. The windows the cache
+    does not hold are asked `llm.parallel` at a time, under one hold of the GPU for all of them."""
+    think = thinks("windows")
+    texts = ["TRANSCRIPT:\n" + _format_window(win, signals) for win in wins]
+    replies = [cache.get(llm, system, text, think) if cache else None for text in texts]
+    missing = [n for n, reply in enumerate(replies) if reply is None]
+    if missing:
+        with report_span(0.0, 0.8), _together(llm) as model:
+            progress = SharedProgress(len(missing))
+
+            def ask(n: int) -> dict:
+                win = wins[n]
+                log(f"[hook] window {n + 1}/{len(wins)}  ({fmt_ts(win[0]['start'])}-{fmt_ts(win[-1]['end'])})  "
+                    f"{llm.describe()}")
+                reply = model.chat_json(system, texts[n], think=think, schema=CLIPS_SCHEMA)
+                if cache is not None:
+                    cache.put(llm, system, texts[n], think, reply)
+                report(1.0)
+                return reply
+
+            workers = max(1, min(len(missing), int(getattr(llm, "parallel", 1) or 1)))
+            with ThreadPoolExecutor(workers, thread_name_prefix="clippy-window") as pool:
+                for n, reply in zip(missing, pool.map(lambda k: progress.wrap(k, ask)(missing[k]),
+                                                      range(len(missing)))):
+                    replies[n] = reply
+    raw = []
+    for reply in replies:
         for c in reply.get("clips", []) if isinstance(reply, dict) else []:
             clip = parse_clip(c)
             if clip and clip.end > clip.start:
                 raw.append(clip)
-    return raw, all_cached
+    return raw, not missing
 
 
 def _fresh(raw: list[Clip], words: list[dict], min_len: float, max_len: float, exclude,
@@ -559,7 +583,7 @@ def write_texts(llm: LLM, clips: list[Clip], words: list[dict], title: str, text
                                  dash_rule=playbook.DASH_RULE, question_rule=playbook.QUESTION_RULE,
                                  topic_rule=playbook.TOPIC_RULE, alt_title_rule=playbook.ALT_TITLE_RULE,
                                  language_rule=playbook.HUNGARIAN_RULE if text_language == "Hungarian" else "")
-    reply = llm.chat_json(prompt, "\n\n".join(lines), think=think_enabled(), schema=TEXTS_SCHEMA)
+    reply = llm.chat_json(prompt, "\n\n".join(lines), think=thinks("rerank"), schema=TEXTS_SCHEMA)
     changed = 0
     for item in reply.get("clips", []) if isinstance(reply, dict) else []:
         try:
@@ -700,21 +724,22 @@ class PickCache:
     folder: Path
     stem: str
 
-    def _path(self, llm: LLM, system: str, text: str) -> Path:
-        key = hashlib.sha256(f"{llm.describe()}\n{system}\n{text}".encode("utf-8")).hexdigest()[:24]
+    def _path(self, llm: LLM, system: str, text: str, think: bool) -> Path:
+        mode = "" if think else "\nno reasoning"
+        key = hashlib.sha256(f"{llm.describe()}{mode}\n{system}\n{text}".encode("utf-8")).hexdigest()[:24]
         return self.folder / f"{self.stem}.{key}.json"
 
-    def ask(self, llm: LLM, system: str, text: str) -> tuple[dict, bool]:
-        """The window's reply and whether it came from the cache."""
-        path = self._path(llm, system, text)
+    def get(self, llm: LLM, system: str, text: str, think: bool) -> dict | None:
+        """The window's earlier reply, or None."""
         try:
-            return json.loads(path.read_text(encoding="utf-8")), True
+            reply = json.loads(self._path(llm, system, text, think).read_text(encoding="utf-8"))
         except (OSError, ValueError):
-            pass
-        reply = llm.chat_json(system, text, think=think_enabled(), schema=CLIPS_SCHEMA)
+            return None
+        return reply if isinstance(reply, dict) else None
+
+    def put(self, llm: LLM, system: str, text: str, think: bool, reply) -> None:
         if isinstance(reply, dict) and reply.get("clips"):
-            write_json(path, reply)
-        return reply, False
+            write_json(self._path(llm, system, text, think), reply)
 
 
 def _avoiding(exclude) -> str:
@@ -732,7 +757,9 @@ def find_highlights(transcript: dict, llm: LLM, max_clips: int = 5, min_len: flo
     `instructions`: free-text wishes from the user ("the funniest parts", "only the parts about music"…).
     `cache`: earlier window answers for this video; when they no longer hold enough new moments, the windows are
     asked again, told which moments are taken.
-    `signals`: the video's reactions (sound, picture, chat); they mark lines for the picker and add candidates."""
+    `signals`: the video's reactions (sound, picture, chat); they mark lines for the picker and add candidates.
+    `lessons`: how the creator's posted clips did; they weigh in when the candidates are compared, not in the windows,
+    so a new lesson keeps the cached window answers."""
     words = [w for s in transcript["segments"] for w in s["words"]]
     signals = signals if signals is not None and signals.peaks(1) else None
     if not words and signals is None:
@@ -756,8 +783,6 @@ def find_highlights(transcript: dict, llm: LLM, max_clips: int = 5, min_len: flo
             system += "\n" + SPEAKERS_RULE
         if signals is not None:
             system += "\n" + SIGNALS_RULE
-        if lessons:
-            system += LESSONS_RULE + lessons
         if instructions.strip():
             system += ("\n\nThe channel owner's specific wishes for THIS selection (follow them, they override "
                        f"the generic preferences above):\n{instructions.strip()}")

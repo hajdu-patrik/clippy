@@ -5,10 +5,8 @@ from clippy.tools import ClippyError
 
 
 def fail(text: str) -> Exception:
-    try:
-        raise RuntimeError(text)
-    except RuntimeError as exc:
-        return exc
+    """An error with only its text: a raised one would carry this file's path, which names the checkout's folder."""
+    return RuntimeError(text)
 
 
 def test_hopeless_failures_are_not_tried_again():

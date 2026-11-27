@@ -18,7 +18,7 @@ from pathlib import Path
 import requests
 
 from .storage import Storage
-from .tools import ClippyError, read_json
+from .tools import ClippyError, check_stop, log, read_json
 
 OLLAMA_URL = "http://127.0.0.1:11434"
 DEFAULT_MODEL = "clippy-qwen3:14b-q6k"
@@ -33,16 +33,51 @@ CLI_ENV = frozenset(("PATH PATHEXT SYSTEMROOT SYSTEMDRIVE COMSPEC WINDIR USERPRO
                      "LOCALAPPDATA PROGRAMDATA TEMP TMP USERNAME LANG CLAUDE_CONFIG_DIR CODEX_HOME HTTP_PROXY "
                      "HTTPS_PROXY NO_PROXY").split())
 CLI_ENV_PREFIXES = ("PROGRAMFILES", "LC_")
+PARALLEL = 2
 OLLAMA_SERVER_ENV = {"OLLAMA_FLASH_ATTENTION": "1", "OLLAMA_KV_CACHE_TYPE": "q8_0",
-                     "OLLAMA_NUM_PARALLEL": "1", "OLLAMA_MAX_LOADED_MODELS": "1"}
+                     "OLLAMA_NUM_PARALLEL": str(PARALLEL), "OLLAMA_MAX_LOADED_MODELS": "1"}
+THINK_STEPS = {"all": ("windows", "rerank"), "windows": ("windows",), "rerank": ("rerank",), "off": ()}
+THINK_ALIASES = {"1": "all", "0": "off", "on": "all", "none": "off"}
+DEFAULT_THINK = "all"
+THINK_BUDGET = 0
+ANSWER_TOKENS = 2048
+NOTES_RULE = ("\n\nYOUR NOTES SO FAR (your reasoning was cut short here; do not reason further, answer now from "
+              "them):\n")
 
 
 def setting(name: str, default: str = "") -> str:
     return os.environ.get(f"CLIPPY_LLM_{name}") or default
 
 
-def think_enabled() -> bool:
-    return setting("THINK", "1") != "0"
+def think_mode() -> str:
+    """Where the model reasons before it answers (CLIPPY_LLM_THINK): "windows", "rerank", "all" or "off"; the old
+    1 and 0 mean all and off, anything else the default."""
+    value = setting("THINK", DEFAULT_THINK).strip().lower()
+    value = THINK_ALIASES.get(value, value)
+    return value if value in THINK_STEPS else DEFAULT_THINK
+
+
+def thinks(step: str) -> bool:
+    """Whether a picking step reasons: "windows" (reading the transcript windows) or "rerank" (comparing the
+    candidates, and the post texts written for them)."""
+    return step in THINK_STEPS[think_mode()]
+
+
+def _number(name: str, default: int) -> int:
+    try:
+        return max(0, int(setting(name, str(default))))
+    except ValueError:
+        return default
+
+
+def think_budget() -> int:
+    """About how many tokens a reasoning answer may think before it must answer (0: up to the answer's limit)."""
+    return _number("THINK_BUDGET", THINK_BUDGET)
+
+
+def parallel_requests() -> int:
+    """How many requests of one job the local model serves at the same time (OLLAMA_NUM_PARALLEL of the server)."""
+    return max(1, _number("PARALLEL", PARALLEL))
 
 
 def cli_timeout() -> int:
@@ -93,6 +128,7 @@ def json_prompt(user: str, schema: dict | None) -> str:
 class LLM(ABC):
     backend = ""
     local = False
+    parallel = 1
 
     def __init__(self, model: str, base_url: str = "", api_key: str = ""):
         self.model, self.base_url, self.api_key = model, base_url.rstrip("/"), api_key
@@ -126,9 +162,15 @@ class OllamaLLM(LLM):
         False: {"temperature": 0.7, "top_p": 0.8, "top_k": 20, "min_p": 0.0},
     }
 
+    @property
+    def parallel(self) -> int:
+        return parallel_requests()
+
     def options(self, think: bool) -> dict:
+        budget = think_budget()
+        thinking = budget + ANSWER_TOKENS if budget else 8192
         return {**self.SAMPLING[think], "presence_penalty": 1.5, "repeat_penalty": 1.0,
-                "num_ctx": int(setting("CTX", "16384")), "num_predict": 8192 if think else 2048}
+                "num_ctx": int(setting("CTX", "16384")), "num_predict": thinking if think else ANSWER_TOKENS}
 
     def _complete(self, system: str, user: str, think: bool, schema: dict | None) -> str:
         payload = {
@@ -136,10 +178,52 @@ class OllamaLLM(LLM):
             "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}],
             "keep_alive": setting("KEEP_ALIVE", "30m"), "options": self.options(think),
         }
+        budget = think_budget() if think else 0
+        streamed = self._think_within(payload, budget) if budget else None
+        if streamed is None:
+            return self._send(payload)
+        text, finished = streamed
+        if finished:
+            return text
+        log(f"[llm] reasoning stopped after about {budget} tokens: answering from it")
+        return self._send({**payload, "think": False, "options": self.options(False),
+                           "messages": [payload["messages"][0],
+                                        {"role": "user", "content": user + NOTES_RULE + text}]})
+
+    def _think_within(self, payload: dict, budget: int) -> tuple[str, bool] | None:
+        """Streams a reasoning answer: (the answer, True) when the model finished thinking within about `budget`
+        tokens, else (its unfinished reasoning, False); None when the server cannot stream it (the plain request then
+        tells why)."""
+        try:
+            r = requests.post(f"{self.base_url}/api/chat", json={**payload, "stream": True}, timeout=1800, stream=True)
+        except requests.RequestException:
+            return None
+        with r:
+            if not r.ok:
+                return None
+            thought, said, steps, answering = [], [], 0, False
+            try:
+                for line in r.iter_lines():
+                    check_stop()
+                    chunk = json.loads(line) if line else {}
+                    message = chunk.get("message") or {}
+                    if message.get("thinking"):
+                        thought.append(message["thinking"])
+                        steps += 1
+                    said.append(message.get("content") or "")
+                    answering = answering or bool(said[-1].strip())
+                    if chunk.get("done"):
+                        return "".join(said), True
+                    if steps > budget and not answering:
+                        return "".join(thought), False
+            except (requests.RequestException, ValueError):
+                return None
+        return None
+
+    def _send(self, payload: dict) -> str:
         r = self._chat(payload)
         if r.status_code == 400 and "think" in r.text.lower():
-            payload.pop("think")
-            payload["messages"][0]["content"] += "\n/think" if think else "\n/no_think"
+            payload["messages"][0]["content"] += "\n/think" if payload.pop("think") else "\n/no_think"
             r = self._chat(payload)
         if r.status_code == 404:
             raise ClippyError(key="error.ollama_no_model", model=self.model)
