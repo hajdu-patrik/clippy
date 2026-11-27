@@ -145,9 +145,6 @@ def test_an_odd_byte_from_the_pipe_does_not_shift_the_samples(tmp_path, fake_mod
         def read(self, n=-1):
             return self.inner.read(min(n, 65537) if n and n > 0 else n)
 
-        def fileno(self):
-            return self.inner.fileno()
-
         def close(self):
             self.inner.close()
             super().close()
@@ -155,7 +152,8 @@ def test_an_odd_byte_from_the_pipe_does_not_shift_the_samples(tmp_path, fake_mod
     class Popen(real):
         def __init__(self, *a, **k):
             super().__init__(*a, **k)
-            self.stdout = Dribble(self.stdout)
+            if "s16le" in (a[0] if a else k.get("args", ())):
+                self.stdout = Dribble(self.stdout)
 
     monkeypatch.setattr(subprocess, "Popen", Popen)
     heard = audio_events.listen(write_wav(tmp_path / "m.wav"))
