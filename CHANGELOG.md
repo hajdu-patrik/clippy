@@ -11,6 +11,9 @@ change, what changed rather than how; dates are ISO 8601.
   `--bootstrap` makes the first set from the kept clips, `--compare` puts two reports side by side.
 - Link post on a clip card ties a Short or Reel you posted yourself to its clip; Clippy reads its numbers back, and
   for YouTube the retention curve and the viewers still watching at 3 s, which *What works* compares by opening.
+- An optional visual check: with `CLIPPY_VISION_MODEL` (a local Ollama vision model such as qwen2.5vl:7b) the
+  strongest quiet reaction peaks get a look at their frames, and the clip picker reads what happens on screen next to
+  the sound, motion and chat marks; off by default, and a failing model only leaves the marks out.
 - Campaigns (sidebar): clipping campaigns for a streamer, a podcast or a brand, with a brief, a rate per 1,000 views,
   a cap per post and the moments to clip; Clippy clips every source with the brief, collects the clippers' post links,
   reads their public views and works out the payout.
