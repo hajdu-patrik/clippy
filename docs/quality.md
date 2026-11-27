@@ -43,13 +43,31 @@ Before picking, Clippy reads the whole video for reactions (`clippy/signals.py`)
 | Signal | How it is read | Cost |
 | --- | --- | --- |
 | **Loud** | the sound's level every 0.5 s against its own surroundings (median and median deviation over 90 s), so a stream that gets louder over hours does not count as one long peak; silence never does | a few seconds per hour |
-| **Laughter** | laughing words in the transcript (haha, lol, xd, *(laughs)*, nevet) | free |
+| **Laughter** | heard in the voice stem by the YAMNet sound event model (below), and laughing words in the transcript (haha, lol, xd, *(laughs)*, nevet) | ~45 CPU s per hour of audio; the words are free |
+| **Applause, cheering** | heard in the music/noise stem by YAMNet (clapping, applause, cheering) | ~50 CPU s per hour of audio |
 | **Action** | how much the picture changes between keyframes (only keyframes are decoded, tiny and grey); skipped for videos with a keyframe in nearly every frame, where it would be slow | seconds for a Twitch VOD |
 | **Chat** | a YouTube stream replay's chat (downloaded with the video): messages per 5 s against the stream's usual rate, and what the chat wrote; messages from before the stream are left out | seconds |
 
 The picture is read when the video is already here, or when little is said (less than a third of the time), since
 then it is worth waiting for the download. Twitch keeps its VOD chat from downloaders, so Twitch VODs are read by
 their sound and picture. The result is cached per video in `data/cache/signals`.
+
+Laughter, applause and cheering are heard in the sound itself by [YAMNet](https://www.kaggle.com/models/google/yamnet)
+(Google's AudioSet tagger, a MobileNet with 3.7 M weights, Apache-2.0), run as ONNX on the CPU through onnxruntime,
+which faster-whisper installs anyway, so it never waits for the GPU (4 threads, ~12 s per hour of audio per stem).
+The model (~16 MB) is downloaded on first use into `models/` and only loaded when its SHA-256 matches the pinned one;
+without it or onnxruntime the laughing words stay the only laughter. When the voice was separated, YAMNet listens to
+both stems and keeps the surer one per 0.48 s frame: Demucs puts laughter into the voice stem, and applause under
+speech is only heard in the music/noise stem (on a live podcast 0.45 there against 0.03 in the whole mix); otherwise
+it listens to the whole mix. A score from 0.1 counts, from 0.4 fully: laughter that overlaps speech scores low.
+PANNs CNN14 (torch) tags AudioSet better, but its ~300 MB checkpoint needs over ten times the compute, belongs on
+the GPU and needs the ML extras.
+
+Measured on three cached Hungarian podcasts (3.5 hours): the laughing words found 8 laughs, none of them laughter
+(*nevetséges* is "ridiculous", *nevet* also "name", *nevettünk* "we laughed at it"), and YAMNet heard nothing at
+any of them. YAMNet found 6 laughs, 3 applause and 1 cheer at 0.2 or more; by the transcript around them (not by ear)
+they sit after a punchline or a story's turn, at "come up on stage" and at the closing thanks of a live recording.
+The strongest laugh (0.57) became a reaction peak; the others mark their transcript lines.
 
 How the picker uses them:
 - Transcript lines get a mark like `⟪loud, chat x6⟫`, and the picker is told to start a few seconds before such a

@@ -42,9 +42,10 @@ Return ONLY JSON: {{"clips": [{{"start": <seconds>, "end": <seconds>, "score": <
 
 SIGNALS_RULE = """
 Lines ending in ⟪…⟫ are where the sound, the picture or the audience reacted: loud = a scream, an explosion or
-cheering; laughter; action = a sudden change on screen; chat xN = N times this stream's usual chat activity. In
-gameplay and streams these are often the best moments, even when little is said: start a few seconds before the
-reaction so the viewer sees what caused it, and end after it lands."""
+cheering; laughter, applause, cheering = heard in the sound or laughed in the words; action = a sudden change on
+screen; chat xN = N times this stream's usual chat activity. In gameplay and streams these are often the best
+moments, even when little is said: start a few seconds before the reaction so the viewer sees what caused it, and
+end after it lands."""
 SPEAKERS_RULE = """
 Each line starts with its speaker (A, B…), told apart by their voices: a strong moment is often an exchange
 between two of them (a question and its answer, a joke and the laugh, a disagreement)."""

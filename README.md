@@ -82,7 +82,8 @@ forgets every paired device.
 
 Tab completion works in PowerShell and in cmd through [Clink](https://chrisant996.github.io/clink/)
 (`winget install chrisant996.Clink`, then `clippy install` again). The first run downloads the Whisper model
-(≈ 3 GB) and the YuNet face model (~230 KB, checked against a pinned SHA-256).
+(≈ 3 GB), the YuNet face model (~230 KB) and the YAMNet sound event model (~16 MB), both checked against a pinned
+SHA-256.
 
 ## How it works
 

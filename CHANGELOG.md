@@ -6,6 +6,8 @@ change, what changed rather than how; dates are ISO 8601.
 ## [Unreleased]
 
 ### Added
+- Laughter, applause and cheering are heard in the sound itself (YAMNet on the CPU, downloaded once with a pinned
+  SHA-256), in the voice and music/noise stems or the whole mix; without the model only laughing words count.
 - Campaigns (sidebar): clipping campaigns for a streamer, a podcast or a brand, with a brief, a rate per 1,000 views,
   a cap per post and the moments to clip; Clippy clips every source with the brief, collects the clippers' post links,
   reads their public views and works out the payout.

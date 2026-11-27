@@ -1,6 +1,6 @@
 """Reactions over the whole video, read without the words: loud moments (a scream, an explosion, cheering), laughter,
-sudden action on screen and chat bursts of a stream replay. They mark the peaks of gameplay and streams, where the
-best moment is often not something said."""
+applause and cheering heard in the sound, sudden action on screen and chat bursts of a stream replay. They mark the
+peaks of gameplay and streams, where the best moment is often not something said."""
 
 from __future__ import annotations
 
@@ -13,8 +13,9 @@ from pathlib import Path
 
 import numpy as np
 
-from .tools import ffmpeg_path, json_cache, log, report
+from .tools import ffmpeg_path, json_cache, log, report, report_span
 
+VERSION = 2
 HOP = 0.5
 RATE = 8000
 BASELINE_SEC = 90.0
@@ -26,6 +27,8 @@ PEAK_GAP = 25.0
 TAG_LEVEL = 0.35
 CHAT_QUOTES = 3
 KEY_SAMPLE_SEC, DENSE_KEYS = 30, 8
+HEARD_FLOOR, HEARD_FULL = 0.1, 0.4
+HEARD = (("laughter", "laughter"), ("applause", "applause"), ("cheer", "cheering"))
 
 
 def rolling_median(values: np.ndarray, window: int) -> np.ndarray:
@@ -139,11 +142,15 @@ class Signals:
     chat: list[float] = field(default_factory=list)
     chat_rate: list[float] = field(default_factory=list)
     laughs: list[float] = field(default_factory=list)
+    laughter: list[float] = field(default_factory=list)
+    applause: list[float] = field(default_factory=list)
+    cheer: list[float] = field(default_factory=list)
     chat_lines: list[tuple[float, str]] = field(default_factory=list)
 
     @property
     def length(self) -> int:
-        return max(len(self.loud), len(self.motion), len(self.chat))
+        return max(len(self.loud), len(self.motion), len(self.chat), len(self.laughter), len(self.applause),
+                   len(self.cheer))
 
     def _arr(self, name: str) -> np.ndarray:
         values = np.zeros(self.length)
@@ -154,8 +161,9 @@ class Signals:
     def strength(self) -> np.ndarray:
         """How much happens at each hop, 0..1: the strongest reaction, a bit more when several come together."""
         loud, motion, chat = self._arr("loud"), self._arr("motion"), self._arr("chat")
-        laugh = curve([(t, 1.0) for t in self.laughs], self.length, self.hop)
-        parts = np.vstack([loud, 0.6 * motion, chat, 0.7 * laugh])
+        laugh = np.maximum(curve([(t, 1.0) for t in self.laughs], self.length, self.hop), self._arr("laughter"))
+        crowd = np.maximum(self._arr("applause"), self._arr("cheer"))
+        parts = np.vstack([loud, 0.6 * motion, chat, 0.7 * laugh, 0.8 * crowd])
         top = parts.max(axis=0)
         together = (parts > TAG_LEVEL).sum(axis=0)
         return np.clip(top + 0.12 * np.maximum(0, together - 1), 0.0, 1.0)
@@ -180,8 +188,11 @@ class Signals:
         for name, values in (("loud", self.loud), ("action", self.motion), ("chat", self.chat)):
             if values and max(values[a:b] or [0.0]) >= TAG_LEVEL:
                 found.append(name)
-        if any(start <= t <= end for t in self.laughs):
-            found.append("laughter")
+        for name, kind in HEARD:
+            values = getattr(self, name)
+            said = name == "laughter" and any(start <= t <= end for t in self.laughs)
+            if said or (values and max(values[a:b] or [0.0]) >= TAG_LEVEL):
+                found.append(kind)
         return tuple(found)
 
     def tags(self, start: float, end: float) -> str:
@@ -215,9 +226,40 @@ class Signals:
         return cls(**known)
 
 
+def heard_levels(heard, length: int, hop: float = HOP) -> dict[str, list[float]]:
+    """The sound event model's frames on the hop grid, 0..1: nothing below HEARD_FLOOR, sure from HEARD_FULL."""
+    out = {}
+    for name, values in (("laughter", heard.laugh), ("applause", heard.applause), ("cheer", heard.cheer)):
+        level = np.clip((np.asarray(values) - HEARD_FLOOR) / (HEARD_FULL - HEARD_FLOOR), 0.0, 1.0)
+        grid = curve(list(zip(np.asarray(heard.times).tolist(), level.tolist())), length, hop)
+        out[name] = np.round(grid, 3).tolist()
+    return out
+
+
+def _hear(out: Signals, heard: tuple[Path, ...], length: int, hop: float) -> int:
+    from . import audio_events
+
+    listened = []
+    try:
+        for i, path in enumerate(heard):
+            with report_span(0.15 + 0.35 * i / len(heard), 0.15 + 0.35 * (i + 1) / len(heard)):
+                listened.append(audio_events.listen(path))
+    except (OSError, RuntimeError, ValueError) as exc:
+        log(f"[hook] sound events skipped ({type(exc).__name__}: {str(exc)[:120]})")
+        return length
+    found = audio_events.loudest(listened)
+    if not length and len(found.times):
+        length = int(found.times[-1] / hop) + 1
+    for name, values in heard_levels(found, length, hop).items():
+        setattr(out, name, values)
+    return length
+
+
 def build(sound: Path | None, words: list[dict], video: Path | None = None, chat: Path | None = None,
-          hop: float = HOP) -> Signals:
-    """Every reaction this video has: the sound always, the picture and the chat when they are there."""
+          hop: float = HOP, heard: tuple[Path, ...] = ()) -> Signals:
+    """Every reaction this video has: the sound always, the picture and the chat when they are there, and the
+    laughter, applause and cheering in `heard` (the voice and the music/noise stems, else the whole mix) when the sound
+    event model is here."""
     out = Signals(hop=hop, laughs=[w["start"] for w in words if LAUGH.search(w.get("word") or "")])
     if sound is not None:
         report(0.1)
@@ -226,6 +268,8 @@ def build(sound: Path | None, words: list[dict], video: Path | None = None, chat
         loud[db < SILENT_DB] = 0.0
         out.loud = np.round(loud, 3).tolist()
     length = len(out.loud)
+    if heard:
+        length = _hear(out, heard, length, hop)
     if video is not None:
         report(0.5)
         moves = keyframe_motion(video)
