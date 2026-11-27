@@ -45,6 +45,9 @@ Lines ending in ⟪…⟫ are where the sound, the picture or the audience react
 cheering; laughter; action = a sudden change on screen; chat xN = N times this stream's usual chat activity. In
 gameplay and streams these are often the best moments, even when little is said: start a few seconds before the
 reaction so the viewer sees what caused it, and end after it lands."""
+REPLAYED_RULE = """
+replayed = a part this video's YouTube viewers rewatch far more than the rest (Most Replayed): the moment is
+somewhere in that stretch, so find the line it turns on and build the clip around it."""
 SPEAKERS_RULE = """
 Each line starts with its speaker (A, B…), told apart by their voices: a strong moment is often an exchange
 between two of them (a question and its answer, a joke and the laugh, a disagreement)."""
@@ -154,19 +157,23 @@ def sentences(words: list[dict], max_len: float = 20.0) -> list[dict]:
     return [{"start": c[0]["start"], "end": c[-1]["end"], "text": " ".join(x["word"] for x in c)} for c in out]
 
 
-def _windows(items: list[dict], window_sec: float, overlap_sec: float) -> list[list[dict]]:
+def _windows(items: list[dict], window_sec: float, overlap_sec: float, cuts: list[float] = ()) -> list[list[dict]]:
+    """Overlapping windows of the transcript; a chapter start (`cuts`) in a window's second half ends it there, and the
+    next window starts with that chapter, so a topic is read whole."""
     if not items:
         return []
     total = items[-1]["end"]
     out, start = [], items[0]["start"]
     while start < total:
         end = start + window_sec
+        cut = max((t for t in cuts if start + window_sec / 2 < t < end), default=None)
+        end = cut or end
         win = [s for s in items if s["start"] >= start - 0.01 and s["start"] < end]
         if win:
             out.append(win)
         if end >= total:
             break
-        start = end - overlap_sec
+        start = end if cut else end - overlap_sec
     return out
 
 
@@ -727,12 +734,14 @@ def find_highlights(transcript: dict, llm: LLM, max_clips: int = 5, min_len: flo
                     max_len: float = 60, window_sec: float = 480, overlap_sec: float = 60,
                     title: str = "", exclude: list[Clip] | tuple = (), instructions: str = "",
                     text_language: str | None = None, cache: PickCache | None = None,
-                    signals: Signals | None = None, lessons: str = "", speakers=None) -> list[Clip]:
+                    signals: Signals | None = None, lessons: str = "", speakers=None,
+                    chapters: list[dict] = ()) -> list[Clip]:
     """`exclude`: clips that already exist (new picks must not overlap them).
     `instructions`: free-text wishes from the user ("the funniest parts", "only the parts about music"…).
     `cache`: earlier window answers for this video; when they no longer hold enough new moments, the windows are
     asked again, told which moments are taken.
-    `signals`: the video's reactions (sound, picture, chat); they mark lines for the picker and add candidates."""
+    `signals`: the video's reactions (sound, picture, chat); they mark lines for the picker and add candidates.
+    `chapters`: the video's own chapters (start_time); the transcript windows break where they start."""
     words = [w for s in transcript["segments"] for w in s["words"]]
     signals = signals if signals is not None and signals.peaks(1) else None
     if not words and signals is None:
@@ -755,13 +764,13 @@ def find_highlights(transcript: dict, llm: LLM, max_clips: int = 5, min_len: flo
         if any(s.get("speaker") for s in sents):
             system += "\n" + SPEAKERS_RULE
         if signals is not None:
-            system += "\n" + SIGNALS_RULE
+            system += "\n" + SIGNALS_RULE + (REPLAYED_RULE if signals.has("replayed") else "")
         if lessons:
             system += LESSONS_RULE + lessons
         if instructions.strip():
             system += ("\n\nThe channel owner's specific wishes for THIS selection (follow them, they override "
                        f"the generic preferences above):\n{instructions.strip()}")
-        wins = _windows(sents, window_sec, overlap_sec)
+        wins = _windows(sents, window_sec, overlap_sec, [float(c["start_time"]) for c in chapters])
         raw, cached = _ask_windows(llm, system, wins, cache, signals)
         if exclude and cached and len(_fresh(raw, words, min_len, max_len, exclude)) < max_clips:
             log("[hook] the earlier picks are used up: asking for new moments")
