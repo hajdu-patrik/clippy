@@ -46,10 +46,13 @@ Before picking, Clippy reads the whole video for reactions (`clippy/signals.py`)
 | **Laughter** | laughing words in the transcript (haha, lol, xd, *(laughs)*, nevet) | free |
 | **Action** | how much the picture changes between keyframes (only keyframes are decoded, tiny and grey); skipped for videos with a keyframe in nearly every frame, where it would be slow | seconds for a Twitch VOD |
 | **Chat** | a YouTube stream replay's chat (downloaded with the video): messages per 5 s against the stream's usual rate, and what the chat wrote; messages from before the stream are left out | seconds |
+| **Replayed** | YouTube's Most Replayed curve (about 100 parts per video, read with the page): a part rewatched far more than its surroundings (median and median deviation over 15 parts). The opening never counts, a lone spike where a chapter starts is a jump to it, and spikes on an even beat (automatic mid-roll ads) drop the curve | free |
 
 The picture is read when the video is already here, or when little is said (less than a third of the time), since
 then it is worth waiting for the download. Twitch keeps its VOD chat from downloaders, so Twitch VODs are read by
-their sound and picture. The result is cached per video in `data/cache/signals`.
+their sound and picture. The result is cached per video in `data/cache/signals`. The Most Replayed curve and the
+chapters are saved next to the video (`<id>.meta.json` in `data/cache/downloads`) every time the page is read, also for
+a video already downloaded, and laid on the cached reactions fresh, so they never go stale in the cache.
 
 How the picker uses them:
 - Transcript lines get a mark like `⟪loud, chat x6⟫`, and the picker is told to start a few seconds before such a
@@ -60,6 +63,8 @@ How the picker uses them:
 - A clip with little or no speech gets its title, description and question written from its reactions and the
   video's title, and its ending is not moved by sentences.
 - A long video without any speech no longer stops: its moments come from the reactions alone.
+- The video's own chapters are topic boundaries: a chapter start in the second half of a transcript window ends the
+  window there, and the next window opens with that chapter, so the picker reads a topic whole.
 
 ## Where a clip starts and ends
 

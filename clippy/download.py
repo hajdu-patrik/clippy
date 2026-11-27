@@ -21,7 +21,7 @@ from pathlib import Path
 from urllib.parse import urlsplit
 
 from .concurrency import SOURCE
-from .tools import ROOT, ClippyError, ffmpeg_path, log, move_atomic, report, slugify
+from .tools import ROOT, ClippyError, ffmpeg_path, log, move_atomic, read_json, report, slugify, write_json
 
 URL_RE = re.compile(r"^https?://", re.I)
 VIDEO_EXTS = (".mp4", ".mkv", ".webm")
@@ -486,6 +486,37 @@ def fetch_chat(remote: Remote, downloads: Path, cookies_from_browser: str | None
         return move_atomic(done, target) if done is not None else None
     finally:
         remove_partial(partial)
+
+
+def meta_file(downloads: Path, vid: str) -> Path:
+    return downloads / f"{vid}.meta.json"
+
+
+def _spans(items, *keys: str) -> list[dict]:
+    return [{k: item[k] for k in ("start_time", "end_time", *keys)} for item in items or []
+            if isinstance(item, dict) and all(isinstance(item.get(k), (int, float)) for k in ("start_time", "end_time"))
+            and all(item.get(k) is not None for k in keys)]
+
+
+def keep_meta(remote: Remote, downloads: Path) -> dict:
+    """The page's Most Replayed curve and chapters, saved next to the video (the cache and a chat's deletion treat it
+    alike). The page is read on every run, also for a video already here, so they stay fresh; a reading without them
+    keeps what was saved."""
+    meta = {"heatmap": _spans(remote.info.get("heatmap"), "value"),
+            "chapters": [{**c, "title": str(c["title"])[:200]} for c in _spans(remote.info.get("chapters"), "title")]}
+    if meta["heatmap"] or meta["chapters"]:
+        write_json(meta_file(downloads, remote.vid), meta)
+    return read_meta(downloads, remote.vid)
+
+
+def read_meta(downloads: Path, vid: str) -> dict:
+    """{"heatmap": [...], "chapters": [...]} saved for a video, empty lists when there is none."""
+    try:
+        data = read_json(meta_file(downloads, vid))
+    except (OSError, ValueError):
+        data = {}
+    data = data if isinstance(data, dict) else {}
+    return {"heatmap": _spans(data.get("heatmap"), "value"), "chapters": _spans(data.get("chapters"), "title")}
 
 
 def fetch(source: str, downloads: Path, max_height: int = 2160, cookies_from_browser: str | None = None) -> tuple[Path, str]:

@@ -19,7 +19,8 @@ from .boundaries import MAX_LANDING, SPEECH_WINDOW, Boundaries, landing
 from .analysis import ClipAnalysis, analyze
 from .captions import CaptionStyle
 from .concurrency import GPU, SOURCE, GuardedLLM
-from .download import Remote, cached_video, fetch, fetch_audio, fetch_chat, fetch_video, is_url, probe
+from .download import (Remote, cached_video, fetch, fetch_audio, fetch_chat, fetch_video, is_url, keep_meta, probe,
+                       read_meta)
 from .highlights import LANG_NAMES, Clip, PickCache, find_highlights, write_texts
 from .settings import URL, Settings, site_of
 from .llm import create_llm
@@ -177,6 +178,7 @@ class Project:
         self._analyses: dict[tuple[float, float], Future] = {}
         self._analyzer: ThreadPoolExecutor | None = None
         self.llm_desc = ""
+        self.meta: dict = {"heatmap": [], "chapters": []}
 
     @property
     def video(self) -> Path | None:
@@ -207,10 +209,16 @@ class Project:
         if not is_url(self.source):
             self.video, self.title = fetch(self.source, downloads)
             key = self.video
+            if key.parent.resolve() == downloads.resolve():
+                self.meta = read_meta(downloads, key.stem)
         else:
             remote = probe(self.source, downloads, cookies_from_browser=o.cookies_from_browser)
             self.title, self.source_duration = remote.title, remote.duration
             self.is_stream = remote.is_stream
+            try:
+                self.meta = keep_meta(remote, downloads)
+            except OSError as exc:
+                log(f"[download] most replayed and chapters not kept ({type(exc).__name__})")
             if remote.has_chat:
                 self._side = self._side or ThreadPoolExecutor(max_workers=1, thread_name_prefix="clippy-chat")
                 self._chat_task = self._side.submit(fetch_chat, remote, downloads, o.cookies_from_browser)
@@ -305,7 +313,8 @@ class Project:
                                 title=self.title, exclude=list(exclude), text_language=o.captions,
                                 instructions=o.instructions if instructions is None else instructions,
                                 cache=PickCache(self.storage.cache("picks"), self.video_stem) if self.video_stem else None,
-                                signals=reactions, lessons=lessons, speakers=self.speaker_turns)
+                                signals=reactions, lessons=lessons, speakers=self.speaker_turns,
+                                chapters=self.meta["chapters"])
         if not clips and short and o.whole:
             log("[hook] the picker found nothing: the whole moment becomes the clip")
             wishes = o.instructions if instructions is None else instructions
@@ -374,8 +383,9 @@ class Project:
             video = self.video if self._video_task is None or self._video_task.done() else None
             name = f"{stem}.{'v' if video else ''}{'c' if chat else ''}.json"
             sound = self.sound if self.sound and self.sound.is_file() else video
+            replayed = signals.replays(self.meta["heatmap"], self.meta["chapters"], duration)
             return signals.cached(self.storage.cache("signals") / name,
-                                  lambda: signals.build(sound, self.words, video, chat))
+                                  lambda: signals.build(sound, self.words, video, chat), replayed)
         except Exception as exc:
             log(f"[hook] reactions skipped ({type(exc).__name__}: {str(exc)[:120]})")
             return None

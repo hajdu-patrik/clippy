@@ -1,6 +1,6 @@
 """Reactions over the whole video, read without the words: loud moments (a scream, an explosion, cheering), laughter,
-sudden action on screen and chat bursts of a stream replay. They mark the peaks of gameplay and streams, where the
-best moment is often not something said."""
+sudden action on screen, chat bursts of a stream replay and the parts YouTube viewers replay most. They mark the
+peaks of gameplay and streams, where the best moment is often not something said."""
 
 from __future__ import annotations
 
@@ -26,6 +26,11 @@ PEAK_GAP = 25.0
 TAG_LEVEL = 0.35
 CHAT_QUOTES = 3
 KEY_SAMPLE_SEC, DENSE_KEYS = 30, 8
+REPLAY_BASELINE = 15
+REPLAY_OPENING = 90.0
+REPLAY_FLOOR, REPLAY_START, REPLAY_SPAN = 0.05, 2.0, 4.0
+REPLAY_MERGE, REPLAY_BEATS, REPLAY_BEAT_SPREAD = 60.0, 8, 0.25
+REPLAY_WEIGHT, REPLAY_TAPER = 0.8, 0.5
 
 
 def rolling_median(values: np.ndarray, window: int) -> np.ndarray:
@@ -124,6 +129,40 @@ def curve(points: list[tuple[float, float]], length: int, hop: float = HOP) -> n
     return grid
 
 
+def replays(heatmap: list[dict], chapters: list[dict] = (), duration: float = 0.0) -> list[tuple[float, float, float]]:
+    """(start, end, 0..1) of YouTube's Most Replayed parts, each against the video's own curve around it. The opening
+    (everyone watches it) never counts, a lone spike where a chapter starts is a jump to it, and spikes on an even
+    beat are where the ads break in, so the curve is dropped then."""
+    keys = ("start_time", "end_time", "value")
+    spans = [tuple(float(h[k]) for k in keys) for h in heatmap or []
+             if isinstance(h, dict) and all(isinstance(h.get(k), (int, float)) for k in keys)]
+    if len(spans) < REPLAY_BASELINE:
+        return []
+    values = np.array([v for _, _, v in spans])
+    starts = [float(c["start_time"]) for c in chapters or [] if isinstance(c, dict)
+              and isinstance(c.get("start_time"), (int, float)) and c["start_time"] > 0]
+    for i in range(1, len(spans) - 1):
+        if any(spans[i][0] <= t < spans[i][1] for t in starts):
+            values[i] = min(values[i], 0.5 * (values[i - 1] + values[i + 1]))
+    opening = min(REPLAY_OPENING, 0.05 * (duration or spans[-1][1]))
+    values[np.array([a < opening for a, _, _ in spans])] = 0.0
+    base = rolling_median(values, REPLAY_BASELINE)
+    spread = max(REPLAY_FLOOR, 1.4826 * float(np.median(np.abs(values - base))))
+    score = np.clip(((values - base) / spread - REPLAY_START) / REPLAY_SPAN, 0.0, 1.0)
+    if _on_a_beat([a for (a, _, _), x in zip(spans, score) if x >= TAG_LEVEL]):
+        return []
+    return [(a, b, round(float(x), 3)) for (a, b, _), x in zip(spans, score) if x > 0]
+
+
+def _on_a_beat(times: list[float]) -> bool:
+    """Many spikes about evenly apart (YouTube's automatic mid-roll ads), not moments people come back to."""
+    gaps = np.diff([t for i, t in enumerate(times) if i == 0 or t - times[i - 1] > REPLAY_MERGE])
+    if len(gaps) < REPLAY_BEATS - 1:
+        return False
+    middle = float(np.median(gaps))
+    return float(np.median(np.abs(gaps - middle))) < REPLAY_BEAT_SPREAD * middle
+
+
 @dataclass(frozen=True)
 class Peak:
     time: float
@@ -140,10 +179,11 @@ class Signals:
     chat_rate: list[float] = field(default_factory=list)
     laughs: list[float] = field(default_factory=list)
     chat_lines: list[tuple[float, str]] = field(default_factory=list)
+    replayed: list[float] = field(default_factory=list)
 
     @property
     def length(self) -> int:
-        return max(len(self.loud), len(self.motion), len(self.chat))
+        return max(len(self.loud), len(self.motion), len(self.chat), len(self.replayed))
 
     def _arr(self, name: str) -> np.ndarray:
         values = np.zeros(self.length)
@@ -155,7 +195,7 @@ class Signals:
         """How much happens at each hop, 0..1: the strongest reaction, a bit more when several come together."""
         loud, motion, chat = self._arr("loud"), self._arr("motion"), self._arr("chat")
         laugh = curve([(t, 1.0) for t in self.laughs], self.length, self.hop)
-        parts = np.vstack([loud, 0.6 * motion, chat, 0.7 * laugh])
+        parts = np.vstack([loud, 0.6 * motion, chat, 0.7 * laugh, REPLAY_WEIGHT * self._arr("replayed")])
         top = parts.max(axis=0)
         together = (parts > TAG_LEVEL).sum(axis=0)
         return np.clip(top + 0.12 * np.maximum(0, together - 1), 0.0, 1.0)
@@ -177,12 +217,18 @@ class Signals:
     def kinds(self, start: float, end: float) -> tuple[str, ...]:
         a, b = max(0, int(start / self.hop)), max(1, int(end / self.hop) + 1)
         found = []
-        for name, values in (("loud", self.loud), ("action", self.motion), ("chat", self.chat)):
+        for name, values in (("loud", self.loud), ("action", self.motion), ("chat", self.chat),
+                             ("replayed", self.replayed)):
             if values and max(values[a:b] or [0.0]) >= TAG_LEVEL:
                 found.append(name)
         if any(start <= t <= end for t in self.laughs):
             found.append("laughter")
         return tuple(found)
+
+    def has(self, kind: str) -> bool:
+        """Whether this video has a reaction of this kind anywhere (loud, action, chat, replayed)."""
+        values = {"loud": self.loud, "action": self.motion, "chat": self.chat, "replayed": self.replayed}[kind]
+        return max(values or [0.0]) >= TAG_LEVEL
 
     def tags(self, start: float, end: float) -> str:
         """Short marks for one transcript line: "loud, chat x4"."""
@@ -250,8 +296,26 @@ def build(sound: Path | None, words: list[dict], video: Path | None = None, chat
     return out
 
 
-def cached(path: Path, make) -> Signals:
+def replay_curve(spans: list[tuple[float, float, float]], length: int, hop: float = HOP) -> list[float]:
+    """The replayed parts on the hop grid, highest in the middle of each part, so a peak lands there."""
+    if not spans:
+        return []
+    grid = np.zeros(max(length, int(max(b for _, b, _ in spans) / hop) + 1))
+    for a, b, value in spans:
+        i0, i1 = int(a / hop), min(len(grid), int(b / hop) + 1)
+        middle, half = 0.5 * (a + b), max(hop, 0.5 * (b - a))
+        t = np.arange(i0, i1) * hop
+        grid[i0:i1] = np.maximum(grid[i0:i1], value * (1.0 - REPLAY_TAPER * np.abs(t - middle) / half))
+    return np.round(grid, 3).tolist()
+
+
+def cached(path: Path, make, replayed: list[tuple[float, float, float]] = ()) -> Signals:
+    """The reactions stored at `path` (else built there), with the replayed parts laid on: those come with every
+    reading of the page, so they stay fresh and never sit in the cache."""
     signals, made = json_cache(path, make, Signals.from_json, Signals.to_json)
+    signals.replayed = replay_curve(list(replayed), signals.length, signals.hop)
+    if replayed:
+        log(f"[hook] most replayed: {sum(x >= TAG_LEVEL for _, _, x in replayed)} parts stand out")
     if not made:
         return signals
     strongest = "; ".join(f"{p.time:.0f} s {'+'.join(p.kinds)}" for p in signals.peaks(5))
