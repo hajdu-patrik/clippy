@@ -17,13 +17,13 @@ import numpy as np
 from .concurrency import RENDER
 from . import burned
 from . import audio as aud
-from .analysis import ClipAnalysis, analyze, decode_cmd
+from .analysis import ClipAnalysis, Decoder, analyze, use_nvdec
 from .captions import CaptionStyle, TextEvent, write_ass
 from .compositing import OUT_H, OUT_W, CropCompositor, LayoutCompositor, Prebuilt, StreamCompositor
 from .director import guess_facecam, mostly_faces, plan_frames, reaction_windows
 from .edit import EditPlan, build_edit
 from .tools import (ROOT, atomic_path, ffmpeg_failed, ffmpeg_features, ffmpeg_path, fps_rational, log,
-                    probe_video, read_exact, report, report_span)
+                    probe_video, report, report_span, spawn_piped)
 
 LAYOUTS = ("auto", "face", "center", "blur", "stream")
 COVER_PAUSE = 0.6
@@ -32,7 +32,6 @@ VIDEO_TAGS = ["-color_primaries", "bt709", "-color_trc", "bt709", "-colorspace",
 
 
 INFLIGHT = 16
-PIPE_BUFFER = 1 << 20
 WORKERS = min(8, os.cpu_count() or 4)
 
 
@@ -277,7 +276,8 @@ class ClipRenderer:
 
     def _pump(self, cmd: list[str], work: Path, edit: EditPlan, plans, compositor: LayoutCompositor,
               n_frames: int, dw: int, dh: int) -> int:
-        """Decode -> compose on a thread pool (OpenCV releases the GIL) -> encode, frames strictly in order."""
+        """Decode -> compose on a thread pool (OpenCV releases the GIL) -> encode, frames strictly in order. One
+        thread writes to the encoder, so reading the decoder and writing the encoder no longer take turns."""
         keep = np.zeros(n_frames + int(self.fps * 2), dtype=bool)
         for ka, kb in edit.frames:
             keep[ka: min(kb, len(keep))] = True
@@ -298,41 +298,43 @@ class ClipRenderer:
 
         log_path = work / "ffmpeg_encode.log"
         written = 0
+        hw = use_nvdec(self.meta, dh)
         with open(log_path, "w", encoding="utf-8") as err:
-            enc = subprocess.Popen(cmd, stdin=subprocess.PIPE, stderr=err, cwd=work)
-            dec = subprocess.Popen(decode_cmd(self.video, self.start, self.span, dw, dh, self.rate,
-                                              self.meta["matrix"], self.meta["range"], strip, self._graph),
-                                   stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, bufsize=PIPE_BUFFER)
+            enc, sink = spawn_piped(cmd, out=False, stderr=err, cwd=work)
+            dec = Decoder(self.video, self.start, self.span, dw, dh, self.rate, self.meta["matrix"],
+                          self.meta["range"], strip, self._graph, hw=hw)
             inflight: deque = deque()
             submitted = 0
+
+            def emit(job) -> None:
+                sink.write(job.result())
+
             try:
-                with ThreadPoolExecutor(max_workers=WORKERS) as pool:
+                with ThreadPoolExecutor(max_workers=WORKERS) as pool, ThreadPoolExecutor(max_workers=1) as writer:
                     for j in range(last_needed):
                         if j % 24 == 0:
                             report(j / last_needed)
                         if not keep[j]:
-                            if read_exact(dec.stdout, skipped) < size:
+                            if not dec.read(skipped):
                                 break
                             continue
                         k = submitted % len(ring)
-                        if read_exact(dec.stdout, memoryview(ring[k])) < size:
+                        if not dec.read(memoryview(ring[k])):
                             break
-                        inflight.append(pool.submit(compose, k, plans[min(j, len(plans) - 1)]))
+                        inflight.append(writer.submit(emit, pool.submit(compose, k, plans[min(j, len(plans) - 1)])))
                         submitted += 1
                         if len(inflight) >= INFLIGHT:
-                            enc.stdin.write(inflight.popleft().result())
+                            inflight.popleft().result()
                             written += 1
                     while inflight:
-                        enc.stdin.write(inflight.popleft().result())
+                        inflight.popleft().result()
                         written += 1
             except BrokenPipeError:
                 pass
             finally:
-                dec.stdout.close()
-                dec.kill()
-                dec.wait()
+                dec.close()
                 try:
-                    enc.stdin.close()
+                    sink.close()
                 except BrokenPipeError:
                     pass
                 enc.wait()

@@ -247,6 +247,10 @@ change, what changed rather than how; dates are ISO 8601.
   of seconds away.
 
 ### Performance
+- Raw frames move through 1 MB pipes in whole frames (Windows gave 4 KB pipes, ffmpeg wrote 32 KB pieces: a 30 s
+  4K strip read in 5 s instead of 15 s) and one thread feeds the encoder while the decoder is read; NVDEC decodes
+  a 4K source that is shrunk to half its height or less (a fitted clip: 62 s -> 41 s for 30 s) with the same
+  frames bit for bit, and the CPU takes over on a busy GPU, another format or a decode error.
 - Rendering a clip from a 4K source is about 2.7x faster (45 s -> 16 s for a 28 s clip): the stream layout is
   built by the decoder, so the full 4K frames never pass through Python, and other layouts decode only at the
   resolution the output uses.
