@@ -170,3 +170,14 @@ def test_the_eval_flags_are_in_both_completion_scripts():
     assert {"--bootstrap", "--compare", "--golden", "--video", "--llm"} <= set(flags)
     for f in flags:
         assert f"'{f}'" in ps and f'"{f}"' in lua
+
+
+def test_a_failed_picker_keeps_its_failed_calls_in_the_summary(storage):
+    class Down(FakeLLM):
+        def chat_json(self, system, user, think=False, schema=None):
+            raise ClippyError("The language model did not answer")
+
+    report = evaluation.run(storage.golden_file, storage, Down())
+    assert "did not answer" in report["videos"][0]["error"] and report["summary"]["skipped"] == 1
+    assert report["summary"]["steps"]["windows"] == {"calls": 1, "seconds": report["summary"]["steps"]["windows"]["seconds"],
+                                                     "failed": 1}

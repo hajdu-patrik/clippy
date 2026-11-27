@@ -200,14 +200,16 @@ def run_video(video: dict, storage: Storage, llm, threshold: float = OVERLAP) ->
 
 
 def summarize(videos: list[dict]) -> dict:
-    """Every video's counts pooled (each label and each pick weighs the same), and the step costs summed."""
+    """Every scored video's counts pooled (each label and each pick weighs the same), and the step costs of every
+    video summed, failed calls of a failed video included."""
     done = [v for v in videos if "counts" in v]
     counts: dict[str, int] = {}
     steps: dict[str, dict] = {}
     for v in done:
         for k, n in v["counts"].items():
             counts[k] = counts.get(k, 0) + n
-        for name, s in v["steps"].items():
+    for v in videos:
+        for name, s in (v.get("steps") or {}).items():
             total = steps.setdefault(name, {"calls": 0, "seconds": 0.0, "failed": 0})
             for k in total:
                 total[k] = round(total[k] + s.get(k, 0), 3)
