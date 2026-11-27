@@ -161,7 +161,7 @@ def test_results_route(tmp_path):
     client = TestClient(create_app(storage, db_path=tmp_path / "t.db", runner=runner, start_worker=False),
                         headers={"X-Clippy-Request": "1"})
     answer = client.get("/api/results").json()
-    assert answer == {"measured": 0, "compared": 0, "findings": [], "analytics": True}
+    assert answer == {"measured": 0, "compared": 0, "findings": [], "held": 0, "holds": [], "analytics": True}
     runner.accounts.save("youtube", Tokens(access_token="a", expires_at=9e12, scope="youtube.upload"))
     assert client.get("/api/results").json()["analytics"] is False
     assert client.post("/api/results/refresh").json()["read"] == 0

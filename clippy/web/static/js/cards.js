@@ -1,5 +1,5 @@
 import { t } from "./i18n.js";
-import { cancelPlanned, openPostDialog, postsHtml } from "./publish.js";
+import { cancelPlanned, openLinkDialog, openPostDialog, postsHtml, unlinkPost } from "./publish.js";
 import { state } from "./state.js";
 import { $, copyText, esc, fmtTs, toast } from "./util.js";
 
@@ -55,6 +55,7 @@ export function cardHtml(id) {
         ${c.jpg_b ? `<a class="btn sm" href="${esc(c.jpg_b)}" download>${esc(t("card.coverB"))}</a>` : ""}
         <button type="button" class="btn sm" data-act="copy">${esc(t("card.copy"))}</button>
         <button type="button" class="btn sm" data-act="edit">${esc(t("card.edit"))}</button>
+        ${old || c.deleted ? "" : `<button type="button" class="btn sm" data-act="link">${esc(t("card.link"))}</button>`}
         ${old || c.deleted ? "" : `<button type="button" class="btn sm primary post-btn" data-act="post">${esc(t("card.post"))}</button>`}
       </div>
     </div>
@@ -90,6 +91,10 @@ async function onCardClick(event) {
     cancelPlanned(Number(pressed.dataset.sid));
   } else if (act === "post") {
     openPostDialog(clip);
+  } else if (act === "link") {
+    openLinkDialog(clip);
+  } else if (act === "unlink") {
+    unlinkPost(clip, Number(pressed.dataset.pid));
   } else if (act === "edit") {
     document.dispatchEvent(new CustomEvent("clippy:compose", { detail: t("card.editPrefix", { n: clip.number }) }));
   }

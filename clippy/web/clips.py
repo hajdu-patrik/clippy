@@ -28,7 +28,8 @@ def caption_of(text: str) -> str:
 
 def present_post(post: dict) -> dict:
     problem = post.get("problem") or {}
-    return {"platform": post["platform"], "state": post["state"], "url": post["url"], "created": post["created"],
+    return {"id": post["id"], "platform": post["platform"], "state": post["state"], "url": post["url"],
+            "created": post["created"],
             **({"error_t": problem} if problem.get("key") else {}),
             **({"stats": post["stats"]} if post.get("stats") else {})}
 

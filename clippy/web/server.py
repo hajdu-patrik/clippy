@@ -156,6 +156,10 @@ class CampaignBody(BaseModel):
     active: bool = True
 
 
+class PostLink(BaseModel):
+    url: str = Field(min_length=8, max_length=500)
+
+
 class CampaignPost(BaseModel):
     clipper: str = Field(default="", max_length=60)
     url: str = Field(min_length=8, max_length=500)
@@ -459,6 +463,14 @@ def create_app(storage: Storage | None = None, db_path: Path | None = None, runn
         options = {"youtube": {"privacy": body.youtube_privacy}, "tiktok": {"mode": body.tiktok_mode},
                    **({"variant": "b"} if body.variant == "b" else {})}
         return chats.publish(chat_id, number, list(dict.fromkeys(body.platforms)), options, body.at)
+
+    @app.post("/api/chats/{chat_id}/clips/{number}/posts")
+    def link_clip_post(chat_id: int, number: int, body: PostLink):
+        return chats.link_post(chat_id, number, body.url)
+
+    @app.delete("/api/chats/{chat_id}/clips/{number}/posts/{post_id}")
+    def unlink_clip_post(chat_id: int, number: int, post_id: int):
+        return {"ok": chats.unlink_post(chat_id, number, post_id)}
 
     @app.get("/api/schedule")
     def get_schedule():
