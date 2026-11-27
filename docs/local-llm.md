@@ -13,7 +13,7 @@ The other modes (OpenRouter, your Claude or ChatGPT subscription, none) are chos
 | Context | 16K tokens | An 8-minute transcript window plus reasoning and the prompt fit comfortably |
 | KV cache | q8_0 with flash attention | Half the VRAM of fp16 at no quality cost; measured 13.3 → 12.2 GiB |
 | Sampling | thinking: T 0.6 / top_p 0.95 / top_k 20; fast: T 0.7 / top_p 0.8 / top_k 20; min_p 0; presence_penalty 1.5 | Qwen3 model card (presence_penalty 1.5 for quantised models) |
-| Thinking mode | on for clip selection and re-ranking, off for chat and hook shortening | Reasoning where the decision matters, speed where it does not |
+| Thinking mode | on for clip selection and re-ranking, off for chat and hook shortening (`CLIPPY_LLM_THINK`, `CLIPPY_LLM_THINK_BUDGET`) | Reasoning where the decision matters, speed where it does not |
 | Output | JSON schema (structured outputs) | Always valid JSON with the expected fields |
 | VRAM scheduling | the model is unloaded before Demucs, Whisper and the aligner | The 14B model takes ~14 GB; they would not fit beside it |
 
@@ -21,6 +21,9 @@ Measured on an RTX 4090 Laptop GPU: Q6_K ≈ 36 tokens/s (Q4_K_M ≈ 44) and pro
 window takes ≈ 35 s in thinking mode.
 
 Ollama server settings (user environment variables; `clippy start` also passes them when it starts Ollama):
-`OLLAMA_FLASH_ATTENTION=1`, `OLLAMA_KV_CACHE_TYPE=q8_0`, `OLLAMA_NUM_PARALLEL=1`, `OLLAMA_MAX_LOADED_MODELS=1`.
+`OLLAMA_FLASH_ATTENTION=1`, `OLLAMA_KV_CACHE_TYPE=q8_0`, `OLLAMA_NUM_PARALLEL=1` (or `CLIPPY_LLM_PARALLEL`), `OLLAMA_MAX_LOADED_MODELS=1`.
+Two parallel slots cost one more 16K q8 KV cache (1360 MiB): weights 10946 MiB + 2 × 1360 MiB + compute ≈ 13.8 GiB,
+which fits a 16 GB card. With `CLIPPY_LLM_PARALLEL=2` the picker reads two transcript windows at once (default 1, until it is measured on an idle GPU);
+with a server that has one slot the second request simply waits.
 To create the model: `ollama pull hf.co/Qwen/Qwen3-14B-GGUF:Q6_K`, then
 `ollama create clippy-qwen3:14b-q6k -f models/Modelfile.qwen3-14b-q6k`.

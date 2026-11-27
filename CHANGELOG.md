@@ -264,9 +264,13 @@ change, what changed rather than how; dates are ISO 8601.
   4K strip read in 5 s instead of 15 s) and one thread feeds the encoder while the decoder is read; NVDEC decodes
   a 4K source that is shrunk to half its height or less (a fitted clip: 62 s -> 41 s for 30 s) with the same
   frames bit for bit, and the CPU takes over on a busy GPU, another format or a decode error.
-- On the GPU Whisper hears 8 speech windows at once (`CLIPPY_WHISPER_BATCH`, halved by itself when VRAM runs out,
-  then one at a time as before), and the stretches without punctuation are heard again in one batch; a window the
+- On the GPU Whisper can hear several speech windows at once (`CLIPPY_WHISPER_BATCH=8`, off by default until it is
+  measured on an idle GPU; halved by itself when VRAM runs out, then one at a time as before), and the stretches without punctuation are heard again in one batch; a window the
   batched decoder got wrong, wrote too little of or left silent is heard again unbatched or dropped, as before.
+- Clip picking can ask two transcript windows at once under one hold of the GPU (`CLIPPY_LLM_PARALLEL=2`, off by
+  default; `clippy start` then gives Ollama two slots), can reason only in the windows or only in the re-ranking (`CLIPPY_LLM_THINK=windows`,
+  `rerank`, `all`, `off`) with a cap on the reasoning (`CLIPPY_LLM_THINK_BUDGET`), and a new lesson from the posted
+  clips weighs in at the re-ranking, so the cached window answers stay valid.
 - Rendering a clip from a 4K source is about 2.7x faster (45 s -> 16 s for a 28 s clip): the stream layout is
   built by the decoder, so the full 4K frames never pass through Python, and other layouts decode only at the
   resolution the output uses.

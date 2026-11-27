@@ -106,6 +106,16 @@ class GuardedLLM:
         with GPU.hold():
             return self._llm.chat_json(*args, **kwargs)
 
+    @contextmanager
+    def together(self) -> Iterator[object]:
+        """A batch of calls that the model serves side by side: the GPU slot is taken once, here, for all of them,
+        and the bare LLM it yields may be called from several threads inside."""
+        if not getattr(self._llm, "local", True):
+            yield self._llm
+            return
+        with GPU.hold():
+            yield self._llm
+
     def __getattr__(self, name: str):
         return getattr(self._llm, name)
 

@@ -16,7 +16,8 @@ from pathlib import Path
 import requests
 
 from . import __version__, i18n
-from .llm import OLLAMA_SERVER_ENV, create_llm, loaded_models, mode_of, ollama_running, stored, unload_all
+from .llm import (create_llm, loaded_models, mode_of, ollama_running, ollama_server_env, stored,
+                  unload_all)
 from .shell import COMMANDS, command_doc, flags_of
 from .storage import DATA
 from .tools import ROOT, ClippyError
@@ -222,7 +223,7 @@ def ensure_ollama() -> None:
         say(f"{Y}{tr('cli.ollama_missing')}{N}")
         return
     say(tr("cli.ollama_starting"))
-    _detached(argv, env={**os.environ, **OLLAMA_SERVER_ENV})
+    _detached(argv, env={**os.environ, **ollama_server_env()})
     for _ in range(30):
         if ollama_running():
             return

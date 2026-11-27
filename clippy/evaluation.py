@@ -11,7 +11,7 @@ from urllib.parse import urlparse
 from . import highlights, i18n
 from .boundaries import COMPLETE_PAUSE, NONE, Boundaries
 from .highlights import Clip, find_highlights
-from .llm import think_enabled
+from .llm import think_mode
 from .signals import Signals
 from .storage import Storage
 from .tools import ClippyError, log, read_json, write_json
@@ -226,7 +226,7 @@ def run(golden_path: Path, storage: Storage, llm, only: list[str] | None = None,
         raise ClippyError(key="error.eval_no_video", ids=", ".join(only or []))
     results = [run_video(v, storage, llm, threshold) for v in videos]
     return {"format": FORMAT, "created": datetime.now(timezone.utc).isoformat(timespec="seconds"),
-            "llm": llm.describe(), "think": think_enabled(), "golden": str(golden_path), "overlap": threshold,
+            "llm": llm.describe(), "think": think_mode(), "golden": str(golden_path), "overlap": threshold,
             "videos": results, "summary": summarize(results)}
 
 
