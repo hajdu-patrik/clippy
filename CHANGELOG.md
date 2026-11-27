@@ -247,6 +247,9 @@ change, what changed rather than how; dates are ISO 8601.
   of seconds away.
 
 ### Performance
+- On the GPU Whisper hears 8 speech windows at once (`CLIPPY_WHISPER_BATCH`, halved by itself when VRAM runs out,
+  then one at a time as before), and the stretches without punctuation are heard again in one batch; a window the
+  batched decoder got wrong, wrote too little of or left silent is heard again unbatched or dropped, as before.
 - Rendering a clip from a 4K source is about 2.7x faster (45 s -> 16 s for a 28 s clip): the stream layout is
   built by the decoder, so the full 4K frames never pass through Python, and other layouts decode only at the
   resolution the output uses.
