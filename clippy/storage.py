@@ -11,6 +11,7 @@ from pathlib import Path
 from .tools import ROOT, safe_name
 
 DATA = ROOT / "data"
+MODELS = ROOT / "models"
 DEFAULT_LIBRARY = Path.home() / "Videos" / "Clippy"
 CACHE_KINDS = ("downloads", "audio", "transcripts", "picks", "signals")
 

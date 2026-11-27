@@ -42,9 +42,10 @@ Return ONLY JSON: {{"clips": [{{"start": <seconds>, "end": <seconds>, "score": <
 
 SIGNALS_RULE = """
 Lines ending in ⟪…⟫ are where the sound, the picture or the audience reacted: loud = a scream, an explosion or
-cheering; laughter; action = a sudden change on screen; chat xN = N times this stream's usual chat activity. In
-gameplay and streams these are often the best moments, even when little is said: start a few seconds before the
-reaction so the viewer sees what caused it, and end after it lands."""
+cheering; laughter, applause, cheering = heard in the sound or laughed in the words; action = a sudden change on
+screen; chat xN = N times this stream's usual chat activity. In gameplay and streams these are often the best
+moments, even when little is said: start a few seconds before the reaction so the viewer sees what caused it, and
+end after it lands."""
 REPLAYED_RULE = """
 replayed = a part this video's YouTube viewers rewatch far more than the rest (Most Replayed): the moment is
 somewhere in that stretch, so find the line it turns on and build the clip around it."""

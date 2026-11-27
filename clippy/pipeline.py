@@ -14,7 +14,7 @@ from dataclasses import asdict, dataclass, field, fields, replace
 from pathlib import Path
 from urllib.parse import urlsplit
 
-from . import align, audio, covers, i18n, separation, signals, speakers, vision
+from . import align, audio, audio_events, covers, i18n, separation, signals, speakers, vision
 from .boundaries import MAX_LANDING, SPEECH_WINDOW, Boundaries, landing
 from .analysis import ClipAnalysis, analyze
 from .captions import CaptionStyle
@@ -381,11 +381,14 @@ class Project:
                 while not wait([task], timeout=5.0).done:
                     log(f"[hook] waiting for the video to read the action on screen ({round(100 * self._downloaded)}%)")
             video = self.video if self._video_task is None or self._video_task.done() else None
-            name = f"{stem}.{'v' if video else ''}{'c' if chat else ''}.json"
             sound = self.sound if self.sound and self.sound.is_file() else video
+            parts = tuple(Path(self.stems[k]) for k in ("vocals", "music") if self.stems and self.stems.get(k))
+            whole = len(parts) == 2 and all(p.is_file() for p in parts)
+            heard = (parts if whole else (sound,)) if sound and audio_events.ready() else ()
+            name = f"{stem}.{signals.VERSION}{'h' if heard else ''}{'v' if video else ''}{'c' if chat else ''}.json"
             replayed = signals.replays(self.meta["heatmap"], self.meta["chapters"], duration)
             return signals.cached(self.storage.cache("signals") / name,
-                                  lambda: signals.build(sound, self.words, video, chat), replayed)
+                                  lambda: signals.build(sound, self.words, video, chat, heard=heard), replayed)
         except Exception as exc:
             log(f"[hook] reactions skipped ({type(exc).__name__}: {str(exc)[:120]})")
             return None
