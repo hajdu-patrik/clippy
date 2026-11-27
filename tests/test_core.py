@@ -237,6 +237,7 @@ def test_a_cpu_fallback_after_a_cuda_failure_keeps_the_transcript_cached(tmp_pat
 
     monkeypatch.setattr(transcribe, "cuda_available", lambda: True)
     monkeypatch.setattr(transcribe, "_load_model", lambda name, device: (Model(device), device))
+    monkeypatch.setattr(transcribe, "_pipeline", lambda model: model)
     monkeypatch.setattr(transcribe, "decode_audio", lambda path: np.zeros(16000, np.float32))
     video = tmp_path / "video.mkv"
     video.write_bytes(b"x")

@@ -264,6 +264,9 @@ change, what changed rather than how; dates are ISO 8601.
   4K strip read in 5 s instead of 15 s) and one thread feeds the encoder while the decoder is read; NVDEC decodes
   a 4K source that is shrunk to half its height or less (a fitted clip: 62 s -> 41 s for 30 s) with the same
   frames bit for bit, and the CPU takes over on a busy GPU, another format or a decode error.
+- On the GPU Whisper hears 8 speech windows at once (`CLIPPY_WHISPER_BATCH`, halved by itself when VRAM runs out,
+  then one at a time as before), and the stretches without punctuation are heard again in one batch; a window the
+  batched decoder got wrong, wrote too little of or left silent is heard again unbatched or dropped, as before.
 - Rendering a clip from a 4K source is about 2.7x faster (45 s -> 16 s for a 28 s clip): the stream layout is
   built by the decoder, so the full 4K frames never pass through Python, and other layouts decode only at the
   resolution the output uses.
