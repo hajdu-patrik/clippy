@@ -331,10 +331,14 @@ tests/             pytest suite (~3 s)            docs/   guides            mode
 
 ```bat
 .venv\Scripts\python -m pip install -e .[dev]
-git config core.hooksPath .githooks          :: pre-commit: pyflakes + pytest
+git config core.hooksPath .githooks          :: pre-commit and pre-push: pyflakes + pytest
 .venv\Scripts\python -m pyflakes clippy tests
 .venv\Scripts\python -m pytest -q
 ```
+
+Nothing reaches GitHub untested: pre-push runs the checks unless pre-commit already passed on the same tree. CI then
+runs only when code, tests, the site or the dependencies change (Windows 3.13, Ubuntu 3.12 and 3.13, macOS 3.13; the
+local hooks cover Windows 3.12), and Vercel rebuilds the site only when `docs/` changes, with no test gate of its own.
 
 Conventions: [CLAUDE.md](CLAUDE.md). Release history: [CHANGELOG.md](CHANGELOG.md).
 

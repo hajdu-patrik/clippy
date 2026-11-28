@@ -38,5 +38,7 @@ belongs in `data/` (ignored) and `.env` (ignored).
 .venv\Scripts\python -m pip_audit
 ```
 
-The git hook in `.githooks/` runs the first two (`git config core.hooksPath .githooks`). Server code is imported at
-start: restart with `clippy restart` after a change, never while a job is running.
+The git hooks in `.githooks/` run the first two on commit and again on push unless the pushed tree already passed
+(`git config core.hooksPath .githooks`). CI runs only on code, test, site or dependency changes; the site deploys
+from `docs/` without its own test gate. Server code is imported at start: restart with `clippy restart` after a
+change, never while a job is running.

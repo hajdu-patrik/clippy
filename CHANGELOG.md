@@ -128,6 +128,9 @@ change, what changed rather than how; dates are ISO 8601.
   profile / channel / playlist link, no video in the post, no sound, each with what helps.
 
 ### Changed
+- Less CI: a pre-push hook runs lint and tests unless pre-commit already passed on the pushed tree; GitHub CI runs
+  only when code, tests, the site or the dependencies change, on 4 runners instead of 6; Vercel rebuilds the site
+  only when `docs/` changes.
 - yt-dlp 2026.11.23 or newer; Demucs 4.1.0 for voice isolation (its model now comes from the Hugging Face Hub, once).
 - Accounts sign in from their card: Set up shows the developer page, the redirect address to copy and the app's key fields, then Save and sign in opens the platform's sign-in; no `.env` editing or restart, and Instagram signs in with Instagram instead of a pasted token (pasting stays as a fallback).
 - The account cards keep their own height and show one clear action: Set up, Sign in with the platform, or Disconnect.

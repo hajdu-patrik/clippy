@@ -1,0 +1,26 @@
+#!/bin/sh
+# Clippy pre-push hook: nothing reaches GitHub untested. Lint and tests run on the pushed commit unless pre-commit
+# already passed on exactly its tree. Skip once with --no-verify.
+cd "$(git rev-parse --show-toplevel)" || exit 1
+stamp="$(git rev-parse --git-path clippy-tested-tree)"
+zero=0000000000000000000000000000000000000000
+while read -r local_ref local_sha remote_ref remote_sha; do
+    [ "$local_sha" = "$zero" ] && continue
+    tree="$(git rev-parse "$local_sha^{tree}")"
+    [ -f "$stamp" ] && [ "$(cat "$stamp")" = "$tree" ] && continue
+    if [ "$local_sha" != "$(git rev-parse HEAD)" ] || ! git diff --quiet HEAD; then
+        echo "clippy pre-push: $local_ref is untested; check it out with a clean working tree and push again" >&2
+        exit 1
+    fi
+    for py in .venv/Scripts/python.exe .venv/bin/python python3 python; do
+        if "$py" -c "import sys; sys.exit(sys.version_info < (3, 12))" </dev/null >/dev/null 2>&1; then
+            "$py" -m pyflakes clippy tests </dev/null || exit 1
+            "$py" -m pytest -q tests </dev/null || exit 1
+            echo "$tree" > "$stamp"
+            continue 2
+        fi
+    done
+    echo "clippy pre-push: no Python 3.12+ found; push with --no-verify to skip the checks" >&2
+    exit 1
+done
+exit 0
