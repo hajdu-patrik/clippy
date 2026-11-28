@@ -326,7 +326,7 @@ Dependencies are checked with `pip-audit`.
 ```
 clippy/            the package: control.py (the clippy command), shell.py, cli.py, pipeline.py, i18n.py, ...
 clippy/web/        FastAPI server, chat service, job runner + live progress, chat agent, static/ (ES modules)
-tests/             pytest suite (~3 s)            docs/   guides            models/   Ollama Modelfile
+tests/             pytest suite (~1 min)          docs/   guides            models/   Ollama Modelfile
 ```
 
 ```bat
